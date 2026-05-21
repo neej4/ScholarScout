@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<!-- ScholarScout Dashboard v1.0 (Grayscale Obsidian Style) -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ScholarScout v1.0</title>
+<link rel="icon" href="/static/logo.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#181818;color:#d4d4d4;min-height:100vh;overflow:hidden}
+:root{--bg:#181818;--card:#222222;--border:#3b3b3b;--text:#d4d4d4;--muted:#8a8a8a;--hover:#333333;--active:#ffffff;--err:#ff6b6b}
+
+/* HEADER */
+.header{background:var(--bg);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
+.logo-container{display:flex;align-items:center;gap:12px}
+.logo-img{width:36px;height:36px} /* Logo displayed as-is (white on dark bg) */
+.logo{font-size:20px;font-weight:700;color:#ffffff;letter-spacing:1px}
+.logo span{font-weight:400;color:var(--muted);font-size:12px;margin-left:10px;letter-spacing:normal}
+.header-right{display:flex;gap:12px;align-items:center}
+.nav-tabs{display:flex;gap:4px;align-items:center}
+.nav-tab{padding:6px 14px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;border-radius:4px;transition:0.2s}
+.nav-tab:hover{background:var(--hover);color:var(--text)}
+.nav-tab.active{background:var(--hover);color:#ffffff}
+.badge{border:1px solid var(--border);border-radius:4px;padding:4px 10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.badge.running{border-style:dashed;color:#ffffff;border-color:var(--muted);animation:pulse 2s infinite}
+.badge.error{border-color:var(--err);color:var(--err)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+/* CONTROLS */
+.controls{padding:16px 32px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg)}
+input[type=text],select,input[type=date],input[type=number]{background:var(--bg);border:1px solid var(--border);color:#ffffff;padding:8px 12px;border-radius:4px;font-size:12px;font-family:inherit;outline:none;transition:border-color 0.2s}
+input:focus,select:focus{border-color:var(--muted)}
+input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
+.btn{padding:8px 16px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s}
+.btn-run{background:#ffffff;color:var(--bg);border-color:#ffffff}
+.btn-run:hover{opacity:0.9}
+.btn-run:disabled{opacity:0.3;cursor:not-allowed}
+.btn-stop{border-color:var(--muted);color:var(--muted)}
+.btn-stop:hover{background:var(--hover);color:#ffffff}
+.btn:hover:not(.btn-run){background:var(--hover)}
+
+/* LAYOUT */
+.main{display:grid;grid-template-columns:320px 1fr;gap:0;height:calc(100vh - 130px);overflow:hidden}
+
+/* LEFT PANEL */
+.left{border-right:1px solid var(--border);overflow-y:auto;padding:20px;background:var(--bg);display:flex;flex-direction:column;gap:20px;min-height:0}
+.section-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px}
+
+/* PHASES */
+.phases{display:flex;flex-direction:column;gap:8px}
+.phase{display:flex;align-items:center;gap:12px;padding:12px;border-radius:6px;background:var(--card);border:1px solid transparent;font-size:12px;transition:0.3s}
+.phase.active{border-color:var(--border);background:var(--hover)}
+.phase.done{opacity:0.7}
+.phase.error{border:1px solid var(--err);background:rgba(255,107,107,0.05)}
+.phase-icon{font-family:monospace;font-size:12px;color:var(--muted)}
+.phase.active .phase-icon{color:#ffffff}
+.phase.done .phase-icon{content:'✓'}
+.phase-text{display:flex;flex-direction:column;flex:1}
+.phase-msg{font-size:10px;color:var(--muted);text-align:left}
+
+/* CATEGORIES (ACCORDION) */
+.cats-accordion{display:flex;flex-direction:column;gap:8px}
+.acc-group{background:var(--card);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.acc-header{padding:10px 12px;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;display:flex;justify-content:space-between;background:var(--hover)}
+.acc-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border)}
+.cat-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.cat-item input[type=checkbox]{accent-color:#ffffff;cursor:pointer}
+
+/* PROGRESS BAR */
+.progress-container{width:100%;height:4px;background:var(--card);border-radius:2px;margin-bottom:16px;overflow:hidden}
+.progress-bar{height:100%;background:#ffffff;width:0%;transition:width 0.4s ease}
+
+
+/* LOG */
+.log-box{background:var(--card);border:1px solid var(--border);border-radius:4px;min-height:100px;max-height:300px;overflow-y:auto;padding:12px;font-size:11px;font-family:'Courier New',monospace;color:var(--muted)}
+.log-line{padding:3px 0;line-height:1.4}
+.log-line.info{color:var(--muted)}
+.log-line.ok{color:#ffffff}
+.log-line.warn{color:#ffffff;font-style:italic}
+.log-line.err{color:var(--err);font-weight:bold}
+
+/* RIGHT PANEL */
+.right{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.tab-content{flex:1;overflow-y:auto;padding:24px 32px;display:none}
+.tab-content.active{display:block}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat{border-bottom:1px solid var(--border);padding-bottom:16px}
+.stat-val{font-size:24px;font-weight:300;color:#ffffff;font-family:monospace}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+
+/* IDEA CARDS */
+.ideas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.idea-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;transition:all 0.2s ease;animation:fadeIn 0.5s ease;display:flex;flex-direction:column;gap:12px;position:relative;max-height:240px;overflow:hidden}
+.idea-card .expand-btn{position:absolute;bottom:0;left:0;right:0;padding:20px 0 10px;text-align:center;background:linear-gradient(transparent,var(--card) 50%);cursor:pointer;font-size:11px;color:var(--muted);letter-spacing:0.5px;border:none;font-family:inherit}
+.idea-card .expand-btn:hover{color:var(--active)}
+.idea-card.short{max-height:none;overflow:visible}
+.idea-card.short .expand-btn{display:none}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.idea-card:hover{border-color:#555;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+.idea-card.bookmarked{border-left:3px solid rgba(255,255,255,0.6)}
+.idea-field{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.idea-title{font-size:14px;font-weight:600;color:var(--active);line-height:1.4;padding-right:28px}
+.idea-meta{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.chip{font-size:10px;padding:2px 8px;border-radius:2px;border:1px solid var(--border);color:var(--muted);text-transform:uppercase}
+.idea-abstract{font-size:12px;color:var(--muted);line-height:1.5;font-style:italic;padding-left:10px;border-left:2px solid var(--border)}
+.idea-why{font-size:12px;color:var(--text);line-height:1.5}
+.idea-insp{font-size:10px;color:var(--muted);font-family:monospace}
+.idea-insp a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)}
+.idea-insp a:hover{color:#ffffff;border-color:#ffffff}
+.idea-method,.idea-steps{font-size:11px;color:var(--text);line-height:1.5;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:4px;border:1px solid var(--border)}
+.idea-method-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+
+/* BOOKMARK BUTTON */
+.bookmark-btn{position:absolute;top:12px;right:12px;background:none;border:none;font-size:16px;cursor:pointer;color:#ffffff;opacity:0.5;transition:opacity 0.2s;padding:4px;line-height:1}
+.bookmark-btn:hover,.bookmark-btn.active{opacity:1}
+
+/* CARD ACTION BUTTONS */
+.idea-actions{display:flex;gap:8px;margin-top:auto;flex-wrap:wrap;align-items:center}
+.btn-sm{padding:4px 10px;border-radius:3px;border:1px solid var(--border);background:var(--bg);color:var(--muted);font-family:inherit;font-size:10px;cursor:pointer;transition:all 0.2s;text-transform:uppercase;letter-spacing:0.5px}
+.btn-sm:hover{background:var(--hover);color:var(--text)}
+
+/* NOVELTY INDICATOR */
+.novelty-result{font-size:11px;margin-top:4px}
+.novelty-result.novel{color:#66cc66}
+.novelty-result.similar{color:#cccc66}
+.novelty-result.exists{color:#ff6b6b}
+.novelty-result a{color:inherit;text-decoration:none;font-size:10px;display:block;margin-top:2px;opacity:0.7;border-bottom:1px solid currentColor}
+.novelty-result a:hover{opacity:1}
+
+/* RESEARCH CONTEXT */
+.context-toggle{padding:6px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:4px}
+.context-toggle:hover{background:var(--hover);color:var(--text)}
+.context-wrapper{width:100%;overflow:hidden;max-height:0;transition:max-height 0.3s ease;order:99}
+.context-wrapper.open{max-height:100px}
+.context-wrapper textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:#ffffff;padding:10px 12px;border-radius:4px;font-size:12px;font-family:inherit;outline:none;resize:none;max-height:80px;margin-top:8px;transition:border-color 0.2s}
+.context-wrapper textarea:focus{border-color:var(--muted)}
+
+/* DEEP DIVE MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.visible{display:flex}
+.modal-content{max-width:700px;width:100%;margin:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;max-height:80vh;overflow-y:auto;padding:32px;position:relative}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px}
+.modal-close:hover{color:#ffffff}
+.modal-title{font-size:16px;font-weight:600;color:var(--active);margin-bottom:20px;padding-right:32px;line-height:1.4}
+.modal-section{margin-bottom:20px}
+.modal-section-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.modal-section p,.modal-section li{font-size:13px;color:var(--text);line-height:1.6}
+.modal-section ol,.modal-section ul{padding-left:20px}
+.modal-section li{margin-bottom:4px}
+.modal-spinner{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+.modal-spinner::before{content:'';display:block;width:32px;height:32px;border:2px solid var(--border);border-top-color:#ffffff;border-radius:50%;margin:0 auto 16px;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* SHORTLIST EXPORT */
+.shortlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.shortlist-header .section-title{margin-bottom:0}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#555}
+
+.empty{text-align:center;padding:80px 20px;color:var(--muted);font-size:13px}
+.empty span{font-size:24px;display:block;margin-bottom:16px;opacity:0.5}
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;align-items:center}
+.welcome-guide{grid-column:1/-1;padding:20px 0}
+.session-item{padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all 0.2s;margin-bottom:10px}
+.session-item:hover{border-color:#555;transform:translateX(4px)}
+
+/* WARNING BANNER */
+.warning-banner{background:rgba(255,107,107,0.1);border:1px solid var(--err);border-radius:4px;padding:12px 16px;margin:0 32px 16px;color:var(--err);font-size:12px;display:none}
+.warning-banner.visible{display:block}
+
+/* PRINT STYLES */
+@media print{
+  body{background:#fff;color:#222;overflow:visible}
+  .header,.controls,.left,.tabs,.context-wrapper,.modal-overlay,
+  #tab-ideas,#tab-trends,.bookmark-btn,.idea-actions,.novelty-result{display:none!important}
+  #tab-shortlist{display:block!important}
+  #tab-shortlist .ideas-grid{display:block}
+  #tab-shortlist .idea-card{break-inside:avoid;border:1px solid #ccc;margin-bottom:16px;page-break-inside:avoid;box-shadow:none;transform:none}
+  #tab-shortlist .idea-card *{color:#222!important}
+  #tab-shortlist .chip{border-color:#999}
+  #tab-shortlist .idea-field,#tab-shortlist .idea-meta{display:none!important}
+  .main{display:block;height:auto}
+  .right{display:block}
+  .shortlist-header .btn{display:none}
+  .shortlist-header .section-title{color:#222}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-container">
+    <img src="/static/logo.png" class="logo-img" onerror="this.style.display='none'" alt="Logo">
+    <span class="logo">ScholarScout <span>v1.0</span></span>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="showTab('ideas')">Ideas</div>
+    <div class="nav-tab" onclick="showTab('recent')">Recent</div>
+    <div class="nav-tab" onclick="showTab('shortlist')">Shortlist <span id="shortlistCount" style="font-size:10px;opacity:0.6"></span></div>
+    <div class="nav-tab" onclick="showTab('settings')">Settings</div>
+  </div>
+  <div class="header-right">
+    <span class="badge" id="statusBadge">Idle</span>
+    <span class="badge" id="modelBadge" style="border:none;font-size:10px"></span>
+  </div>
+</div>
+
+<div class="controls">
+  <input type="date" id="dateFrom" title="Start date">
+  <span style="color:var(--muted);font-size:11px">TO</span>
+  <input type="date" id="dateTo" title="End date">
+  <input type="number" id="maxIdeas" value="50" min="5" max="200" style="width:72px" title="Max Ideas">
+  <select id="langSelect" title="Output Language">
+    <option value="en">English</option>
+    <option value="id">Bahasa Indonesia</option>
+  </select>
+  <button class="context-toggle" id="ctxToggle" title="Research Context">
+    <span>▤</span> Context
+  </button>
+  <button class="btn btn-run" id="btnRun" onclick="startPipeline()">Run Pipeline</button>
+  <button class="btn btn-stop" id="btnStop" onclick="stopPipeline()" style="display:none">Stop</button>
+  <select id="approachSelect" title="Research Approach">
+    <option value="any">Any Approach</option>
+    <option value="computational">Computational / AI</option>
+    <option value="experimental">Experimental / Lab</option>
+    <option value="clinical">Clinical / Field Study</option>
+    <option value="theoretical">Theoretical / Review</option>
+  </select>
+  <button class="btn" onclick="clearStorage()">Clear Data</button>
+  <div class="context-wrapper" id="ctxWrapper">
+    <textarea id="researchContext" rows="3" placeholder="Describe your research background: expertise, lab, resources, interests..."></textarea>
+  </div>
+</div>
+
+<!-- WARNING BANNER -->
+<div class="warning-banner" id="storageWarning">
+  ⚠ Bookmark tidak tersedia di mode ini (localStorage tidak dapat diakses)
+</div>
+
+<div class="main">
+  <!-- LEFT: Progress -->
+  <div class="left">
+    <div>
+      <div class="section-title">Pipeline Status</div>
+      <div class="progress-container"><div class="progress-bar" id="progBar"></div></div>
+      <div class="phases">
+        <div class="phase" id="ph0"><div class="phase-icon" id="phi0">[ ]</div><div class="phase-text"><div>System Pre-Check</div><div class="phase-msg" id="ph0msg">Pending</div></div></div>
+        <div class="phase" id="ph1"><div class="phase-icon" id="phi1">[ ]</div><div class="phase-text"><div>Scraping Literature</div><div class="phase-msg" id="ph1msg">Pending</div></div></div>
+        <div class="phase" id="ph2"><div class="phase-icon" id="phi2">[ ]</div><div class="phase-text"><div>Trend Analysis</div><div class="phase-msg" id="ph2msg">Pending</div></div></div>
+        <div class="phase" id="ph3"><div class="phase-icon" id="phi3">[ ]</div><div class="phase-text"><div>Idea Generation</div><div class="phase-msg" id="ph3msg">Pending</div></div></div>
+        <div class="phase" id="ph4"><div class="phase-icon" id="phi4">[ ]</div><div class="phase-text"><div>Export Results</div><div class="phase-msg" id="ph4msg">Pending</div></div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Sources to Scan</div>
+      <div class="cats-container" id="catsContainer">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title">Console</div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Results -->
+  <div class="right">
+    <!-- IDEAS TAB -->
+    <div class="tab-content active" id="tab-ideas">
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="sPapers">0</div><div class="stat-lbl">Papers Analyzed</div></div>
+        <div class="stat"><div class="stat-val" id="sIdeas">0</div><div class="stat-lbl">Ideas Generated</div></div>
+        <div class="stat"><div class="stat-val" id="sCats">0</div><div class="stat-lbl">Categories</div></div>
+        <div class="stat"><div class="stat-val" id="sCost">-</div><div class="stat-lbl">Time</div></div>
+      </div>
+      <div class="filter-bar">
+        <input type="text" id="ideaSearch" placeholder="Search ideas..." style="flex:1">
+        <select id="ideaFilter">
+          <option value="">All Levels</option>
+          <option value="Undergraduate">Undergraduate</option>
+          <option value="Master's">Master's</option>
+          <option value="PhD">PhD</option>
+        </select>
+      </div>
+      <div class="ideas-grid" id="ideasGrid">
+        <div class="welcome-guide" id="welcomeGuide">
+          <div style="text-align:center;margin-bottom:32px">
+            <div style="font-size:20px;font-weight:600;color:#ffffff;margin-bottom:8px">Welcome to ScholarScout</div>
+            <p style="color:var(--muted);font-size:13px">AI-powered research idea discovery for students and researchers</p>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:32px">
+            <div style="padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px">
+              <div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:6px">1. Select Categories</div>
+              <p style="font-size:11px;color:var(--muted);line-height:1.5">Choose research fields from the left panel. 80+ categories across 10 disciplines.</p>
+            </div>
+            <div style="padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px">
+              <div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:6px">2. Set Your Context</div>
+              <p style="font-size:11px;color:var(--muted);line-height:1.5">Click "Context" to describe your background. Choose your research approach (AI, Lab, Clinical, etc).</p>
+            </div>
+            <div style="padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px">
+              <div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:6px">3. Run Pipeline</div>
+              <p style="font-size:11px;color:var(--muted);line-height:1.5">Click "Run Pipeline" to fetch papers, analyze trends, and generate tailored research ideas.</p>
+            </div>
+            <div style="padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px">
+              <div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:6px">4. Explore & Bookmark</div>
+              <p style="font-size:11px;color:var(--muted);line-height:1.5">Click "Show more" for full details. Bookmark favorites. Use "Deep Dive" for methodology analysis.</p>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:32px">
+            <div style="text-align:center;padding:12px">
+              <div style="font-size:18px;font-weight:300;color:#fff;font-family:monospace">3</div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Data Sources</div>
+            </div>
+            <div style="text-align:center;padding:12px">
+              <div style="font-size:18px;font-weight:300;color:#fff;font-family:monospace">80+</div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Categories</div>
+            </div>
+            <div style="text-align:center;padding:12px">
+              <div style="font-size:18px;font-weight:300;color:#fff;font-family:monospace">6</div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">LLM Providers</div>
+            </div>
+            <div style="text-align:center;padding:12px">
+              <div style="font-size:18px;font-weight:300;color:#fff;font-family:monospace">5</div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Research Approaches</div>
+            </div>
+          </div>
+          <div style="text-align:center;padding:16px;border-top:1px solid var(--border)">
+            <p style="font-size:11px;color:var(--muted);margin-bottom:8px">ScholarScout is free and open source</p>
+            <a href="https://ko-fi.com/scholarscout" target="_blank" style="display:inline-block;padding:6px 16px;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:11px;text-decoration:none;transition:0.2s" onmouseover="this.style.borderColor='#fff';this.style.color='#fff'" onmouseout="this.style.borderColor='';this.style.color=''">&#9829; Support (Ko-fi)</a>
+            <span style="margin:0 8px;color:var(--border)">·</span>
+            <a href="https://saweria.co/scholarscout" target="_blank" style="display:inline-block;padding:6px 16px;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:11px;text-decoration:none;transition:0.2s" onmouseover="this.style.borderColor='#fff';this.style.color='#fff'" onmouseout="this.style.borderColor='';this.style.color=''">&#9829; Support (Saweria)</a>
+            <span style="margin:0 8px;color:var(--border)">·</span>
+            <a href="https://github.com/neej4/ScholarScout" target="_blank" style="color:var(--muted);font-size:11px;text-decoration:none;border-bottom:1px solid var(--border)">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECENT TAB -->
+    <div class="tab-content" id="tab-recent">
+      <div class="section-title" style="margin-bottom:16px">Recent Pipeline Results</div>
+      <div class="ideas-grid" id="recentGrid">
+        <div class="empty"><span>▦</span>No previous results found</div>
+      </div>
+    </div>
+
+    <!-- SHORTLIST TAB -->
+    <div class="tab-content" id="tab-shortlist">
+      <div class="shortlist-header">
+        <div class="section-title">Bookmarked Ideas</div>
+        <button class="btn" onclick="exportShortlistPDF()">Export PDF</button>
+      </div>
+      <div class="ideas-grid" id="shortlistGrid">
+        <div class="empty"><span>◆</span>Bookmark ideas to build your shortlist</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab-content" id="tab-settings">
+      <div class="section-title" style="margin-bottom:24px">LLM Provider Configuration</div>
+      <div style="max-width:500px;display:flex;flex-direction:column;gap:16px">
+        <div>
+          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">Provider</label>
+          <select id="settProvider" style="width:100%">
+            <option value="gemini">Google Gemini (Free)</option>
+            <option value="groq">Groq (Free)</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="openai">OpenAI</option>
+            <option value="ollama">Ollama (Local)</option>
+            <option value="custom">Custom Endpoint</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">API Key</label>
+          <input type="password" id="settApiKey" placeholder="Paste your API key here..." style="width:100%">
+          <div id="settKeyLink" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+        </div>
+        <div>
+          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">Model</label>
+          <input type="text" id="settModel" placeholder="auto" style="width:100%">
+        </div>
+        <div id="settCustomUrl" style="display:none">
+          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">Base URL</label>
+          <input type="text" id="settBaseUrl" placeholder="http://localhost:11434/v1" style="width:100%">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-run" onclick="saveSettings()">Save</button>
+          <button class="btn" onclick="testConnection()">Test Connection</button>
+        </div>
+        <div id="settStatus" style="font-size:12px;padding:10px;border-radius:4px;display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ONBOARDING MODAL -->
+<div class="modal-overlay" id="onboardingModal">
+  <div class="modal-content" style="max-width:520px">
+    <div class="modal-title">Welcome to ScholarScout</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6">Before generating ideas, help us understand your research profile so we can tailor results to your needs.</p>
+    
+    <div class="modal-section">
+      <div class="modal-section-title">Research Approach</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">What type of research methodology are you targeting?</p>
+      <div style="display:flex;flex-direction:column;gap:8px" id="onboardApproach">
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
+          <input type="radio" name="ob_approach" value="any" checked style="accent-color:#fff"> <span><strong>Any Approach</strong> — Show all types of research ideas</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
+          <input type="radio" name="ob_approach" value="computational" style="accent-color:#fff"> <span><strong>Computational / AI</strong> — Machine learning, data science, modeling</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
+          <input type="radio" name="ob_approach" value="experimental" style="accent-color:#fff"> <span><strong>Experimental / Lab</strong> — Wet lab, hardware, physical experiments</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
+          <input type="radio" name="ob_approach" value="clinical" style="accent-color:#fff"> <span><strong>Clinical / Field</strong> — Patient studies, surveys, observational</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
+          <input type="radio" name="ob_approach" value="theoretical" style="accent-color:#fff"> <span><strong>Theoretical / Review</strong> — Meta-analysis, systematic review, frameworks</span>
+        </label>
+      </div>
+    </div>
+    
+    <div class="modal-section">
+      <div class="modal-section-title">Your Research Context (optional)</div>
+      <textarea id="onboardContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:10px;border-radius:4px;font-size:12px;font-family:inherit;resize:none" placeholder="e.g., 3rd year medical student, interested in cardiology, have access to hospital EHR data..."></textarea>
+    </div>
+    
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-run" onclick="completeOnboarding()" style="flex:1">Start Generating</button>
+      <button class="btn" onclick="skipOnboarding()">Skip</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEEP DIVE MODAL -->
+<div class="modal-overlay" id="deepDiveModal" onclick="closeModalOnOverlay(event)">
+  <div class="modal-content" id="deepDiveContent">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div id="deepDiveBody">
+      <div class="modal-spinner">Loading deep dive analysis...</div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/bookmarks.js"></script>
+<script>
+const CAT_GROUPS = [
+  {
+    name: "Computer Science",
+    cats: [
+      {id: "cs.AI", name: "Artificial Intelligence"},
+      {id: "cs.LG", name: "Machine Learning"},
+      {id: "cs.CL", name: "Computation & Language (NLP)"},
+      {id: "cs.CV", name: "Computer Vision"},
+      {id: "cs.RO", name: "Robotics"},
+      {id: "cs.CR", name: "Cryptography & Security"},
+      {id: "cs.SE", name: "Software Engineering"},
+      {id: "cs.NE", name: "Neural & Evolutionary Computing"},
+      {id: "cs.IR", name: "Information Retrieval"},
+      {id: "cs.HC", name: "Human-Computer Interaction"},
+      {id: "cs.DB", name: "Databases"},
+      {id: "cs.DC", name: "Distributed Computing"}
+    ]
+  },
+  {
+    name: "Medicine & Health",
+    cats: [
+      {id: "med.cardio", name: "Cardiology"},
+      {id: "med.neuro", name: "Neurology & Psychiatry"},
+      {id: "med.onco", name: "Oncology"},
+      {id: "med.pharma", name: "Pharmacology & Drug Discovery"},
+      {id: "med.public", name: "Public Health & Epidemiology"},
+      {id: "med.surgery", name: "Surgery & Surgical Tech"},
+      {id: "med.radiology", name: "Radiology & Medical Imaging"},
+      {id: "med.genetics", name: "Medical Genetics"},
+      {id: "med.pediatrics", name: "Pediatrics"},
+      {id: "med.infectious", name: "Infectious Diseases"}
+    ]
+  },
+  {
+    name: "Biology & Life Sciences",
+    cats: [
+      {id: "q-bio.GN", name: "Genomics & Bioinformatics"},
+      {id: "q-bio.NC", name: "Neurons & Cognition"},
+      {id: "q-bio.QM", name: "Quantitative Methods (Bio)"},
+      {id: "bio.ecology", name: "Ecology & Evolution"},
+      {id: "bio.molecular", name: "Molecular Biology"},
+      {id: "bio.microbio", name: "Microbiology"},
+      {id: "bio.biotech", name: "Biotechnology"},
+      {id: "bio.marine", name: "Marine Biology"}
+    ]
+  },
+  {
+    name: "Physics & Astronomy",
+    cats: [
+      {id: "physics.med-ph", name: "Medical Physics"},
+      {id: "physics.optics", name: "Optics & Photonics"},
+      {id: "physics.quantum", name: "Quantum Physics"},
+      {id: "physics.astro", name: "Astrophysics"},
+      {id: "physics.condensed", name: "Condensed Matter"},
+      {id: "physics.nuclear", name: "Nuclear Physics"},
+      {id: "physics.plasma", name: "Plasma Physics"}
+    ]
+  },
+  {
+    name: "Engineering",
+    cats: [
+      {id: "eess.AS", name: "Audio & Speech Processing"},
+      {id: "eess.IV", name: "Image & Video Processing"},
+      {id: "eess.SP", name: "Signal Processing"},
+      {id: "eng.civil", name: "Civil & Structural Engineering"},
+      {id: "eng.mechanical", name: "Mechanical Engineering"},
+      {id: "eng.chemical", name: "Chemical Engineering"},
+      {id: "eng.materials", name: "Materials Science"},
+      {id: "eng.biomedical", name: "Biomedical Engineering"},
+      {id: "eng.environmental", name: "Environmental Engineering"}
+    ]
+  },
+  {
+    name: "Chemistry",
+    cats: [
+      {id: "chem.organic", name: "Organic Chemistry"},
+      {id: "chem.inorganic", name: "Inorganic Chemistry"},
+      {id: "chem.analytical", name: "Analytical Chemistry"},
+      {id: "chem.physical", name: "Physical Chemistry"},
+      {id: "chem.biochem", name: "Biochemistry"},
+      {id: "chem.computational", name: "Computational Chemistry"}
+    ]
+  },
+  {
+    name: "Mathematics & Statistics",
+    cats: [
+      {id: "stat.ML", name: "Statistical Machine Learning"},
+      {id: "math.OC", name: "Optimization & Control"},
+      {id: "math.ST", name: "Statistics Theory"},
+      {id: "math.NA", name: "Numerical Analysis"},
+      {id: "math.CO", name: "Combinatorics & Graph Theory"},
+      {id: "math.AP", name: "Applied Mathematics"}
+    ]
+  },
+  {
+    name: "Social Sciences",
+    cats: [
+      {id: "soc.psychology", name: "Psychology & Cognitive Science"},
+      {id: "soc.economics", name: "Economics & Finance"},
+      {id: "soc.political", name: "Political Science"},
+      {id: "soc.sociology", name: "Sociology"},
+      {id: "soc.education", name: "Education & Pedagogy"},
+      {id: "soc.communication", name: "Communication & Media"},
+      {id: "soc.law", name: "Law & Legal Studies"}
+    ]
+  },
+  {
+    name: "Earth & Environmental",
+    cats: [
+      {id: "earth.climate", name: "Climate Science"},
+      {id: "earth.geology", name: "Geology & Geophysics"},
+      {id: "earth.ocean", name: "Oceanography"},
+      {id: "earth.atmospheric", name: "Atmospheric Science"},
+      {id: "earth.remote", name: "Remote Sensing & GIS"},
+      {id: "earth.sustainability", name: "Sustainability & Energy"}
+    ]
+  },
+  {
+    name: "Agriculture & Food",
+    cats: [
+      {id: "agri.crop", name: "Crop Science & Agronomy"},
+      {id: "agri.animal", name: "Animal Science & Veterinary"},
+      {id: "agri.food", name: "Food Science & Technology"},
+      {id: "agri.forestry", name: "Forestry & Natural Resources"},
+      {id: "agri.aquaculture", name: "Aquaculture & Fisheries"}
+    ]
+  }
+];
+
+function toggleAcc(el) {
+  const body = el.nextElementSibling;
+  body.style.display = body.style.display === 'none' ? 'flex' : 'none';
+}
+
+function initCategories() {
+  const c = document.getElementById('catsContainer');
+  c.className = "cats-accordion";
+  c.innerHTML = CAT_GROUPS.map((g, i) => `
+    <div class="acc-group">
+      <div class="acc-header" onclick="toggleAcc(this)">
+        <span>${g.name}</span>
+        <span style="font-size:10px;color:var(--muted)">${g.cats.length}</span>
+      </div>
+      <div class="acc-body" style="display: ${i===0?'flex':'none'};">
+        ${g.cats.map(cat => `
+          <label class="cat-item">
+            <input type="checkbox" value="${cat.id}" ${i===0?'checked':''}>
+            ${cat.name}
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+initCategories();
+
+// Set default dates
+(function(){
+  const now=new Date();
+  document.getElementById('dateTo').value=now.toISOString().slice(0,10);
+  document.getElementById('dateFrom').value=new Date(now-10*864e5).toISOString().slice(0,10);
+})();
+
+// ── Language Selection Persistence ──
+(function() {
+  const langSelect = document.getElementById('langSelect');
+  const savedLanguage = sessionStorage.getItem('scholarscout_language');
+  if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'id')) {
+    langSelect.value = savedLanguage;
+  }
+  langSelect.addEventListener('change', function() {
+    sessionStorage.setItem('scholarscout_language', this.value);
+  });
+})();
+
+// ── Approach Selection Persistence ──
+(function() {
+  const approachSelect = document.getElementById('approachSelect');
+  const saved = sessionStorage.getItem('scholarscout_approach');
+  if (saved) approachSelect.value = saved;
+  approachSelect.addEventListener('change', function() {
+    sessionStorage.setItem('scholarscout_approach', this.value);
+  });
+})();
+let running = false, es = null, ideas = [], startTime = null, currentLanguage = 'en';
+
+// HTML-escape utility to prevent XSS (top-level so available everywhere)
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ── localStorage availability check (reuse variable from bookmarks.js, show UI banner) ──
+if (!isLocalStorageAvailable()) {
+  const banner = document.getElementById('storageWarning');
+  if (banner) banner.classList.add('visible');
+}
+
+// ── Bookmarks (UI integration) ──
+// Core bookmark functions are in bookmarks.js
+function toggleBookmark(title, btnEl) {
+  // Check if localStorage is available
+  if (!isLocalStorageAvailable()) {
+    btnEl.disabled = true;
+    btnEl.style.opacity = '0.3';
+    btnEl.style.cursor = 'not-allowed';
+    return;
+  }
+  
+  // Find the full idea object from the ideas array
+  const idea = ideas.find(i => i.idea_title === title);
+  if (!idea) {
+    console.error('Idea not found:', title);
+    return;
+  }
+  
+  if (isBookmarked(title)) {
+    removeBookmark(title);
+    btnEl.classList.remove('active');
+    btnEl.textContent = '◇';
+  } else {
+    // Add language field to idea before bookmarking
+    const ideaWithLanguage = { ...idea, language: currentLanguage };
+    addBookmark(ideaWithLanguage);
+    btnEl.classList.add('active');
+    btnEl.textContent = '◆';
+  }
+  
+  const card = btnEl.closest('.idea-card');
+  if (card) card.classList.toggle('bookmarked', isBookmarked(title));
+  refreshShortlist();
+}
+
+function refreshShortlist() {
+  const grid = document.getElementById('shortlistGrid');
+  const bm = getBookmarks();
+  
+  // Update navbar count
+  const countEl = document.getElementById('shortlistCount');
+  if (countEl) countEl.textContent = bm.length ? `(${bm.length})` : '';
+  if (bm.length === 0) {
+    grid.innerHTML = '<div class="empty"><span>◆</span>Bookmark ideas to build your shortlist</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  bm.forEach(idea => {
+    const title = idea.idea_title || 'Untitled';
+    const card = document.createElement('div');
+    card.className = 'idea-card bookmarked';
+    card.innerHTML = `
+      <div class="idea-field">${escapeHtml(idea.field || 'Uncategorized')}</div>
+      <div class="idea-title">${escapeHtml(title)}</div>
+      <div class="idea-meta">
+        <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
+        <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+      </div>
+      ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
+      <div class="idea-actions">
+        <button class="btn-sm" data-action="novelty">Check Novelty</button>
+      </div>
+      <button class="expand-btn" data-action="expand">Show more ▾</button>`;
+    
+    grid.appendChild(card);
+    
+    // Check if needs expand
+    requestAnimationFrame(() => {
+      if (card.scrollHeight <= 240) card.classList.add('short');
+    });
+    
+    // Wire expand
+    const expandBtn = card.querySelector('[data-action="expand"]');
+    if (expandBtn) {
+      expandBtn.addEventListener('click', () => openIdeaDetail(idea));
+    }
+    // Wire novelty
+    const noveltyBtn = card.querySelector('[data-action="novelty"]');
+    if (noveltyBtn) {
+      noveltyBtn.addEventListener('click', function() { checkNovelty(title, this); });
+    }
+  });
+}
+
+// Initialize shortlist on page load to show persisted bookmarks
+refreshShortlist();
+
+function exportShortlistPDF() { window.print(); }
+
+// ── Research Context (DOM-safe initialization) ──
+function initContextToggle() {
+  const ctxToggle = document.getElementById('ctxToggle');
+  const ctxWrapper = document.getElementById('ctxWrapper');
+  if (ctxToggle && ctxWrapper) {
+    ctxToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      ctxWrapper.classList.toggle('open');
+    });
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initContextToggle);
+} else {
+  initContextToggle();
+}
+
+// ── Deep Dive Modal ──
+function openDeepDive(idea, triggerBtn) {
+  const modal = document.getElementById('deepDiveModal');
+  const body = document.getElementById('deepDiveBody');
+  
+  // Disable the Deep Dive button (passed directly from event listener if available)
+  const deepDiveBtn = triggerBtn || (function() {
+    // Fallback: query by data-title (safe attribute)
+    const cards = document.querySelectorAll('.idea-card');
+    for (const c of cards) {
+      if (c.getAttribute('data-title') === idea.idea_title) {
+        return c.querySelector('[data-action="deepdive"]');
+      }
+    }
+    return null;
+  })();
+  if (deepDiveBtn) {
+    deepDiveBtn.disabled = true;
+  }
+  
+  // Show modal with spinner
+  body.innerHTML = '<div class="modal-spinner">Loading deep dive analysis...</div>';
+  modal.classList.add('visible');
+  
+  // Create AbortController for 30-second timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  
+  fetch('/api/deepdive', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(idea),
+    signal: controller.signal
+  })
+  .then(r => {
+    clearTimeout(timeoutId);
+    if (!r.ok) {
+      // HTTP error (including 500)
+      return r.json().catch(() => ({error: 'Server error'})).then(data => {
+        throw new Error(data.error || 'Server error');
+      });
+    }
+    return r.json();
+  })
+  .then(data => {
+    // Success: render content (escape title to prevent XSS)
+    body.innerHTML = `
+      <div class="modal-title">${escapeHtml(idea.idea_title || 'Deep Dive')}</div>
+      ${renderModalSection('Research Outline', data.outline, 'ol')}
+      ${renderModalSection('Methodology', data.methodology, 'p')}
+      ${renderModalSection('Recommended Datasets', data.datasets, 'ul')}
+      ${renderModalSection('Key References', data.references, 'ul')}
+      ${renderModalSection('Estimated Timeline', data.timeline, 'p')}
+      ${renderModalSection('Recommended Tools', data.tools, 'ul')}`;
+    if (deepDiveBtn) deepDiveBtn.disabled = false;
+  })
+  .catch(err => {
+    clearTimeout(timeoutId);
+    
+    // Determine error message
+    let errorMsg;
+    if (err.name === 'AbortError') {
+      // Timeout
+      errorMsg = 'Waktu habis. Silakan coba lagi.';
+    } else {
+      // HTTP 500 or network error
+      errorMsg = 'Gagal memuat Deep Dive. Silakan coba lagi.';
+    }
+    
+    // Show error in modal
+    body.innerHTML = `<div class="modal-title">Error</div><p style="color:var(--err);font-size:13px">${escapeHtml(errorMsg)}</p>`;
+    
+    // Re-enable the button
+    if (deepDiveBtn) {
+      deepDiveBtn.disabled = false;
+    }
+  });
+}
+function renderModalSection(title, content, type) {
+  if (!content) return '';
+  let html = `<div class="modal-section"><div class="modal-section-title">${escapeHtml(title)}</div>`;
+  if (type === 'p') {
+    html += `<p>${escapeHtml(content)}</p>`;
+  } else if (type === 'ol' || type === 'ul') {
+    const items = Array.isArray(content) ? content : [content];
+    html += `<${type}>${items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</${type}>`;
+  }
+  return html + '</div>';
+}
+function closeModal() {
+  document.getElementById('deepDiveModal').classList.remove('visible');
+}
+function closeModalOnOverlay(event) {
+  // Only close if clicking on the overlay itself, not the content
+  if (event.target.id === 'deepDiveModal') {
+    closeModal();
+  }
+}
+
+// ── Idea Detail Popup ──
+function openIdeaDetail(idea) {
+  const modal = document.getElementById('deepDiveModal');
+  const body = document.getElementById('deepDiveBody');
+  
+  const ids = (idea.inspired_by || '').split(';').map(s => s.trim()).filter(Boolean);
+  const links = (idea.inspiration_link || '').split(';').map(s => s.trim()).filter(Boolean);
+  const refs = ids.map((id, i) => `<a href="${escapeHtml(links[i] || '#')}" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(id)}</a>`).join(', ');
+  
+  const nextSteps = (idea.next_steps || '').split('|').map(s => s.trim()).filter(Boolean);
+  const keyPapers = (idea.key_papers || '').split('|').map(s => s.trim()).filter(Boolean);
+  
+  body.innerHTML = `
+    <div class="modal-title">${escapeHtml(idea.idea_title || 'Untitled')}</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <span class="chip">${escapeHtml(idea.field || '')}</span>
+      <span class="chip">${escapeHtml(idea.difficulty || '')}</span>
+      <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+    </div>
+    ${idea.abstract ? `<div class="modal-section"><div class="modal-section-title">Abstract</div><p>${escapeHtml(idea.abstract)}</p></div>` : ''}
+    ${idea.why_hard ? `<div class="modal-section"><div class="modal-section-title">Why It's Hard</div><p>${escapeHtml(idea.why_hard)}</p></div>` : ''}
+    ${idea.methodology_hint ? `<div class="modal-section"><div class="modal-section-title">Methodology</div><p>${escapeHtml(idea.methodology_hint)}</p></div>` : ''}
+    ${nextSteps.length ? `<div class="modal-section"><div class="modal-section-title">Next Steps</div><ol>${nextSteps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol></div>` : ''}
+    ${keyPapers.length ? `<div class="modal-section"><div class="modal-section-title">Key Papers to Read</div><ul>${keyPapers.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul></div>` : ''}
+    ${idea.resources_needed ? `<div class="modal-section"><div class="modal-section-title">Resources Needed</div><p>${escapeHtml(idea.resources_needed)}</p></div>` : ''}
+    ${refs ? `<div class="modal-section"><div class="modal-section-title">Inspired By</div><p style="font-family:monospace;font-size:11px">${refs}</p></div>` : ''}
+    <div style="margin-top:12px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:10px">
+      <button class="btn btn-run" id="modalDeepDiveBtn">Deep Dive ↓</button>
+      <button class="btn" id="modalExportBtn">Export PDF</button>
+    </div>
+  `;
+  
+  modal.classList.add('visible');
+  
+  // Wire Deep Dive button inside popup
+  const ddBtn = document.getElementById('modalDeepDiveBtn');
+  if (ddBtn) {
+    ddBtn.addEventListener('click', function() {
+      this.disabled = true;
+      this.textContent = 'Loading...';
+      openDeepDive(idea, this);
+    });
+  }
+  
+  // Wire Export PDF button — prints only this idea's detail
+  const exportBtn = document.getElementById('modalExportBtn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function() {
+      const content = document.getElementById('deepDiveBody');
+      const printWin = window.open('', '_blank');
+      printWin.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(idea.idea_title || 'Research Idea')}</title>
+        <style>body{font-family:Inter,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#222;line-height:1.6}
+        h1{font-size:18px;margin-bottom:16px}h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#666;margin:20px 0 8px}
+        p,li{font-size:13px}ol,ul{padding-left:20px}li{margin-bottom:4px}
+        .meta{display:flex;gap:8px;margin-bottom:16px}.chip{font-size:10px;padding:2px 8px;border:1px solid #ccc;border-radius:2px}
+        .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#999}</style></head><body>`);
+      printWin.document.write(`<h1>${escapeHtml(idea.idea_title || 'Untitled')}</h1>`);
+      printWin.document.write(`<div class="meta"><span class="chip">${escapeHtml(idea.field || '')}</span><span class="chip">${escapeHtml(idea.difficulty || '')}</span><span class="chip">${escapeHtml(idea.cost_estimate || '')}</span></div>`);
+      if (idea.abstract) printWin.document.write(`<h2>Abstract</h2><p>${escapeHtml(idea.abstract)}</p>`);
+      if (idea.why_hard) printWin.document.write(`<h2>Why It's Hard</h2><p>${escapeHtml(idea.why_hard)}</p>`);
+      if (idea.methodology_hint) printWin.document.write(`<h2>Methodology</h2><p>${escapeHtml(idea.methodology_hint)}</p>`);
+      if (idea.next_steps) { const steps = idea.next_steps.split('|').map(s=>s.trim()).filter(Boolean); if(steps.length) printWin.document.write(`<h2>Next Steps</h2><ol>${steps.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ol>`); }
+      if (idea.key_papers) { const papers = idea.key_papers.split('|').map(s=>s.trim()).filter(Boolean); if(papers.length) printWin.document.write(`<h2>Key Papers</h2><ul>${papers.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ul>`); }
+      if (idea.resources_needed) printWin.document.write(`<h2>Resources Needed</h2><p>${escapeHtml(idea.resources_needed)}</p>`);
+      printWin.document.write(`<div class="footer">Generated by ScholarScout — scholarscout.app</div>`);
+      printWin.document.write('</body></html>');
+      printWin.document.close();
+      printWin.print();
+    });
+  }
+}
+
+// ── Novelty Check ──
+function checkNovelty(title, btnEl) {
+  btnEl.textContent = '...';
+  btnEl.disabled = true;
+  fetch('/api/novelty', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({idea_title: title})
+  })
+  .then(r => {
+    if (!r.ok && r.status === 503) {
+      // HTTP 503: restore button to active state
+      throw new Error('Service unavailable');
+    }
+    return r.json();
+  })
+  .then(data => {
+    if (data.error) {
+      // Error response: restore button
+      throw new Error(data.error);
+    }
+    const container = btnEl.parentElement;
+    btnEl.remove();
+    const res = document.createElement('div');
+    res.className = 'novelty-result';
+    if (data.status === 'novel') {
+      res.classList.add('novel');
+      res.textContent = '● Likely Novel';
+    } else if (data.status === 'similar') {
+      res.classList.add('similar');
+      let html = '● Similar Exists';
+      if (data.papers && data.papers.length) {
+        html += data.papers.map(p => `<a href="${escapeHtml(p.url || '#')}" target="_blank">${escapeHtml(p.title || p.url || '')}</a>`).join('');
+      }
+      res.innerHTML = html;
+    } else {
+      res.classList.add('exists');
+      let html = '● Already Researched';
+      if (data.papers && data.papers.length) {
+        html += data.papers.map(p => `<a href="${escapeHtml(p.url || '#')}" target="_blank">${escapeHtml(p.title || p.url || '')}</a>`).join('');
+      }
+      res.innerHTML = html;
+    }
+    container.insertBefore(res, container.firstChild);
+  })
+  .catch(() => {
+    // On error (including HTTP 503): restore button to active state
+    btnEl.textContent = 'Check Novelty';
+    btnEl.disabled = false;
+  });
+}
+
+function showTab(name) {
+  document.querySelectorAll('.nav-tab,.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.nav-tab[onclick="showTab('${name}')"]`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+  
+  if (name === 'shortlist') refreshShortlist();
+  if (name === 'recent') loadRecentIdeas();
+}
+
+function setPhase(n, status, msg) {
+  const el = document.getElementById('ph'+n);
+  const ic = document.getElementById('phi'+n);
+  const ms = document.getElementById('ph'+n+'msg');
+  if (!el) return;
+  el.className = 'phase ' + status;
+  if(status === 'done') ic.textContent = '[✓]';
+  else if(status === 'active') ic.textContent = '[~]';
+  else if(status === 'error') ic.textContent = '[!]';
+  else ic.textContent = '[ ]';
+  if (msg) ms.textContent = msg;
+}
+
+function updateProgress(pct) {
+  document.getElementById('progBar').style.width = pct + '%';
+}
+
+function addLog(msg, type='info') {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = `> ${msg}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function addIdeaCard(idea) {
+  const grid = document.getElementById('ideasGrid');
+  if (grid.querySelector('.empty')) grid.innerHTML = '';
+  
+  const ids = (idea.inspired_by || '').split(';').map(s => s.trim()).filter(Boolean);
+  const links = (idea.inspiration_link || '').split(';').map(s => s.trim()).filter(Boolean);
+  const insp = ids.map((id, i) => `<a href="${escapeHtml(links[i] || '#')}" target="_blank">${escapeHtml(id)}</a>`).join(', ');
+  const title = idea.idea_title || 'Untitled';
+  const bm = isBookmarked(title);
+  
+  const card = document.createElement('div');
+  card.className = 'idea-card' + (bm ? ' bookmarked' : '');
+  card.setAttribute('data-title', title);
+  
+  // Disable bookmark button if localStorage is not available
+  const bookmarkDisabled = !isLocalStorageAvailable();
+  
+  card.innerHTML = `
+    <button class="bookmark-btn${bm ? ' active' : ''}" data-action="bookmark" ${bookmarkDisabled ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''}>${bm ? '◆' : '◇'}</button>
+    <div class="idea-field">${escapeHtml(idea.field || 'Uncategorized')}</div>
+    <div class="idea-title">${escapeHtml(title)}</div>
+    <div class="idea-meta">
+      <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
+      <span class="chip">${escapeHtml(idea.cost_estimate || 'Cloud GPU')}</span>
+      ${currentLanguage === 'id' ? '<span class="chip">ID</span>' : ''}
+    </div>
+    ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
+    <div class="idea-why">${escapeHtml(idea.why_hard || '')}</div>
+    ${idea.methodology_hint ? `<div class="idea-method"><span class="idea-method-label">Approach:</span> ${escapeHtml(idea.methodology_hint)}</div>` : ''}
+    ${idea.next_steps ? `<div class="idea-steps"><span class="idea-method-label">Start here:</span> ${escapeHtml(idea.next_steps)}</div>` : ''}
+    ${insp ? `<div class="idea-insp">REF: ${insp}</div>` : ''}
+    <div class="idea-actions">
+      <button class="btn-sm" data-action="novelty">Check Novelty</button>
+    </div>
+    <button class="expand-btn" data-action="expand">Show more ▾</button>`;
+  
+  // Add to grid, then check if card needs expand button
+  grid.prepend(card);
+  requestAnimationFrame(() => {
+    if (card.scrollHeight <= 240) {
+      card.classList.add('short');
+    }
+  });
+  const bookmarkBtn = card.querySelector('[data-action="bookmark"]');
+  if (bookmarkBtn) {
+    bookmarkBtn.addEventListener('click', function() {
+      toggleBookmark(title, this);
+    });
+  }
+  const noveltyBtn = card.querySelector('[data-action="novelty"]');
+  if (noveltyBtn) {
+    noveltyBtn.addEventListener('click', function() {
+      checkNovelty(title, this);
+    });
+  }
+  const expandBtn = card.querySelector('[data-action="expand"]');
+  if (expandBtn) {
+    expandBtn.addEventListener('click', function() {
+      openIdeaDetail(idea);
+    });
+  }
+}
+
+function updateStats() {
+  document.getElementById('sIdeas').textContent = ideas.length;
+}
+
+function handleEvent(ev) {
+  const e = ev.event;
+  if (e === 'ping') return;
+
+  // ── Universal: Log EVERY event to console (kecuali ping) ──
+  if (ev.msg && e !== 'idea') {
+    const typeMap = {
+      'start':'ok', 'ping_start':'info', 'ping_ok':'ok', 'ping_wait':'warn', 'ping_fallback':'warn',
+      'phase':'warn', 'phase1_done':'ok', 'phase2_done':'ok', 'phase2_info':'info',
+      'phase3_done':'ok', 'csv_done':'ok',
+      'cat_start':'info', 'cat_done':'ok', 'cat_skip':'warn', 'cat_fetch_done':'info',
+      'cat_ideas':'ok', 'gen_start':'info',
+      'paper_found':'info', 'trend':'ok',
+      'llm_error':'err', 'fatal_error':'err', 'cat_error':'err', 'trend_error':'err', 'gen_error':'err',
+      'llm_wait':'warn', 'llm_warn':'warn', 'ping_warn':'warn',
+      'done':'ok'
+    };
+    addLog(`[${e.toUpperCase()}] ${ev.msg}`, typeMap[e] || 'info');
+  }
+
+  // ── Phase tracking ──
+  if (e === 'start') {
+    setPhase(0, 'active', 'Pinging LLM...');
+    updateProgress(5);
+    document.getElementById('sPapers').textContent = '0';
+  }
+  else if (e === 'ping_ok') {
+    setPhase(0, 'done', 'LLM Validated');
+    updateProgress(10);
+  }
+  else if (e === 'fatal_error') {
+    // Mark current active phase as error
+    [0,1,2,3,4].forEach(n => {
+      const el = document.getElementById('ph'+n);
+      if (el && el.classList.contains('active')) setPhase(n, 'error', ev.msg || 'Error');
+    });
+    document.getElementById('statusBadge').textContent = 'ERROR';
+    document.getElementById('statusBadge').className = 'badge error';
+    document.getElementById('progBar').style.background = 'var(--err)';
+  }
+  else if (e === 'llm_error') {
+    // Log only, don't stop UI — pipeline may have fallback
+  }
+  else if (e === 'phase') {
+    // Mark previous phases as done
+    for (let i = 0; i < ev.phase; i++) {
+      const prev = document.getElementById('ph'+i);
+      if (prev && !prev.classList.contains('done') && !prev.classList.contains('error')) {
+        setPhase(i, 'done', document.getElementById('ph'+i+'msg').textContent);
+      }
+    }
+    setPhase(ev.phase, 'active', ev.msg);
+    updateProgress(ev.phase * 20 + 10);
+  }
+  else if (e === 'cat_done' || e === 'cat_fetch_done') {
+    // Update papers counter live
+    const cur = parseInt(document.getElementById('sPapers').textContent) || 0;
+    document.getElementById('sPapers').textContent = cur + (ev.count || 0);
+  }
+  else if (e === 'trend') {
+    const cur = parseInt(document.getElementById('sCats').textContent) || 0;
+    document.getElementById('sCats').textContent = cur + 1;
+  }
+  else if (e === 'idea') {
+    ideas.push(ev.idea);
+    addIdeaCard(ev.idea);
+    updateStats();
+    addLog(`[IDEA] ${ev.idea.idea_title || ev.msg}`, 'ok');
+  }
+  else if (e === 'done') {
+    running = false;
+    document.getElementById('btnRun').disabled = false;
+    document.getElementById('btnStop').style.display = 'none';
+    document.getElementById('statusBadge').textContent = 'READY';
+    document.getElementById('statusBadge').className = 'badge';
+    // Mark all phases as done
+    [0,1,2,3,4].forEach(n => {
+      const el = document.getElementById('ph'+n);
+      if (el && !el.classList.contains('error')) setPhase(n, 'done', document.getElementById('ph'+n+'msg').textContent);
+    });
+    updateProgress(100);
+    if (ev.papers) document.getElementById('sPapers').textContent = ev.papers;
+    if (ev.ideas) document.getElementById('sIdeas').textContent = ev.ideas;
+    if (startTime) {
+       document.getElementById('sCost').textContent = Math.round((Date.now()-startTime)/1000) + 's';
+    }
+    if (ev.errors && ev.errors.length > 0) {
+      addLog(`[WARN] ${ev.errors.length} non-fatal error(s) during run`, 'warn');
+    }
+  }
+}
+
+function clearStorage() {
+  ideas = [];
+  document.getElementById('ideasGrid').innerHTML='<div class="empty"><span>▸</span>Execute pipeline to generate insights</div>';
+  updateStats();
+}
+
+function startPipeline() {
+  // Check if first time — show onboarding
+  if (!sessionStorage.getItem('scholarscout_onboarded')) {
+    document.getElementById('onboardingModal').classList.add('visible');
+    return;
+  }
+  
+  _doStartPipeline();
+}
+
+function completeOnboarding() {
+  // Save approach selection
+  const approach = document.querySelector('input[name="ob_approach"]:checked').value;
+  document.getElementById('approachSelect').value = approach;
+  sessionStorage.setItem('scholarscout_approach', approach);
+  
+  // Save context if provided
+  const ctx = document.getElementById('onboardContext').value.trim();
+  if (ctx) {
+    document.getElementById('researchContext').value = ctx;
+    document.getElementById('ctxWrapper').classList.add('open');
+  }
+  
+  // Mark onboarded
+  sessionStorage.setItem('scholarscout_onboarded', '1');
+  document.getElementById('onboardingModal').classList.remove('visible');
+  
+  // Start pipeline
+  _doStartPipeline();
+}
+
+function skipOnboarding() {
+  sessionStorage.setItem('scholarscout_onboarded', '1');
+  document.getElementById('onboardingModal').classList.remove('visible');
+  _doStartPipeline();
+}
+
+function _doStartPipeline() {
+  const dateFrom = document.getElementById('dateFrom').value;
+  const dateTo   = document.getElementById('dateTo').value;
+  const maxIdeas = parseInt(document.getElementById('maxIdeas').value) || 50;
+  
+  // Get checked categories
+  const selectedCats = Array.from(document.querySelectorAll('.cat-item input:checked')).map(el => el.value);
+  if (selectedCats.length === 0) {
+    alert("Please select at least one category");
+    return;
+  }
+
+  ideas = []; 
+  document.getElementById('ideasGrid').innerHTML = '<div class="empty"><span>▸</span>Processing...</div>';
+  document.getElementById('logBox').innerHTML = '';
+  
+  [0,1,2,3,4].forEach(n => setPhase(n,'','Pending'));
+  setPhase(0, 'active', 'Pinging API...');
+  
+  running = true;
+  document.getElementById('btnRun').disabled = true;
+  document.getElementById('btnStop').style.display = 'inline-block';
+  document.getElementById('statusBadge').textContent = 'RUNNING';
+  document.getElementById('statusBadge').className = 'badge running';
+  startTime = Date.now();
+
+  if (es) es.close();
+  es = new EventSource('/api/stream');
+  es.onmessage = ev => { try { handleEvent(JSON.parse(ev.data)); } catch(e){} };
+
+  const language = document.getElementById('langSelect').value;
+  currentLanguage = language;
+  const research_context = document.getElementById('researchContext').value.slice(0, 2000);
+  const approach = document.getElementById('approachSelect').value;
+
+  fetch('/api/run', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach })
+  }).catch(err => { addLog('[ERR] Failed: ' + err, 'err'); });
+}
+
+function stopPipeline() {
+  fetch('/api/stop', { method: 'POST' }).then(() => {
+    running = false;
+    document.getElementById('btnRun').disabled = false;
+    document.getElementById('btnStop').style.display = 'none';
+    addLog('[SYS] Interrupted', 'warn');
+    if (es) es.close();
+  });
+}
+
+// ── Modal keyboard / backdrop close ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+document.getElementById('deepDiveModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── Recent Sessions ──
+function loadRecentIdeas() {
+  const grid = document.getElementById('recentGrid');
+  grid.innerHTML = '<div class="empty"><span>▸</span>Loading sessions...</div>';
+  
+  fetch('/api/sessions').then(r => r.json()).then(sessions => {
+    if (!sessions.length) {
+      grid.innerHTML = '<div class="empty"><span>▦</span>No previous sessions. Run the pipeline first.</div>';
+      return;
+    }
+    grid.innerHTML = '';
+    sessions.forEach((session, idx) => {
+      const dt = new Date(session.timestamp);
+      const timeStr = dt.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + ' — ' + dt.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+      const cats = (session.categories || []).slice(0, 4).join(', ') + (session.categories.length > 4 ? '...' : '');
+      const approach = session.approach || 'any';
+      
+      const item = document.createElement('div');
+      item.className = 'session-item';
+      item.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:13px;color:#fff;font-weight:500">${escapeHtml(timeStr)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">${escapeHtml(cats)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--muted)">${session.ideas_total} ideas · ${session.papers_total} papers</div>
+            <span class="chip" style="margin-top:4px;display:inline-block">${escapeHtml(approach)}</span>
+          </div>
+        </div>`;
+      item.addEventListener('click', () => loadSessionDetail(idx));
+      grid.appendChild(item);
+    });
+  }).catch(() => {
+    grid.innerHTML = '<div class="empty"><span>▦</span>Failed to load sessions</div>';
+  });
+}
+
+function loadSessionDetail(index) {
+  const grid = document.getElementById('recentGrid');
+  grid.innerHTML = '<div class="empty"><span>▸</span>Loading ideas...</div>';
+  
+  fetch(`/api/sessions/${index}`).then(r => r.json()).then(session => {
+    const sessionIdeas = session.ideas || [];
+    if (!sessionIdeas.length) {
+      grid.innerHTML = '<div class="empty"><span>▦</span>No ideas in this session</div>';
+      return;
+    }
+    
+    // Back button + ideas
+    grid.innerHTML = '';
+    const backBtn = document.createElement('button');
+    backBtn.className = 'btn';
+    backBtn.textContent = '← Back to sessions';
+    backBtn.style.marginBottom = '16px';
+    backBtn.addEventListener('click', loadRecentIdeas);
+    grid.appendChild(backBtn);
+    
+    const ideasContainer = document.createElement('div');
+    ideasContainer.className = 'ideas-grid';
+    grid.appendChild(ideasContainer);
+    
+    sessionIdeas.forEach(idea => {
+      const title = idea.idea_title || 'Untitled';
+      const card = document.createElement('div');
+      card.className = 'idea-card';
+      card.innerHTML = `
+        <button class="bookmark-btn" data-action="bookmark">${isBookmarked(title) ? '◆' : '◇'}</button>
+        <div class="idea-field">${escapeHtml(idea.field || '')}</div>
+        <div class="idea-title">${escapeHtml(title)}</div>
+        <div class="idea-meta">
+          <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
+          <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+        </div>
+        ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
+        <div class="idea-actions">
+          <button class="btn-sm" data-action="novelty">Check Novelty</button>
+        </div>
+        <button class="expand-btn" data-action="expand">Show more ▾</button>`;
+      ideasContainer.appendChild(card);
+      
+      requestAnimationFrame(() => { if (card.scrollHeight <= 240) card.classList.add('short'); });
+      
+      const expandBtn = card.querySelector('[data-action="expand"]');
+      if (expandBtn) expandBtn.addEventListener('click', () => openIdeaDetail(idea));
+      const bmBtn = card.querySelector('[data-action="bookmark"]');
+      if (bmBtn) bmBtn.addEventListener('click', function() { toggleBookmark(title, this); });
+      const novBtn = card.querySelector('[data-action="novelty"]');
+      if (novBtn) novBtn.addEventListener('click', function() { checkNovelty(title, this); });
+    });
+  }).catch(() => {
+    grid.innerHTML = '<div class="empty"><span>▦</span>Failed to load session</div>';
+  });
+}
+
+// ── Search & Filter ──
+(function initSearchFilter() {
+  const searchInput = document.getElementById('ideaSearch');
+  const filterSelect = document.getElementById('ideaFilter');
+  
+  function applyFilter() {
+    const query = (searchInput.value || '').toLowerCase();
+    const level = filterSelect.value;
+    const cards = document.querySelectorAll('#ideasGrid .idea-card');
+    
+    cards.forEach(card => {
+      const title = (card.querySelector('.idea-title') || {}).textContent || '';
+      const abstract = (card.querySelector('.idea-abstract') || {}).textContent || '';
+      const difficulty = (card.querySelector('.chip') || {}).textContent || '';
+      
+      const matchesSearch = !query || title.toLowerCase().includes(query) || abstract.toLowerCase().includes(query);
+      const matchesLevel = !level || difficulty.includes(level);
+      
+      card.style.display = (matchesSearch && matchesLevel) ? '' : 'none';
+    });
+  }
+  
+  if (searchInput) searchInput.addEventListener('input', applyFilter);
+  if (filterSelect) filterSelect.addEventListener('change', applyFilter);
+})();
+
+// ── Settings ──
+(function initSettings() {
+  const providerSelect = document.getElementById('settProvider');
+  const keyLink = document.getElementById('settKeyLink');
+  const customUrl = document.getElementById('settCustomUrl');
+  
+  const providerDocs = {
+    gemini: 'https://aistudio.google.com/app/apikey',
+    groq: 'https://console.groq.com/keys',
+    openrouter: 'https://openrouter.ai/keys',
+    openai: 'https://platform.openai.com/api-keys',
+    ollama: 'https://ollama.com/download',
+    custom: ''
+  };
+  const providerModels = {
+    gemini: 'gemini-2.0-flash',
+    groq: 'llama-3.3-70b-versatile',
+    openrouter: 'deepseek/deepseek-chat',
+    openai: 'gpt-4o-mini',
+    ollama: 'llama3.2',
+    custom: ''
+  };
+  
+  function updateProviderUI() {
+    const p = providerSelect.value;
+    const url = providerDocs[p] || '';
+    keyLink.innerHTML = url ? `Get key: <a href="${url}" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">${url.replace('https://', '')}</a>` : '';
+    customUrl.style.display = (p === 'custom' || p === 'ollama') ? 'block' : 'none';
+    document.getElementById('settModel').placeholder = providerModels[p] || 'model name';
+    // Hide API key field for ollama
+    document.getElementById('settApiKey').parentElement.style.display = p === 'ollama' ? 'none' : 'block';
+  }
+  
+  providerSelect.addEventListener('change', updateProviderUI);
+  
+  // Load current settings
+  fetch('/api/settings').then(r => r.json()).then(data => {
+    if (data.provider) providerSelect.value = data.provider;
+    if (data.model) document.getElementById('settModel').value = data.model;
+    if (data.api_key_masked) document.getElementById('settApiKey').placeholder = data.api_key_masked;
+    if (data.base_url && (data.provider === 'custom' || data.provider === 'ollama')) {
+      document.getElementById('settBaseUrl').value = data.base_url;
+    }
+    updateProviderUI();
+  }).catch(() => {});
+  
+  updateProviderUI();
+})();
+
+function showSettingsStatus(msg, ok) {
+  const el = document.getElementById('settStatus');
+  el.style.display = 'block';
+  el.style.background = ok ? 'rgba(102,204,102,0.1)' : 'rgba(255,107,107,0.1)';
+  el.style.border = '1px solid ' + (ok ? '#66cc66' : 'var(--err)');
+  el.style.color = ok ? '#66cc66' : 'var(--err)';
+  el.textContent = msg;
+}
+
+function saveSettings() {
+  const body = {
+    provider: document.getElementById('settProvider').value,
+    model: document.getElementById('settModel').value,
+  };
+  const key = document.getElementById('settApiKey').value;
+  if (key) body.api_key = key;
+  const url = document.getElementById('settBaseUrl').value;
+  if (url) body.base_url = url;
+  
+  fetch('/api/settings', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      showSettingsStatus('Error: ' + data.error, false);
+    } else {
+      showSettingsStatus('Saved! Provider: ' + data.provider + ', Model: ' + data.model, true);
+      // Update model badge in header
+      document.getElementById('modelBadge').textContent = data.provider + '/' + data.model;
+    }
+  })
+  .catch(e => showSettingsStatus('Network error: ' + e.message, false));
+}
+
+function testConnection() {
+  showSettingsStatus('Testing...', true);
+  const body = {
+    provider: document.getElementById('settProvider').value,
+    model: document.getElementById('settModel').value,
+  };
+  const key = document.getElementById('settApiKey').value;
+  if (key) body.api_key = key;
+  const url = document.getElementById('settBaseUrl').value;
+  if (url) body.base_url = url;
+  
+  fetch('/api/settings/test', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      showSettingsStatus('Connected! ' + data.provider + '/' + data.model + ' (' + data.tokens_used + ' tokens used)', true);
+    } else {
+      showSettingsStatus('Connection failed. Check API key and provider.', false);
+    }
+  })
+  .catch(e => showSettingsStatus('Network error: ' + e.message, false));
+}
+
+// ── Update Checker ──
+(function checkForUpdates() {
+  const CURRENT_VERSION = '1.0.0';
+  const REPO = 'neej4/ScholarScout';
+  
+  fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {cache: 'no-store'})
+    .then(r => { if (r.ok) return r.json(); throw new Error(); })
+    .then(data => {
+      const latest = (data.tag_name || '').replace(/^v/, '');
+      if (latest && latest !== CURRENT_VERSION) {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;bottom:16px;right:16px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font-size:11px;color:var(--text);z-index:999;max-width:280px;box-shadow:0 4px 12px rgba(0,0,0,0.3)';
+        banner.innerHTML = `<div style="margin-bottom:6px;font-weight:600">Update available: v${escapeHtml(latest)}</div><div style="color:var(--muted)">You have v${CURRENT_VERSION}. <a href="https://github.com/${REPO}/releases/latest" target="_blank" style="color:#fff;border-bottom:1px solid var(--border)">View release</a></div><button onclick="this.parentElement.remove()" style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px">&times;</button>`;
+        document.body.appendChild(banner);
+      }
+    })
+    .catch(() => {}); // Silently fail if offline or rate limited
+})();
+</script>
+</body>
+</html>
