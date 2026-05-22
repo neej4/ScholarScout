@@ -228,5 +228,6 @@ class SemanticScholarFetcher(BaseFetcher):
             abstract=abstract,
             link=url,
             submitted_date=pub_date or "",
-            source="semantic_scholar"
+            source="semantic_scholar",
+            citations=item.get("citationCount", 0) or 0
         )

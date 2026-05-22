@@ -26,14 +26,47 @@ class IdeaGenerator:
             "cost": "Institutional Resources",
             "note": "Requires multi-GPU cluster, large datasets, or specialized lab equipment.",
             "timeline": "1-3 years"
-        }
+        },
+        "Hackathon": {
+            "cost": "Free (laptop + APIs)",
+            "note": "Must be demo-able in 4-12 hours. Use pre-trained models and free APIs only.",
+            "timeline": "4-12 hours"
+        },
+        "Side Project": {
+            "cost": "Free-$20",
+            "note": "Completable in weekends. Deployable on free tier hosting.",
+            "timeline": "1-4 weekends"
+        },
+        "Industry": {
+            "cost": "Company Budget",
+            "note": "Company-funded compute. Must show ROI to stakeholders.",
+            "timeline": "1-6 months"
+        },
     }
 
     def __init__(self, llm_client: LLMClient):
         self.llm = llm_client
 
+    def _load_skill_constraints(self, goal: str) -> str:
+        """Load skill file and inject as context. LLM reads markdown natively."""
+        import os
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        skill_path = os.path.join(base_dir, "skills", goal, "SKILL.md")
+        
+        try:
+            with open(skill_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # Trim to ~2000 chars to stay within token budget
+            if len(content) > 2000:
+                content = content[:2000] + "\n..."
+            
+            return f"\n--- SKILL PROFILE ({goal}) ---\n{content}\n--- END SKILL PROFILE ---\nGenerate ideas that fit within the constraints above.\n"
+        except:
+            return ""
+
     def generate(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
-                 research_context: str = '', language: str = 'en', approach: str = 'any') -> List[ProjectIdea]:
+                 research_context: str = '', language: str = 'en', approach: str = 'any', goal: str = 'any') -> List[ProjectIdea]:
         category = trend.category
         ref_papers = trend.ref_papers
         
@@ -45,11 +78,24 @@ class IdeaGenerator:
         )
         paper_count = len(available_papers)
         
+        # Load skill constraints from file if goal is specified
+        goal_section = ""
+        if goal and goal != "any":
+            goal_section = self._load_skill_constraints(goal)
+        
         methods_ctx = ""
         if trend.methodology_patterns:
             methods_ctx = f"\nCommon methodologies in this area:\n" + "\n".join(f"  - {m}" for m in trend.methodology_patterns)
         
         gaps_ctx = "\n".join(f"  - {g}" for g in trend.research_gaps) if trend.research_gaps else "  (infer from the papers above)"
+        
+        cross_ctx = ""
+        if trend.cross_pollination:
+            cross_ctx = f"\nCross-pollination opportunities (combine gap + external technique):\n" + "\n".join(f"  - {c}" for c in trend.cross_pollination)
+        
+        saturation_ctx = ""
+        if trend.saturation_level:
+            saturation_ctx = f"\nField saturation: {trend.saturation_level} (if saturated, ideas must be highly specific and differentiated)"
         
         avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
 
@@ -102,7 +148,7 @@ Category: {category}
 Trending keywords: {', '.join(trend.top_keywords)}
 Identified research gaps:
 {gaps_ctx}
-{methods_ctx}
+{methods_ctx}{cross_ctx}{saturation_ctx}
 
 === AVAILABLE PAPERS (P1 to P{paper_count}) ===
 {paper_ctx}
@@ -110,12 +156,12 @@ Identified research gaps:
 
 Already generated (DO NOT duplicate):
 {avoid_str}
-{context_section}{language_section}{approach_section}
+{context_section}{language_section}{approach_section}{goal_section}
 Generate exactly {n} research project ideas as a JSON array. Each object MUST have:
 
 - "idea_title": Specific, descriptive (8-18 words). NOT generic.
 
-- "difficulty": "Undergraduate" | "Master's" | "PhD"
+- "difficulty": "Undergraduate" | "Master's" | "PhD" | "Hackathon" | "Side Project" | "Industry"
 
 - "abstract": 3-4 sentences. Problem, approach, expected outcome. Be concrete.
 
@@ -131,7 +177,13 @@ Generate exactly {n} research project ideas as a JSON array. Each object MUST ha
 
 - "resources_needed": comma-separated list.
 
+- "prerequisites": Array of 3-5 skills/knowledge the student must have to execute this idea (e.g., "Python proficiency", "Understanding of Bayesian statistics", "Access to clinical data"). Be specific to THIS idea.
+
 - "inspired_by_ids": Array of paper IDs from above (e.g., ["P1", "P5"]).
+
+- "why_this_idea": 1-2 sentences explaining which research gap this fills and why NOW is the right time. Reference specific papers.
+
+- "quality_score": Integer 1-10. Self-evaluate: is this idea novel (not obvious), feasible (can be done), and specific (not vague)? Be honest. Score below 6 = idea is too generic or infeasible.
 
 ANTI-HALLUCINATION RULES:
 1. Every paper reference MUST use the P-number from the list above.
@@ -166,6 +218,12 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                             diff = "Undergraduate"
                         elif "phd" in diff_lower or "doktor" in diff_lower:
                             diff = "PhD"
+                        elif "hack" in diff_lower:
+                            diff = "Hackathon"
+                        elif "side" in diff_lower or "weekend" in diff_lower:
+                            diff = "Side Project"
+                        elif "industry" in diff_lower or "company" in diff_lower:
+                            diff = "Industry"
                         else:
                             diff = "Master's"
                     
@@ -205,6 +263,22 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                     
                     # Format key_papers from mapped titles (grounded, not hallucinated)
                     key_papers = " | ".join(key_paper_titles[:3]) if key_paper_titles else ""
+                    
+                    # Quality scoring — filter out low-quality ideas
+                    try:
+                        quality_score = int(idea.get("quality_score", 7))
+                    except (ValueError, TypeError):
+                        quality_score = 7
+                    if quality_score < 5:
+                        continue  # Skip ideas the LLM itself rates as poor
+                    
+                    # Why this idea
+                    why_this_idea = idea.get("why_this_idea", "")
+                    
+                    # Prerequisites
+                    prereqs = idea.get("prerequisites", [])
+                    if isinstance(prereqs, list):
+                        prereqs = " | ".join(prereqs[:5])
                         
                     obj = ProjectIdea(
                         idea_title=title,
@@ -218,6 +292,9 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                         methodology_hint=idea.get("methodology_hint", ""),
                         next_steps=next_steps,
                         key_papers=key_papers,
+                        why_this_idea=why_this_idea,
+                        quality_score=quality_score,
+                        prerequisites=prereqs,
                         inspired_by="; ".join(p.id for p in insp),
                         inspiration_title="; ".join(p.title[:80] for p in insp),
                         inspiration_link="; ".join(p.link for p in insp),
@@ -249,6 +326,9 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                     methodology_hint=f"Implement 3-4 recent {kw} methods, evaluate on same splits, report with confidence intervals.",
                     next_steps="Survey recent papers on this topic | Identify 2-3 standard benchmarks | Set up evaluation pipeline",
                     key_papers="; ".join(p.title[:60] for p in insp[:2]),
+                    why_this_idea=f"No comprehensive benchmark exists for recent {kw} methods under limited supervision.",
+                    quality_score=6,
+                    prerequisites="Literature survey skills | Basic ML implementation | Experiment design",
                     inspired_by="; ".join(p.id for p in insp),
                     inspiration_title="; ".join(p.title[:80] for p in insp),
                     inspiration_link="; ".join(p.link for p in insp),

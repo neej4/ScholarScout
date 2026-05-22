@@ -12,6 +12,7 @@ class Paper:
     link: str
     submitted_date: str
     source: str = "arxiv"
+    citations: int = 0  # Citation count (from OpenAlex/S2)
     
     def to_dict(self) -> dict:
         return {
@@ -22,7 +23,8 @@ class Paper:
             "abstract": self.abstract,
             "link": self.link,
             "submitted": self.submitted_date,
-            "source": self.source
+            "source": self.source,
+            "citations": self.citations
         }
 
 @dataclass
@@ -34,6 +36,8 @@ class TrendAnalysis:
     emerging_methods: List[str]
     research_gaps: List[str]
     methodology_patterns: List[str] = field(default_factory=list)
+    saturation_level: str = "growing"  # saturated | growing | emerging
+    cross_pollination: List[str] = field(default_factory=list)
     ref_papers: List[Paper] = field(default_factory=list)
     
 @dataclass
@@ -50,6 +54,9 @@ class ProjectIdea:
     methodology_hint: str    # How to approach this technically
     next_steps: str          # First 3 concrete actions to start
     key_papers: str          # 2-3 must-read papers before starting
+    why_this_idea: str       # Which gap this fills and why now
+    quality_score: int       # Self-evaluated 1-10
+    prerequisites: str       # Skills/knowledge needed to execute
     inspired_by: str
     inspiration_title: str
     inspiration_link: str
@@ -68,6 +75,9 @@ class ProjectIdea:
             "methodology_hint": self.methodology_hint,
             "next_steps": self.next_steps,
             "key_papers": self.key_papers,
+            "why_this_idea": self.why_this_idea,
+            "quality_score": self.quality_score,
+            "prerequisites": self.prerequisites,
             "inspired_by": self.inspired_by,
             "inspiration_title": self.inspiration_title,
             "inspiration_link": self.inspiration_link,

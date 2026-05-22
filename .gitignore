@@ -29,7 +29,6 @@ data/*.jsonl
 # IDE
 .vscode/
 .idea/
-.kiro/
 *.swp
 *.swo
 

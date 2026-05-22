@@ -45,6 +45,7 @@ def api_run():
         if body.get("research_context"): env["SCOUT_CONTEXT"] = body["research_context"]
         if body.get("language"): env["SCOUT_LANGUAGE"] = body["language"]
         if body.get("approach"): env["SCOUT_APPROACH"] = body["approach"]
+        if body.get("goal"): env["SCOUT_GOAL"] = body["goal"]
             
         script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run_pipeline.py")
         _pipeline_proc = subprocess.Popen(
@@ -119,6 +120,207 @@ def api_session_detail(index):
         return jsonify({"error": "Session not found"}), 404
     except:
         return jsonify({"error": "No session history"}), 404
+
+@app.route("/api/quick", methods=["POST"])
+def api_quick():
+    """Quick mode: generate ideas from cache or LLM knowledge (no fetching)."""
+    from src.core.config import Config
+    from src.core.llm import LLMClient
+    from src.core.analyzer import TrendAnalyzer
+    import re as re_mod
+    
+    body = request.get_json(silent=True) or {}
+    categories = body.get("categories", ["cs.AI"])
+    max_ideas = min(int(body.get("max_ideas", 5)), 20)
+    language = body.get("language", "en")
+    approach = body.get("approach", "any")
+    goal = body.get("goal", "any")
+    context = body.get("context", "")
+    
+    # Try to load papers from cache
+    cache_file = os.path.join(data_dir, "papers_cache.json")
+    cached_papers = {}
+    from_cache = False
+    try:
+        with open(cache_file, "r", encoding="utf-8") as f:
+            cached_papers = json.load(f)
+        from_cache = True
+    except:
+        pass
+    
+    # Filter cached papers by selected categories
+    relevant_papers = []
+    for pid, paper in cached_papers.items():
+        if paper.get("category") in categories:
+            relevant_papers.append(paper)
+    
+    # Build paper context for prompt
+    paper_context = ""
+    if relevant_papers:
+        # Sort by recency, take top papers
+        relevant_papers.sort(key=lambda p: p.get("submitted", ""), reverse=True)
+        top_papers = relevant_papers[:15]
+        paper_context = "\n".join(
+            f"[P{i+1}] \"{p.get('title','')}\"\n    Abstract: {p.get('abstract','')[:150]}"
+            for i, p in enumerate(top_papers)
+        )
+        paper_context = f"\n=== REFERENCE PAPERS (from cache) ===\n{paper_context}\n=== END ===\n"
+    
+    # Build approach/goal constraints
+    approach_hint = ""
+    if approach == "computational": approach_hint = "Ideas must be computational/AI-based."
+    elif approach == "experimental": approach_hint = "Ideas must involve physical experiments, NOT computation."
+    elif approach == "clinical": approach_hint = "Ideas must involve clinical/field studies."
+    elif approach == "theoretical": approach_hint = "Ideas must be theoretical/review."
+    
+    goal_hint = ""
+    if goal == "HACKATHON":
+        goal_hint = "Ideas must be demo-able in 4-12 hours. Use existing APIs/tools. Include: what the demo looks like, tech stack, MVP scope."
+    elif goal == "SIDE_PROJECT":
+        goal_hint = "Ideas must be completable in 1-4 weekends. Deployable on free hosting."
+    elif goal == "THESIS":
+        goal_hint = "Ideas must fill 40-100 pages. Include literature review angle."
+    elif goal == "PUBLICATION":
+        goal_hint = "Ideas must have clear novelty claim and be publishable."
+    
+    lang_hint = "Write in formal academic Bahasa Indonesia." if language == "id" else ""
+    
+    cats_str = ", ".join(categories[:5])
+    
+    prompt = f"""Generate exactly {max_ideas} project ideas for the fields: {cats_str}
+{approach_hint}
+{goal_hint}
+{lang_hint}
+{f'Student context: {context}' if context else ''}
+{paper_context}
+
+Return a JSON array. Each object must have: idea_title, difficulty, abstract (3 sentences), why_hard, methodology_hint, next_steps (array of 3), resources_needed, prerequisites (array of 3-5 skills), why_this_idea, quality_score (1-10).
+{f'Reference papers using P-numbers from the list above for key_paper_ids.' if paper_context else ''}
+
+Respond ONLY with valid JSON array. No markdown."""
+
+    try:
+        llm = LLMClient()
+        response = llm.call(prompt, task_type="idea_generation")
+        
+        if not response:
+            return jsonify({"error": "LLM returned empty response", "ideas": []}), 500
+        
+        cleaned = re_mod.sub(r"```(?:json)?|```", "", response).strip()
+        ideas_raw = json.loads(cleaned)
+        if isinstance(ideas_raw, dict):
+            ideas_raw = [ideas_raw]
+        
+        # Format ideas
+        ideas = []
+        cost_map = {"Undergraduate": "Free Tier", "Master's": "Cloud GPU ($50-200)", "PhD": "Institutional", "Hackathon": "Free (laptop + APIs)", "Side Project": "Free-$20", "Industry": "Company Budget"}
+        
+        for idea in ideas_raw[:max_ideas]:
+            diff = idea.get("difficulty", "Master's")
+            ideas.append({
+                "idea_title": idea.get("idea_title", ""),
+                "field": categories[0] if categories else "",
+                "difficulty": diff,
+                "cost_estimate": cost_map.get(diff, "Cloud GPU ($50-200)"),
+                "cost_note": "",
+                "why_hard": idea.get("why_hard", ""),
+                "resources_needed": idea.get("resources_needed", ""),
+                "abstract": idea.get("abstract", ""),
+                "methodology_hint": idea.get("methodology_hint", ""),
+                "next_steps": " | ".join(idea.get("next_steps", [])) if isinstance(idea.get("next_steps"), list) else idea.get("next_steps", ""),
+                "key_papers": "",
+                "why_this_idea": idea.get("why_this_idea", ""),
+                "quality_score": idea.get("quality_score", 7),
+                "prerequisites": " | ".join(idea.get("prerequisites", [])) if isinstance(idea.get("prerequisites"), list) else idea.get("prerequisites", ""),
+                "inspired_by": "",
+                "inspiration_title": "",
+                "inspiration_link": "",
+                "generated_date": Config.TODAY_STR
+            })
+        
+        return jsonify({"ideas": ideas, "from_cache": from_cache and bool(relevant_papers)})
+    except Exception as e:
+        return jsonify({"error": str(e), "ideas": []}), 500
+
+@app.route("/api/regenerate", methods=["POST"])
+def api_regenerate():
+    """Regenerate a single idea for a given field/approach."""
+    from src.core.config import Config
+    from src.core.llm import LLMClient
+    from src.core.models import TrendAnalysis, Paper
+    
+    body = request.get_json(silent=True) or {}
+    field = body.get("field", "cs.AI")
+    approach = body.get("approach", "any")
+    language = body.get("language", "en")
+    context = body.get("context", "")
+    exclude = body.get("exclude_title", "")
+    
+    try:
+        llm = LLMClient()
+        
+        # Simple single-idea generation prompt (no paper grounding needed)
+        from src.core.analyzer import TrendAnalyzer
+        keywords = TrendAnalyzer.KEYWORD_SEEDS.get(field, ["research", "analysis"])[:5]
+        
+        approach_hint = ""
+        if approach == "experimental":
+            approach_hint = "The idea MUST involve physical experiments or lab work, NOT computation."
+        elif approach == "clinical":
+            approach_hint = "The idea MUST involve clinical studies with human subjects."
+        elif approach == "theoretical":
+            approach_hint = "The idea MUST be a theoretical contribution or systematic review."
+        
+        lang_hint = ""
+        if language == "id":
+            lang_hint = "Write ALL fields in formal academic Bahasa Indonesia."
+        
+        prompt = f"""Generate exactly 1 novel research idea for the field: {field}
+Keywords in this area: {', '.join(keywords)}
+{approach_hint}
+{lang_hint}
+{f'Student context: {context}' if context else ''}
+Do NOT generate this title: {exclude}
+
+Return a JSON object with: idea_title, difficulty (Undergraduate|Master's|PhD), abstract (3 sentences), why_hard (2 sentences), methodology_hint (2 sentences), next_steps (array of 3 strings), resources_needed, prerequisites (array of 3-5 skills needed), why_this_idea (1 sentence), quality_score (1-10).
+
+Respond ONLY with valid JSON. No markdown."""
+
+        response = llm.call(prompt, task_type="idea_generation")
+        if response:
+            import re
+            cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
+            idea_data = json.loads(cleaned)
+            
+            # Normalize difficulty
+            diff = idea_data.get("difficulty", "Master's")
+            cost_map = {"Undergraduate": "Free Tier (Colab/Laptop)", "Master's": "Cloud GPU ($50-200)", "PhD": "Institutional Resources"}
+            
+            result = {
+                "idea_title": idea_data.get("idea_title", ""),
+                "field": field,
+                "difficulty": diff,
+                "cost_estimate": cost_map.get(diff, "Cloud GPU ($50-200)"),
+                "cost_note": "",
+                "why_hard": idea_data.get("why_hard", ""),
+                "resources_needed": idea_data.get("resources_needed", ""),
+                "abstract": idea_data.get("abstract", ""),
+                "methodology_hint": idea_data.get("methodology_hint", ""),
+                "next_steps": " | ".join(idea_data.get("next_steps", [])) if isinstance(idea_data.get("next_steps"), list) else idea_data.get("next_steps", ""),
+                "key_papers": "",
+                "why_this_idea": idea_data.get("why_this_idea", ""),
+                "quality_score": idea_data.get("quality_score", 7),
+                "prerequisites": " | ".join(idea_data.get("prerequisites", [])) if isinstance(idea_data.get("prerequisites"), list) else idea_data.get("prerequisites", ""),
+                "inspired_by": "",
+                "inspiration_title": "",
+                "inspiration_link": "",
+                "generated_date": Config.TODAY_STR
+            }
+            return jsonify({"idea": result})
+        
+        return jsonify({"error": "LLM returned empty response"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/deepdive", methods=["POST"])
 def api_deepdive():
@@ -219,6 +421,26 @@ def api_novelty():
     except Exception as e:
         # Unexpected error
         return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
+@app.route("/api/clear-cache", methods=["POST"])
+def api_clear_cache():
+    """Clear papers cache."""
+    cache_file = os.path.join(data_dir, "papers_cache.json")
+    try:
+        open(cache_file, "w").write("{}")
+        return jsonify({"status": "cleared"})
+    except:
+        return jsonify({"status": "ok"})
+
+@app.route("/api/clear-sessions", methods=["POST"])
+def api_clear_sessions():
+    """Clear session history."""
+    history_file = os.path.join(data_dir, "session_history.json")
+    try:
+        open(history_file, "w").write("[]")
+        return jsonify({"status": "cleared"})
+    except:
+        return jsonify({"status": "ok"})
 
 @app.route("/api/stream")
 def api_stream():
@@ -363,7 +585,13 @@ def api_settings_test():
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("  ScholarScout (Python Preview Server)")
+    print("  ScholarScout v1.3")
     print("  http://localhost:5050")
     print("=" * 50)
-    app.run(host="0.0.0.0", port=5050, debug=False, threaded=True)
+    
+    try:
+        from waitress import serve
+        serve(app, host="0.0.0.0", port=5050, threads=4)
+    except ImportError:
+        # Waitress not installed — use Flask dev server
+        app.run(host="0.0.0.0", port=5050, debug=False, threaded=True)

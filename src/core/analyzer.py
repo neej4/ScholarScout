@@ -110,12 +110,13 @@ class TrendAnalyzer:
             Return a JSON object with exactly these keys:
             - "top_keywords": list of 5 dominant technical keywords/phrases (specific, not generic)
             - "emerging_methods": list of 3 novel methods, techniques, or architectures appearing in these papers
-            - "research_gaps": list of 3 specific underexplored directions that NO paper above fully addresses (be concrete — name what's missing, not vague statements)
-            - "methodology_patterns": list of 3 common methodological approaches used across these papers (e.g., "LoRA fine-tuning on domain-specific data", "contrastive pre-training + downstream transfer")
+            - "research_gaps": list of 3 specific underexplored directions that NO paper above fully addresses. Look for phrases like "future work should...", "however, this method fails when...", "limitations include..." in the abstracts. Extract CONCRETE gaps, not vague statements.
+            - "methodology_patterns": list of 3 common methodological approaches used across these papers
+            - "saturation_level": one of "saturated" (many papers, incremental improvements only), "growing" (active area, still room for novelty), or "emerging" (few papers, wide open). Base this on how many papers cover similar ground.
+            - "cross_pollination_opportunities": list of 2 suggestions for combining a gap from these papers with a technique from a DIFFERENT field (e.g., "Apply federated learning from cs.LG to solve the privacy gap in medical IoT sensors")
             - "representative_ids": list of 3 paper numbers (1-indexed) that best represent the current frontier
 
-            Be SPECIFIC. Avoid generic phrases like "novel approach" or "further research needed."
-            Name concrete techniques, datasets, and evaluation methods.
+            Be SPECIFIC. Name concrete techniques, datasets, and evaluation methods.
 
             Respond ONLY with valid JSON. No markdown fences, no explanation.
         """).strip()
@@ -150,6 +151,8 @@ class TrendAnalyzer:
                     emerging_methods=parsed.get("emerging_methods", []),
                     research_gaps=parsed.get("research_gaps", []),
                     methodology_patterns=parsed.get("methodology_patterns", []),
+                    saturation_level=parsed.get("saturation_level", "growing"),
+                    cross_pollination=parsed.get("cross_pollination_opportunities", []),
                     ref_papers=ref_papers
                 )
             except Exception:
@@ -167,5 +170,7 @@ class TrendAnalyzer:
             emerging_methods=[k for k, _ in found[:2]],
             research_gaps=[],
             methodology_patterns=[],
+            saturation_level="growing",
+            cross_pollination=[],
             ref_papers=batch[:3]
         )

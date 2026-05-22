@@ -123,15 +123,77 @@ class OpenAlexFetcher(BaseFetcher):
             except Exception:
                 pass
 
+    # Categories that work better with keyword search (concept IDs unreliable)
+    KEYWORD_SEARCH_CATEGORIES = {
+        "med.cardio": "cardiology heart cardiac",
+        "med.neuro": "neurology brain neurological",
+        "med.onco": "oncology cancer tumor",
+        "med.pharma": "pharmacology drug therapy",
+        "med.public": "public health epidemiology",
+        "med.surgery": "surgery surgical operation",
+        "med.radiology": "radiology imaging CT MRI",
+        "med.genetics": "genetics genomics hereditary",
+        "med.pediatrics": "pediatrics children neonatal",
+        "med.infectious": "infectious disease pathogen",
+        "bio.ecology": "ecology ecosystem biodiversity",
+        "bio.molecular": "molecular biology gene protein",
+        "bio.microbio": "microbiology bacteria microbiome",
+        "bio.biotech": "biotechnology genetic engineering",
+        "bio.marine": "marine biology ocean aquatic",
+        "soc.psychology": "psychology cognitive behavior",
+        "soc.economics": "economics finance market",
+        "soc.political": "political science governance",
+        "soc.sociology": "sociology social inequality",
+        "soc.education": "education learning pedagogy",
+        "soc.communication": "communication media digital",
+        "soc.law": "law legal regulation",
+        "earth.climate": "climate change warming carbon",
+        "earth.geology": "geology geophysics seismology",
+        "earth.ocean": "oceanography marine ocean",
+        "earth.atmospheric": "atmospheric weather meteorology",
+        "earth.remote": "remote sensing satellite GIS",
+        "earth.sustainability": "sustainability renewable energy",
+        "agri.crop": "crop agriculture plant breeding",
+        "agri.animal": "animal science livestock veterinary",
+        "agri.food": "food science nutrition safety",
+        "agri.forestry": "forestry conservation trees",
+        "agri.aquaculture": "aquaculture fish farming",
+        "chem.organic": "organic chemistry synthesis",
+        "chem.inorganic": "inorganic chemistry metal",
+        "chem.analytical": "analytical chemistry spectroscopy",
+        "chem.physical": "physical chemistry thermodynamics",
+        "chem.biochem": "biochemistry enzyme protein",
+        "chem.computational": "computational chemistry molecular simulation",
+    }
+
     def fetch_papers(self, category: str, max_results: int = 50) -> List[Paper]:
         """Fetch papers from OpenAlex by concept/topic."""
+        # Use keyword search for categories with unreliable concept IDs
+        if category in self.KEYWORD_SEARCH_CATEGORIES:
+            return self._fetch_by_keyword_direct(category, self.KEYWORD_SEARCH_CATEGORIES[category], max_results)
+        
         concept_id = CATEGORY_TO_OPENALEX.get(category)
         if not concept_id:
-            self._emit("fetch_retry", cat=category,
-                 msg=f"OpenAlex: no concept mapping for {category}, using keyword search")
             return self._fetch_by_keyword(category, max_results)
         
         return self._fetch_by_concept(category, concept_id, max_results)
+
+    def _fetch_by_keyword_direct(self, category: str, keywords: str, max_results: int) -> List[Paper]:
+        """Fetch by direct keyword search (more reliable for non-CS categories)."""
+        date_from = self.start_date.strftime("%Y-%m-%d")
+        date_to = self.end_date.strftime("%Y-%m-%d")
+        
+        params = urllib.parse.urlencode({
+            "search": keywords,
+            "filter": f"from_publication_date:{date_from},to_publication_date:{date_to},type:article",
+            "sort": "publication_date:desc",
+            "per_page": min(max_results, 50),
+            "select": "id,title,authorships,abstract_inverted_index,publication_date,primary_location,concepts,cited_by_count",
+            "mailto": "scholarscout@users.noreply.github.com"
+        })
+        
+        url = f"{self.BASE_URL}?{params}"
+        return self._do_fetch(url, category)
 
     def _fetch_by_concept(self, category: str, concept_id: str, max_results: int) -> List[Paper]:
         """Fetch by OpenAlex concept ID."""
@@ -142,7 +204,7 @@ class OpenAlexFetcher(BaseFetcher):
             "filter": f"concepts.id:{concept_id},from_publication_date:{date_from},to_publication_date:{date_to}",
             "sort": "publication_date:desc",
             "per_page": min(max_results, 50),
-            "select": "id,title,authorships,abstract_inverted_index,publication_date,primary_location,concepts",
+            "select": "id,title,authorships,abstract_inverted_index,publication_date,primary_location,concepts,cited_by_count",
             "mailto": "scholarscout@users.noreply.github.com"
         })
         
@@ -161,7 +223,7 @@ class OpenAlexFetcher(BaseFetcher):
             "filter": f"from_publication_date:{date_from},to_publication_date:{date_to}",
             "sort": "publication_date:desc",
             "per_page": min(max_results, 50),
-            "select": "id,title,authorships,abstract_inverted_index,publication_date,primary_location,concepts",
+            "select": "id,title,authorships,abstract_inverted_index,publication_date,primary_location,concepts,cited_by_count",
             "mailto": "scholarscout@users.noreply.github.com"
         })
         
@@ -256,7 +318,8 @@ class OpenAlexFetcher(BaseFetcher):
             abstract=abstract[:500],
             link=link,
             submitted_date=pub_date,
-            source="openalex"
+            source="openalex",
+            citations=work.get("cited_by_count", 0) or 0
         )
 
     def _reconstruct_abstract(self, inverted_index: Optional[dict]) -> str:

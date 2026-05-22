@@ -3,11 +3,11 @@
 # Docs: https://github.com/neej4/ScholarScout
 
 llm:
-  provider: gemini          # gemini | groq | openrouter | openai | ollama | custom
-  api_key: ""               # Get free key: https://aistudio.google.com/app/apikey
-  model: gemini-2.0-flash   # Leave empty for provider default
+  provider: gemini
+  api_key: ""
+  model: gemini-2.0-flash
 
 app:
-  max_ideas: 50
+  max_ideas: 10
   sources:
     - arxiv

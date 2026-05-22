@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ScholarScout v1.0</title>
+<title>ScholarScout</title>
 <link rel="icon" href="/static/logo.png" type="image/png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -28,11 +28,13 @@ body{font-family:'Inter',sans-serif;background:#181818;color:#d4d4d4;min-height:
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
 
 /* CONTROLS */
-.controls{padding:16px 32px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg)}
-input[type=text],select,input[type=date],input[type=number]{background:var(--bg);border:1px solid var(--border);color:#ffffff;padding:8px 12px;border-radius:4px;font-size:12px;font-family:inherit;outline:none;transition:border-color 0.2s}
+.controls{padding:10px 24px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);background:var(--bg)}
+.ctrl-group{display:flex;gap:6px;align-items:center}
+.ctrl-sep{font-size:10px;color:var(--muted)}
+input[type=text],input[type=password],select,input[type=date],input[type=number]{background:var(--bg);border:1px solid var(--border);color:#ffffff;padding:6px 10px;border-radius:4px;font-size:11px;font-family:inherit;outline:none;transition:border-color 0.2s}
 input:focus,select:focus{border-color:var(--muted)}
-input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
-.btn{padding:8px 16px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
+.btn{padding:6px 14px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.2s}
 .btn-run{background:#ffffff;color:var(--bg);border-color:#ffffff}
 .btn-run:hover{opacity:0.9}
 .btn-run:disabled{opacity:0.3;cursor:not-allowed}
@@ -130,13 +132,7 @@ input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
 .novelty-result a{color:inherit;text-decoration:none;font-size:10px;display:block;margin-top:2px;opacity:0.7;border-bottom:1px solid currentColor}
 .novelty-result a:hover{opacity:1}
 
-/* RESEARCH CONTEXT */
-.context-toggle{padding:6px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--muted);font-family:inherit;font-size:11px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:4px}
-.context-toggle:hover{background:var(--hover);color:var(--text)}
-.context-wrapper{width:100%;overflow:hidden;max-height:0;transition:max-height 0.3s ease;order:99}
-.context-wrapper.open{max-height:100px}
-.context-wrapper textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:#ffffff;padding:10px 12px;border-radius:4px;font-size:12px;font-family:inherit;outline:none;resize:none;max-height:80px;margin-top:8px;transition:border-color 0.2s}
-.context-wrapper textarea:focus{border-color:var(--muted)}
+/* RESEARCH CONTEXT (now in profile popup) */
 
 /* DEEP DIVE MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px}
@@ -170,10 +166,45 @@ input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
 .welcome-guide{grid-column:1/-1;padding:20px 0}
 .session-item{padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all 0.2s;margin-bottom:10px}
 .session-item:hover{border-color:#555;transform:translateX(4px)}
+.settings-form{max-width:480px;display:flex;flex-direction:column;gap:14px}
+.settings-field{display:flex;flex-direction:column;gap:5px}
+.settings-field label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.settings-field input,.settings-field select{width:100%}
+
+/* PROFILE CARDS */
+.profile-section{margin-bottom:16px}
+.profile-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.profile-cards{display:flex;flex-wrap:wrap;gap:6px}
+.profile-card{padding:6px 12px;border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--muted);cursor:pointer;transition:all 0.15s}
+.profile-card:hover{border-color:var(--text);color:var(--text)}
+.profile-card.selected{background:#ffffff;color:var(--bg);border-color:#ffffff}
 
 /* WARNING BANNER */
 .warning-banner{background:rgba(255,107,107,0.1);border:1px solid var(--err);border-radius:4px;padding:12px 16px;margin:0 32px 16px;color:var(--err);font-size:12px;display:none}
 .warning-banner.visible{display:block}
+
+/* LIGHT MODE */
+body.light{background:#f5f5f5;color:#333}
+body.light{--bg:#f5f5f5;--card:#ffffff;--border:#e0e0e0;--text:#333;--muted:#666;--hover:#f0f0f0;--active:#111;--err:#d32f2f}
+body.light .logo-img{filter:none}
+body.light .header{border-color:var(--border)}
+body.light .badge{color:#666;border-color:#ddd}
+body.light .log-box{background:#fafafa}
+.theme-toggle{background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--muted);cursor:pointer;font-size:11px;font-family:inherit;transition:0.2s}
+.theme-toggle:hover{color:var(--text);border-color:var(--text)}
+
+/* MOBILE RESPONSIVE */
+@media(max-width:900px){
+  .main{grid-template-columns:1fr;height:auto;overflow:auto}
+  .left{display:none}
+  .header{flex-wrap:wrap;padding:12px 16px;gap:8px}
+  .nav-tabs{order:3;width:100%;justify-content:center}
+  .controls{padding:12px 16px;flex-wrap:wrap}
+  .ideas-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .filter-bar{flex-direction:column}
+  .modal-content{margin:12px;padding:20px;max-height:90vh}
+}
 
 /* PRINT STYLES */
 @media print{
@@ -198,7 +229,7 @@ input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
 <div class="header">
   <div class="logo-container">
     <img src="/static/logo.png" class="logo-img" onerror="this.style.display='none'" alt="Logo">
-    <span class="logo">ScholarScout <span>v1.0</span></span>
+    <span class="logo">ScholarScout</span>
   </div>
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="showTab('ideas')">Ideas</div>
@@ -207,35 +238,87 @@ input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
     <div class="nav-tab" onclick="showTab('settings')">Settings</div>
   </div>
   <div class="header-right">
+    <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)" title="Release notes">v1.3</a>
+    <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode">◐</button>
     <span class="badge" id="statusBadge">Idle</span>
     <span class="badge" id="modelBadge" style="border:none;font-size:10px"></span>
   </div>
 </div>
 
 <div class="controls">
-  <input type="date" id="dateFrom" title="Start date">
-  <span style="color:var(--muted);font-size:11px">TO</span>
-  <input type="date" id="dateTo" title="End date">
-  <input type="number" id="maxIdeas" value="50" min="5" max="200" style="width:72px" title="Max Ideas">
-  <select id="langSelect" title="Output Language">
-    <option value="en">English</option>
-    <option value="id">Bahasa Indonesia</option>
+  <div class="ctrl-group">
+    <input type="date" id="dateFrom" title="Start date">
+    <span class="ctrl-sep">to</span>
+    <input type="date" id="dateTo" title="End date">
+  </div>
+  <div class="ctrl-group">
+    <select id="langSelect" title="Output language">
+      <option value="en">English</option>
+      <option value="id">Bahasa Indonesia</option>
+    </select>
+    <input type="number" id="maxIdeas" value="10" min="1" max="200" style="width:56px" title="Number of ideas">
+  </div>
+  <div class="ctrl-group">
+    <button class="btn" id="configBtn" title="Set your research profile, approach, and context">Profile</button>
+    <button class="btn btn-run" id="btnRun" onclick="startPipeline()">Run</button>
+    <button class="btn" onclick="quickMode()" title="Generate ideas instantly from cached papers (no fetching)">Quick</button>
+    <button class="btn btn-stop" id="btnStop" onclick="stopPipeline()" style="display:none">Stop</button>
+    <button class="btn" onclick="clearStorage()">Clear</button>
+  </div>
+  <!-- Hidden selects for data storage (read by pipeline) -->
+  <select id="approachSelect" style="display:none">
+    <option value="any">Any</option>
+    <option value="computational">Computational</option>
+    <option value="experimental">Experimental</option>
+    <option value="clinical">Clinical</option>
+    <option value="theoretical">Theoretical</option>
   </select>
-  <button class="context-toggle" id="ctxToggle" title="Research Context">
-    <span>▤</span> Context
-  </button>
-  <button class="btn btn-run" id="btnRun" onclick="startPipeline()">Run Pipeline</button>
-  <button class="btn btn-stop" id="btnStop" onclick="stopPipeline()" style="display:none">Stop</button>
-  <select id="approachSelect" title="Research Approach">
-    <option value="any">Any Approach</option>
-    <option value="computational">Computational / AI</option>
-    <option value="experimental">Experimental / Lab</option>
-    <option value="clinical">Clinical / Field Study</option>
-    <option value="theoretical">Theoretical / Review</option>
+  <select id="goalSelect" style="display:none">
+    <option value="any">Any</option>
+    <option value="THESIS">Thesis</option>
+    <option value="PUBLICATION">Publication</option>
+    <option value="GRANT_PROPOSAL">Grant Proposal</option>
   </select>
-  <button class="btn" onclick="clearStorage()">Clear Data</button>
-  <div class="context-wrapper" id="ctxWrapper">
-    <textarea id="researchContext" rows="3" placeholder="Describe your research background: expertise, lab, resources, interests..."></textarea>
+  <textarea id="researchContext" style="display:none"></textarea>
+</div>
+
+<!-- PROFILE CONFIG POPUP -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal-content" style="max-width:520px">
+    <button class="modal-close" onclick="document.getElementById('profileModal').classList.remove('visible')">&times;</button>
+    <div class="modal-title" style="font-size:14px;margin-bottom:16px">Research Profile</div>
+    
+    <div class="profile-section">
+      <div class="profile-label">Approach</div>
+      <div class="profile-cards" id="approachCards">
+        <div class="profile-card selected" data-value="any">Any</div>
+        <div class="profile-card" data-value="computational">Computational / AI</div>
+        <div class="profile-card" data-value="experimental">Experimental / Lab</div>
+        <div class="profile-card" data-value="clinical">Clinical / Field</div>
+        <div class="profile-card" data-value="theoretical">Theoretical / Review</div>
+      </div>
+    </div>
+    
+    <div class="profile-section">
+      <div class="profile-label">Goal</div>
+      <div class="profile-cards" id="goalCards">
+        <div class="profile-card selected" data-value="any">Any</div>
+        <div class="profile-card" data-value="THESIS">Thesis</div>
+        <div class="profile-card" data-value="PUBLICATION">Publication</div>
+        <div class="profile-card" data-value="GRANT_PROPOSAL">Grant Proposal</div>
+        <div class="profile-card" data-value="HACKATHON">Hackathon</div>
+        <div class="profile-card" data-value="SIDE_PROJECT">Side Project</div>
+        <div class="profile-card" data-value="AI_TOOL">AI Tool</div>
+        <div class="profile-card" data-value="INDUSTRY_RND">Industry R&D</div>
+      </div>
+    </div>
+    
+    <div class="profile-section">
+      <div class="profile-label">Context <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+      <textarea id="profileContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:4px;font-size:11px;font-family:inherit;resize:none" placeholder="Your background: expertise, lab access, available compute, interests..."></textarea>
+    </div>
+    
+    <button class="btn btn-run" style="width:100%;margin-top:12px" onclick="saveProfile()">Save Profile</button>
   </div>
 </div>
 
@@ -289,6 +372,9 @@ input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
           <option value="Undergraduate">Undergraduate</option>
           <option value="Master's">Master's</option>
           <option value="PhD">PhD</option>
+          <option value="Hackathon">Hackathon</option>
+          <option value="Side Project">Side Project</option>
+          <option value="Industry">Industry</option>
         </select>
       </div>
       <div class="ideas-grid" id="ideasGrid">
@@ -347,9 +433,9 @@ input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
 
     <!-- RECENT TAB -->
     <div class="tab-content" id="tab-recent">
-      <div class="section-title" style="margin-bottom:16px">Recent Pipeline Results</div>
-      <div class="ideas-grid" id="recentGrid">
-        <div class="empty"><span>▦</span>No previous results found</div>
+      <div class="section-title" style="margin-bottom:16px">Recent Pipeline Sessions</div>
+      <div id="recentGrid">
+        <div class="empty"><span>▦</span>No previous sessions. Run the pipeline first.</div>
       </div>
     </div>
 
@@ -366,78 +452,105 @@ input[type=date]::-webkit-calendar-picker-indicator {filter:invert(1);}
 
     <!-- SETTINGS TAB -->
     <div class="tab-content" id="tab-settings">
-      <div class="section-title" style="margin-bottom:24px">LLM Provider Configuration</div>
-      <div style="max-width:500px;display:flex;flex-direction:column;gap:16px">
+      <div style="max-width:560px;display:flex;flex-direction:column;gap:32px">
+        
+        <!-- LLM Provider -->
         <div>
-          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">Provider</label>
-          <select id="settProvider" style="width:100%">
-            <option value="gemini">Google Gemini (Free)</option>
-            <option value="groq">Groq (Free)</option>
-            <option value="openrouter">OpenRouter</option>
-            <option value="openai">OpenAI</option>
-            <option value="ollama">Ollama (Local)</option>
-            <option value="custom">Custom Endpoint</option>
-          </select>
+          <div class="section-title" style="margin-bottom:4px">LLM Provider</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">ScholarScout needs an AI model to analyze papers and generate ideas. Pick a free provider to get started.</p>
+          <div class="settings-form">
+            <div class="settings-field">
+              <label class="settings-label">Provider</label>
+              <select id="settProvider">
+                <option value="gemini">Google Gemini (Free, 15 req/min)</option>
+                <option value="groq">Groq (Free, very fast)</option>
+                <option value="openrouter">OpenRouter (pay per token)</option>
+                <option value="openai">OpenAI (pay per token)</option>
+                <option value="ollama">Ollama (runs on your machine, no internet)</option>
+                <option value="custom">Custom endpoint</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">API Key</label>
+              <input type="password" id="settApiKey" placeholder="Paste your API key here...">
+              <div id="settKeyLink" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Model <span style="font-weight:400;color:var(--muted)">(leave empty for default)</span></label>
+              <input type="text" id="settModel" placeholder="auto">
+            </div>
+            <div class="settings-field" id="settCustomUrl" style="display:none">
+              <label class="settings-label">Base URL</label>
+              <input type="text" id="settBaseUrl" placeholder="http://localhost:11434/v1">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-run" onclick="saveSettings()">Save</button>
+              <button class="btn" onclick="testConnection()">Test Connection</button>
+            </div>
+            <div id="settStatus" style="font-size:12px;padding:10px;border-radius:4px;display:none"></div>
+          </div>
         </div>
-        <div>
-          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">API Key</label>
-          <input type="password" id="settApiKey" placeholder="Paste your API key here..." style="width:100%">
-          <div id="settKeyLink" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
-        </div>
-        <div>
-          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">Model</label>
-          <input type="text" id="settModel" placeholder="auto" style="width:100%">
-        </div>
-        <div id="settCustomUrl" style="display:none">
-          <label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">Base URL</label>
-          <input type="text" id="settBaseUrl" placeholder="http://localhost:11434/v1" style="width:100%">
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn btn-run" onclick="saveSettings()">Save</button>
-          <button class="btn" onclick="testConnection()">Test Connection</button>
-        </div>
-        <div id="settStatus" style="font-size:12px;padding:10px;border-radius:4px;display:none"></div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<!-- ONBOARDING MODAL -->
-<div class="modal-overlay" id="onboardingModal">
-  <div class="modal-content" style="max-width:520px">
-    <div class="modal-title">Welcome to ScholarScout</div>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.6">Before generating ideas, help us understand your research profile so we can tailor results to your needs.</p>
-    
-    <div class="modal-section">
-      <div class="modal-section-title">Research Approach</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">What type of research methodology are you targeting?</p>
-      <div style="display:flex;flex-direction:column;gap:8px" id="onboardApproach">
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
-          <input type="radio" name="ob_approach" value="any" checked style="accent-color:#fff"> <span><strong>Any Approach</strong> — Show all types of research ideas</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
-          <input type="radio" name="ob_approach" value="computational" style="accent-color:#fff"> <span><strong>Computational / AI</strong> — Machine learning, data science, modeling</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
-          <input type="radio" name="ob_approach" value="experimental" style="accent-color:#fff"> <span><strong>Experimental / Lab</strong> — Wet lab, hardware, physical experiments</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
-          <input type="radio" name="ob_approach" value="clinical" style="accent-color:#fff"> <span><strong>Clinical / Field</strong> — Patient studies, surveys, observational</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;color:var(--text)">
-          <input type="radio" name="ob_approach" value="theoretical" style="accent-color:#fff"> <span><strong>Theoretical / Review</strong> — Meta-analysis, systematic review, frameworks</span>
-        </label>
+        <!-- Pipeline Behavior -->
+        <div>
+          <div class="section-title" style="margin-bottom:4px">Pipeline behavior</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">Control how the pipeline runs. Defaults work well for most users.</p>
+          <div class="settings-form">
+            <div class="settings-field">
+              <label class="settings-label">LLM timeout <span style="font-weight:400;color:var(--muted)">(how long to wait for AI response)</span></label>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input type="number" id="settTimeout" value="180" min="30" max="600" style="width:70px">
+                <span style="font-size:10px;color:var(--muted)">seconds (increase if you get timeout errors)</span>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Quality filter <span style="font-weight:400;color:var(--muted)">(hide low-quality ideas)</span></label>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input type="number" id="settQuality" value="5" min="1" max="9" style="width:70px">
+                <span style="font-size:10px;color:var(--muted)">/10 minimum (lower = more ideas, higher = stricter)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Sources -->
+        <div>
+          <div class="section-title" style="margin-bottom:4px">Data sources</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">Where to fetch papers from. Disable a source if it's slow or rate-limiting you.</p>
+          <div class="settings-form" style="gap:10px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="settArxiv" checked style="accent-color:#fff"> arXiv <span style="color:var(--muted);font-size:10px;margin-left:4px">preprints, mostly CS/Physics/Math</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="settOpenAlex" checked style="accent-color:#fff"> OpenAlex <span style="color:var(--muted);font-size:10px;margin-left:4px">250M+ works, all fields, most reliable</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="settS2" checked style="accent-color:#fff"> Semantic Scholar <span style="color:var(--muted);font-size:10px;margin-left:4px">citation data, often rate-limited</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Storage -->
+        <div>
+          <div class="section-title" style="margin-bottom:4px">Storage</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">Manage locally stored data. Nothing is sent to external servers.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="if(confirm('Delete all cached papers? Next run will fetch fresh.')){fetch('/api/clear-cache',{method:'POST'}).then(()=>alert('Done'))}">Clear paper cache</button>
+            <button class="btn" onclick="if(confirm('Delete session history?')){fetch('/api/clear-sessions',{method:'POST'}).then(()=>alert('Done'))}">Clear sessions</button>
+            <button class="btn" onclick="if(confirm('Remove all bookmarks?')){localStorage.removeItem('scholarscout_bookmarks');refreshShortlist();alert('Done')}">Clear bookmarks</button>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div style="padding-top:16px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);line-height:2">
+            ScholarScout v1.3.0 · <a href="https://github.com/neej4/ScholarScout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">GitHub</a> · <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Changelog</a> · MIT License
+            <br>
+            <a href="https://ko-fi.com/scholarscout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Support (Ko-fi)</a> · <a href="https://saweria.co/scholarscout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Support (Saweria)</a>
+          </div>
+        </div>
+
       </div>
-    </div>
-    
-    <div class="modal-section">
-      <div class="modal-section-title">Your Research Context (optional)</div>
-      <textarea id="onboardContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:10px;border-radius:4px;font-size:12px;font-family:inherit;resize:none" placeholder="e.g., 3rd year medical student, interested in cardiology, have access to hospital EHR data..."></textarea>
-    </div>
-    
-    <div style="display:flex;gap:10px;margin-top:16px">
-      <button class="btn btn-run" onclick="completeOnboarding()" style="flex:1">Start Generating</button>
-      <button class="btn" onclick="skipOnboarding()">Skip</button>
     </div>
   </div>
 </div>
@@ -638,6 +751,58 @@ initCategories();
     sessionStorage.setItem('scholarscout_approach', this.value);
   });
 })();
+
+// ── Profile Popup ──
+document.getElementById('configBtn').addEventListener('click', function() {
+  document.getElementById('profileModal').classList.add('visible');
+});
+
+// Card selection logic
+document.querySelectorAll('.profile-cards').forEach(group => {
+  group.addEventListener('click', function(e) {
+    const card = e.target.closest('.profile-card');
+    if (!card) return;
+    group.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  });
+});
+
+// Restore profile from session
+(function restoreProfile() {
+  const approach = sessionStorage.getItem('scholarscout_approach') || 'any';
+  const goal = sessionStorage.getItem('scholarscout_goal') || 'any';
+  const ctx = sessionStorage.getItem('scholarscout_context') || '';
+  
+  document.querySelectorAll('#approachCards .profile-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.value === approach);
+  });
+  document.querySelectorAll('#goalCards .profile-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.value === goal);
+  });
+  document.getElementById('profileContext').value = ctx;
+  document.getElementById('approachSelect').value = approach;
+  document.getElementById('goalSelect').value = goal;
+  document.getElementById('researchContext').value = ctx;
+})();
+
+function saveProfile() {
+  const approach = document.querySelector('#approachCards .profile-card.selected').dataset.value;
+  const goal = document.querySelector('#goalCards .profile-card.selected').dataset.value;
+  const ctx = document.getElementById('profileContext').value.trim();
+  
+  // Save to session
+  sessionStorage.setItem('scholarscout_approach', approach);
+  sessionStorage.setItem('scholarscout_goal', goal);
+  sessionStorage.setItem('scholarscout_context', ctx);
+  
+  // Sync to hidden selects/textarea
+  document.getElementById('approachSelect').value = approach;
+  document.getElementById('goalSelect').value = goal;
+  document.getElementById('researchContext').value = ctx;
+  
+  // Close popup
+  document.getElementById('profileModal').classList.remove('visible');
+}
 let running = false, es = null, ideas = [], startTime = null, currentLanguage = 'en';
 
 // HTML-escape utility to prevent XSS (top-level so available everywhere)
@@ -746,27 +911,31 @@ refreshShortlist();
 
 function exportShortlistPDF() { window.print(); }
 
-// ── Research Context (DOM-safe initialization) ──
-function initContextToggle() {
-  const ctxToggle = document.getElementById('ctxToggle');
-  const ctxWrapper = document.getElementById('ctxWrapper');
-  if (ctxToggle && ctxWrapper) {
-    ctxToggle.addEventListener('click', function(e) {
-      e.preventDefault();
-      ctxWrapper.classList.toggle('open');
-    });
-  }
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initContextToggle);
-} else {
-  initContextToggle();
-}
+// ── (Context toggle removed — now in Profile popup) ──
 
 // ── Deep Dive Modal ──
+const _deepDiveCache = {}; // Cache deep dive results by title
+
 function openDeepDive(idea, triggerBtn) {
   const modal = document.getElementById('deepDiveModal');
   const body = document.getElementById('deepDiveBody');
+  
+  // Check cache first
+  const cacheKey = idea.idea_title || '';
+  if (_deepDiveCache[cacheKey]) {
+    const data = _deepDiveCache[cacheKey];
+    body.innerHTML = `
+      <div class="modal-title">${escapeHtml(idea.idea_title || 'Deep Dive')}</div>
+      ${renderModalSection('Research Outline', data.outline, 'ol')}
+      ${renderModalSection('Methodology', data.methodology, 'p')}
+      ${renderModalSection('Recommended Datasets', data.datasets, 'ul')}
+      ${renderModalSection('Key References', data.references, 'ul')}
+      ${renderModalSection('Estimated Timeline', data.timeline, 'p')}
+      ${renderModalSection('Recommended Tools', data.tools, 'ul')}`;
+    modal.classList.add('visible');
+    if (triggerBtn) triggerBtn.disabled = false;
+    return;
+  }
   
   // Disable the Deep Dive button (passed directly from event listener if available)
   const deepDiveBtn = triggerBtn || (function() {
@@ -787,9 +956,9 @@ function openDeepDive(idea, triggerBtn) {
   body.innerHTML = '<div class="modal-spinner">Loading deep dive analysis...</div>';
   modal.classList.add('visible');
   
-  // Create AbortController for 30-second timeout
+  // Create AbortController for 3-minute timeout (LLM can be slow)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), 180000);
   
   fetch('/api/deepdive', {
     method: 'POST',
@@ -808,7 +977,9 @@ function openDeepDive(idea, triggerBtn) {
     return r.json();
   })
   .then(data => {
-    // Success: render content (escape title to prevent XSS)
+    // Cache the result
+    _deepDiveCache[cacheKey] = data;
+    // Render content
     body.innerHTML = `
       <div class="modal-title">${escapeHtml(idea.idea_title || 'Deep Dive')}</div>
       ${renderModalSection('Research Outline', data.outline, 'ol')}
@@ -845,10 +1016,18 @@ function renderModalSection(title, content, type) {
   if (!content) return '';
   let html = `<div class="modal-section"><div class="modal-section-title">${escapeHtml(title)}</div>`;
   if (type === 'p') {
-    html += `<p>${escapeHtml(content)}</p>`;
+    html += `<p>${escapeHtml(String(content))}</p>`;
   } else if (type === 'ol' || type === 'ul') {
     const items = Array.isArray(content) ? content : [content];
-    html += `<${type}>${items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</${type}>`;
+    html += `<${type}>${items.map(i => {
+      if (typeof i === 'object' && i !== null) {
+        // Handle reference objects {title, url}
+        const t = escapeHtml(i.title || i.name || JSON.stringify(i));
+        const u = i.url || i.link || '';
+        return u ? `<li><a href="${escapeHtml(u)}" target="_blank" style="color:var(--text);border-bottom:1px solid var(--border)">${t}</a></li>` : `<li>${t}</li>`;
+      }
+      return `<li>${escapeHtml(String(i))}</li>`;
+    }).join('')}</${type}>`;
   }
   return html + '</div>';
 }
@@ -887,10 +1066,19 @@ function openIdeaDetail(idea) {
     ${nextSteps.length ? `<div class="modal-section"><div class="modal-section-title">Next Steps</div><ol>${nextSteps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol></div>` : ''}
     ${keyPapers.length ? `<div class="modal-section"><div class="modal-section-title">Key Papers to Read</div><ul>${keyPapers.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul></div>` : ''}
     ${idea.resources_needed ? `<div class="modal-section"><div class="modal-section-title">Resources Needed</div><p>${escapeHtml(idea.resources_needed)}</p></div>` : ''}
+    ${idea.prerequisites ? `<div class="modal-section"><div class="modal-section-title">Prerequisites (skills you need)</div><ul>${idea.prerequisites.split('|').map(s => s.trim()).filter(Boolean).map(s => '<li>'+escapeHtml(s)+'</li>').join('')}</ul></div>` : ''}
+    ${idea.why_this_idea ? `<div class="modal-section"><div class="modal-section-title">Why This Idea?</div><p>${escapeHtml(idea.why_this_idea)}</p></div>` : ''}
     ${refs ? `<div class="modal-section"><div class="modal-section-title">Inspired By</div><p style="font-family:monospace;font-size:11px">${refs}</p></div>` : ''}
-    <div style="margin-top:12px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:10px">
+    ${idea.quality_score ? `<div style="font-size:10px;color:var(--muted);margin-top:8px">Quality score: ${idea.quality_score}/10</div>` : ''}
+    <div style="margin-top:12px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-run" id="modalDeepDiveBtn">Deep Dive ↓</button>
       <button class="btn" id="modalExportBtn">Export PDF</button>
+      <button class="btn" id="modalCopyBtn">Copy</button>
+      <button class="btn" id="modalRegenBtn">Regenerate</button>
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn" id="modalThumbUp" style="font-size:14px;padding:4px 8px" title="This idea is useful">▲</button>
+        <button class="btn" id="modalThumbDown" style="font-size:14px;padding:4px 8px" title="This idea is not useful">▼</button>
+      </span>
     </div>
   `;
   
@@ -932,6 +1120,97 @@ function openIdeaDetail(idea) {
       printWin.print();
     });
   }
+  
+  // Wire Copy button
+  const copyBtn = document.getElementById('modalCopyBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', function() {
+      const parts = [idea.idea_title || ''];
+      if (idea.field) parts.push(`Field: ${idea.field}`);
+      if (idea.difficulty) parts.push(`Level: ${idea.difficulty}`);
+      if (idea.abstract) parts.push(`\nAbstract: ${idea.abstract}`);
+      if (idea.why_hard) parts.push(`\nWhy hard: ${idea.why_hard}`);
+      if (idea.methodology_hint) parts.push(`\nMethodology: ${idea.methodology_hint}`);
+      if (idea.next_steps) parts.push(`\nNext steps:\n${idea.next_steps.split('|').map((s,i) => `  ${i+1}. ${s.trim()}`).join('\n')}`);
+      if (idea.key_papers) parts.push(`\nKey papers: ${idea.key_papers}`);
+      if (idea.resources_needed) parts.push(`\nResources: ${idea.resources_needed}`);
+      parts.push('\n— Generated by ScholarScout');
+      
+      navigator.clipboard.writeText(parts.join('\n')).then(() => {
+        this.textContent = 'Copied';
+        setTimeout(() => { this.textContent = 'Copy'; }, 2000);
+      });
+    });
+  }
+  
+  // Wire Regenerate button
+  const regenBtn = document.getElementById('modalRegenBtn');
+  if (regenBtn) {
+    regenBtn.addEventListener('click', function() {
+      this.disabled = true;
+      this.textContent = 'Generating...';
+      // Call API to regenerate a single idea for this category
+      fetch('/api/regenerate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          field: idea.field || '',
+          approach: document.getElementById('approachSelect').value,
+          language: document.getElementById('langSelect').value,
+          context: document.getElementById('researchContext').value.slice(0, 2000),
+          exclude_title: idea.idea_title
+        })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.idea) {
+          // Add new idea to grid and open its detail
+          ideas.push(data.idea);
+          addIdeaCard(data.idea);
+          updateStats();
+          closeModal();
+          setTimeout(() => openIdeaDetail(data.idea), 300);
+        } else {
+          this.textContent = 'Failed';
+          setTimeout(() => { this.textContent = 'Regenerate'; this.disabled = false; }, 2000);
+        }
+      })
+      .catch(() => {
+        this.textContent = 'Failed';
+        setTimeout(() => { this.textContent = 'Regenerate'; this.disabled = false; }, 2000);
+      });
+    });
+  }
+  
+  // Wire Thumbs up/down (feedback stored in localStorage)
+  const thumbUp = document.getElementById('modalThumbUp');
+  const thumbDown = document.getElementById('modalThumbDown');
+  function saveFeedback(title, vote) {
+    let fb = {};
+    try { fb = JSON.parse(localStorage.getItem('scholarscout_feedback') || '{}'); } catch(e) {}
+    fb[title] = vote;
+    localStorage.setItem('scholarscout_feedback', JSON.stringify(fb));
+  }
+  if (thumbUp) {
+    thumbUp.addEventListener('click', function() {
+      saveFeedback(idea.idea_title, 'up');
+      this.style.color = '#66cc66';
+      thumbDown.style.color = '';
+    });
+  }
+  if (thumbDown) {
+    thumbDown.addEventListener('click', function() {
+      saveFeedback(idea.idea_title, 'down');
+      this.style.color = 'var(--err)';
+      thumbUp.style.color = '';
+    });
+  }
+  // Restore previous feedback state
+  try {
+    const fb = JSON.parse(localStorage.getItem('scholarscout_feedback') || '{}');
+    if (fb[idea.idea_title] === 'up' && thumbUp) thumbUp.style.color = '#66cc66';
+    if (fb[idea.idea_title] === 'down' && thumbDown) thumbDown.style.color = 'var(--err)';
+  } catch(e) {}
 }
 
 // ── Novelty Check ──
@@ -1119,7 +1398,6 @@ function handleEvent(ev) {
     updateProgress(10);
   }
   else if (e === 'fatal_error') {
-    // Mark current active phase as error
     [0,1,2,3,4].forEach(n => {
       const el = document.getElementById('ph'+n);
       if (el && el.classList.contains('active')) setPhase(n, 'error', ev.msg || 'Error');
@@ -1127,6 +1405,17 @@ function handleEvent(ev) {
     document.getElementById('statusBadge').textContent = 'ERROR';
     document.getElementById('statusBadge').className = 'badge error';
     document.getElementById('progBar').style.background = 'var(--err)';
+    // Show user-friendly error in ideas grid
+    const grid = document.getElementById('ideasGrid');
+    let hint = 'Check Settings tab for LLM configuration.';
+    if (ev.msg && ev.msg.includes('API Key')) hint = 'Go to Settings tab and add your API key.';
+    else if (ev.msg && ev.msg.includes('unreachable')) hint = 'Check your internet connection or LLM provider status.';
+    else if (ev.msg && ev.msg.includes('model')) hint = 'The model name may be incorrect. Check Settings tab.';
+    grid.innerHTML = `<div class="empty" style="color:var(--err)"><span>!</span>${escapeHtml(ev.msg || 'Pipeline failed')}<br><span style="font-size:11px;color:var(--muted);margin-top:8px;display:block">${hint}</span></div>`;
+    running = false;
+    document.getElementById('btnRun').disabled = false;
+    document.getElementById('btnStop').style.display = 'none';
+    playNotification();
   }
   else if (e === 'llm_error') {
     // Log only, don't stop UI — pipeline may have fallback
@@ -1163,6 +1452,7 @@ function handleEvent(ev) {
     document.getElementById('btnStop').style.display = 'none';
     document.getElementById('statusBadge').textContent = 'READY';
     document.getElementById('statusBadge').className = 'badge';
+    playNotification(); // Sound alert when pipeline finishes
     // Mark all phases as done
     [0,1,2,3,4].forEach(n => {
       const el = document.getElementById('ph'+n);
@@ -1186,40 +1476,54 @@ function clearStorage() {
   updateStats();
 }
 
-function startPipeline() {
-  // Check if first time — show onboarding
-  if (!sessionStorage.getItem('scholarscout_onboarded')) {
-    document.getElementById('onboardingModal').classList.add('visible');
+function quickMode() {
+  const selectedCats = Array.from(document.querySelectorAll('.cat-item input:checked')).map(el => el.value);
+  if (selectedCats.length === 0) {
+    alert("Select at least one category");
     return;
   }
   
-  _doStartPipeline();
+  const grid = document.getElementById('ideasGrid');
+  grid.innerHTML = '<div class="empty"><span>▸</span>Generating ideas (quick mode)...</div>';
+  
+  const maxIdeas = parseInt(document.getElementById('maxIdeas').value) || 5;
+  const language = document.getElementById('langSelect').value;
+  const approach = document.getElementById('approachSelect').value;
+  const goal = document.getElementById('goalSelect').value;
+  const context = document.getElementById('researchContext').value.slice(0, 2000);
+  
+  fetch('/api/quick', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ categories: selectedCats, max_ideas: maxIdeas, language: language, approach: approach, goal: goal, context: context })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ideas && data.ideas.length) {
+      grid.innerHTML = '';
+      ideas = data.ideas;
+      data.ideas.forEach(idea => addIdeaCard(idea));
+      updateStats();
+      if (data.from_cache) addLog('[QUICK] Generated from cached papers', 'ok');
+      else addLog('[QUICK] Generated from LLM knowledge (no cache available)', 'warn');
+      playNotification();
+    } else {
+      grid.innerHTML = '<div class="empty"><span>!</span>' + escapeHtml(data.error || 'No ideas generated') + '</div>';
+    }
+  })
+  .catch(e => {
+    grid.innerHTML = '<div class="empty"><span>!</span>Quick mode failed: ' + escapeHtml(e.message) + '</div>';
+  });
 }
 
-function completeOnboarding() {
-  // Save approach selection
-  const approach = document.querySelector('input[name="ob_approach"]:checked').value;
-  document.getElementById('approachSelect').value = approach;
-  sessionStorage.setItem('scholarscout_approach', approach);
-  
-  // Save context if provided
-  const ctx = document.getElementById('onboardContext').value.trim();
-  if (ctx) {
-    document.getElementById('researchContext').value = ctx;
-    document.getElementById('ctxWrapper').classList.add('open');
+function startPipeline() {
+  // Check if first time — show profile popup
+  if (!sessionStorage.getItem('scholarscout_onboarded')) {
+    document.getElementById('profileModal').classList.add('visible');
+    sessionStorage.setItem('scholarscout_onboarded', '1');
+    return;
   }
   
-  // Mark onboarded
-  sessionStorage.setItem('scholarscout_onboarded', '1');
-  document.getElementById('onboardingModal').classList.remove('visible');
-  
-  // Start pipeline
-  _doStartPipeline();
-}
-
-function skipOnboarding() {
-  sessionStorage.setItem('scholarscout_onboarded', '1');
-  document.getElementById('onboardingModal').classList.remove('visible');
   _doStartPipeline();
 }
 
@@ -1257,11 +1561,12 @@ function _doStartPipeline() {
   currentLanguage = language;
   const research_context = document.getElementById('researchContext').value.slice(0, 2000);
   const approach = document.getElementById('approachSelect').value;
+  const goal = document.getElementById('goalSelect').value;
 
   fetch('/api/run', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach })
+    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal })
   }).catch(err => { addLog('[ERR] Failed: ' + err, 'err'); });
 }
 
@@ -1517,9 +1822,45 @@ function testConnection() {
   .catch(e => showSettingsStatus('Network error: ' + e.message, false));
 }
 
+// ── Theme Toggle ──
+(function initTheme() {
+  const toggle = document.getElementById('themeToggle');
+  const saved = localStorage.getItem('scholarscout_theme');
+  if (saved === 'light') document.body.classList.add('light');
+  
+  toggle.addEventListener('click', function() {
+    document.body.classList.toggle('light');
+    localStorage.setItem('scholarscout_theme', document.body.classList.contains('light') ? 'light' : 'dark');
+  });
+})();
+
+// ── Keyboard Shortcuts ──
+document.addEventListener('keydown', function(e) {
+  // Escape = close modal (already handled above)
+  // Ctrl+Enter = Run pipeline
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !running) {
+    e.preventDefault();
+    startPipeline();
+  }
+  // Ctrl+K = focus search
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    const search = document.getElementById('ideaSearch');
+    if (search) search.focus();
+  }
+});
+
+// ── Notification Sound ──
+const notifAudio = new Audio('/static/notification.m4a');
+notifAudio.volume = 0.5;
+
+function playNotification() {
+  try { notifAudio.play(); } catch(e) {}
+}
+
 // ── Update Checker ──
 (function checkForUpdates() {
-  const CURRENT_VERSION = '1.0.0';
+  const CURRENT_VERSION = '1.3.0';
   const REPO = 'neej4/ScholarScout';
   
   fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {cache: 'no-store'})

@@ -27,6 +27,7 @@ class Orchestrator:
         self.research_context = research_context or os.environ.get('SCOUT_CONTEXT', '')
         self.language = language or os.environ.get('SCOUT_LANGUAGE', 'en')
         self.approach = approach or os.environ.get('SCOUT_APPROACH', 'any')
+        self.goal = os.environ.get('SCOUT_GOAL', 'any')
         self.llm_client = LLMClient(emit_fn=self._emit)
         
         # Initialize multi-source fetchers
@@ -130,6 +131,20 @@ class Orchestrator:
         errors = []
         cat_counts = {}
         
+        # Load previous session titles for duplicate detection
+        history_file = os.path.join(Config.DATA_DIR, "session_history.json")
+        try:
+            with open(history_file, "r", encoding="utf-8") as f:
+                history = json.load(f)
+            for session in history[:5]:  # Check last 5 sessions
+                for idea in session.get("ideas", []):
+                    if idea.get("idea_title"):
+                        seen_titles.add(idea["idea_title"])
+            if seen_titles:
+                self._emit("dedup", msg=f"Loaded {len(seen_titles)} previous titles for deduplication")
+        except:
+            pass
+        
         cache = self.load_cache()
         cached_total = len(cache)
 
@@ -213,8 +228,9 @@ class Orchestrator:
         for cat, papers_in_cat in cat_papers.items():
             self._emit("cat_start", cat=cat, phase=2, msg=f"Analysing {cat} ({min(len(papers_in_cat), papers_per_cat)} papers)")
             try:
-                # Only analyze as many papers as needed (don't waste tokens on extras)
-                analysis_batch = papers_in_cat[:papers_per_cat]
+                # Sort by citations (high-impact papers first) then take top N
+                sorted_papers = sorted(papers_in_cat, key=lambda p: p.citations, reverse=True)
+                analysis_batch = sorted_papers[:papers_per_cat]
                 trend = self.analyzer.analyze(papers=analysis_batch, category=cat)
                 trends.append(trend)
                 kw_preview = trend.top_keywords[:3] if trend.top_keywords else ["(none)"]
@@ -249,7 +265,8 @@ class Orchestrator:
                     trend, seen_titles, n=ideas_per_cat,
                     research_context=self.research_context,
                     language=self.language,
-                    approach=self.approach
+                    approach=self.approach,
+                    goal=self.goal
                 )
             except Exception as e:
                 self._emit("gen_error", cat=trend.category, msg=f"Generation failed {trend.category}: {e}")
