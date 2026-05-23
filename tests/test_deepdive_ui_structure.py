@@ -134,8 +134,8 @@ def test_close_modal_on_overlay_function():
     # Check it only closes when clicking overlay
     assert "event.target.id === 'deepDiveModal'" in content, "Overlay click detection not found"
     
-    # Check modal has onclick handler
-    assert 'onclick="closeModalOnOverlay(event)"' in content, "Overlay onclick handler not found"
+    # Check modal backdrop click is wired up
+    assert "deepDiveModal').addEventListener('click'" in content, "Overlay click listener not found"
 
 
 def test_render_modal_section_function():

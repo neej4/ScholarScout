@@ -4,4 +4,4 @@ waitress==3.0.0
 PyYAML>=6.0
 
 # Dev / test dependencies (not needed in production)
-# Install with: pip install -r requirements-dev.txt
+# Install with: pip install -e ".[dev]"

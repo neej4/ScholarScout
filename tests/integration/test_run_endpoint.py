@@ -9,22 +9,21 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 import pytest
 from unittest.mock import patch, MagicMock
 from preview_server import app
+import src.web.routes.pipeline as pipeline_routes
 
 
 @pytest.fixture
 def client():
     """Flask test client fixture."""
-    import preview_server
-    
     # Reset global pipeline state before each test
-    preview_server._pipeline_proc = None
+    pipeline_routes._pipeline_proc = None
     
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
     
     # Clean up after test
-    preview_server._pipeline_proc = None
+    pipeline_routes._pipeline_proc = None
 
 
 def test_research_context_forwarded_to_env(client):
@@ -34,7 +33,7 @@ def test_research_context_forwarded_to_env(client):
     """
     test_context = "Saya mahasiswa S2 dengan keahlian NLP"
     
-    with patch('preview_server.subprocess.Popen') as mock_popen:
+    with patch('src.web.routes.pipeline.subprocess.Popen') as mock_popen:
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         mock_popen.return_value = mock_proc
@@ -69,7 +68,7 @@ def test_language_forwarded_to_env(client):
     """
     test_language = "id"
     
-    with patch('preview_server.subprocess.Popen') as mock_popen:
+    with patch('src.web.routes.pipeline.subprocess.Popen') as mock_popen:
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         mock_popen.return_value = mock_proc
@@ -104,7 +103,7 @@ def test_both_parameters_forwarded(client):
     test_context = "Mahasiswa S1 dengan minat Computer Vision"
     test_language = "id"
     
-    with patch('preview_server.subprocess.Popen') as mock_popen:
+    with patch('src.web.routes.pipeline.subprocess.Popen') as mock_popen:
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         mock_popen.return_value = mock_proc
@@ -132,7 +131,7 @@ def test_empty_parameters_not_forwarded(client):
     """
     Verifies that empty or missing parameters are not added to environment variables.
     """
-    with patch('preview_server.subprocess.Popen') as mock_popen:
+    with patch('src.web.routes.pipeline.subprocess.Popen') as mock_popen:
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         mock_popen.return_value = mock_proc
@@ -160,7 +159,7 @@ def test_existing_parameters_still_work(client):
     Verifies that existing parameters (api_key, model, etc.) still work correctly
     after adding the new parameters.
     """
-    with patch('preview_server.subprocess.Popen') as mock_popen:
+    with patch('src.web.routes.pipeline.subprocess.Popen') as mock_popen:
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         mock_popen.return_value = mock_proc

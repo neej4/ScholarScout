@@ -26,7 +26,7 @@ def client():
 @pytest.fixture
 def mock_deepdive_handler():
     """Mock DeepDiveHandler to avoid actual LLM calls."""
-    with patch('preview_server.DeepDiveHandler') as mock_handler_class:
+    with patch('src.web.routes.analysis.DeepDiveHandler') as mock_handler_class:
         mock_handler = MagicMock()
         mock_handler_class.return_value = mock_handler
         
@@ -70,7 +70,7 @@ def mock_deepdive_handler():
 @pytest.fixture
 def mock_llm_client():
     """Mock LLMClient to avoid actual API calls."""
-    with patch('preview_server.LLMClient') as mock_client_class:
+    with patch('src.web.routes.analysis.LLMClient') as mock_client_class:
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
         yield mock_client
