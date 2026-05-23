@@ -1,6 +1,7 @@
 import textwrap
 import re
 import json
+import os
 from typing import List, Set, Optional
 
 from src.core.models import TrendAnalysis, ProjectIdea
@@ -8,9 +9,21 @@ from src.core.llm import LLMClient
 from src.core.config import Config
 
 
+# Goals that trigger PRODUCT mode (output = buildable product, not research paper)
+PRODUCT_GOALS = {"HACKATHON", "SIDE_PROJECT", "AI_TOOL", "INDUSTRY_RND"}
+DEVELOP_GOALS = {"FEATURE", "INTEGRATION", "OPTIMIZATION", "EXTENSION", "PIVOT"}
+ACADEMIC_GOALS = {"THESIS", "PUBLICATION", "GRANT_PROPOSAL", "UNDERGRADUATE",
+                  "MASTERS", "PHD", "LAB_SCIENTIST", "CLINICAL_RESEARCHER", "DATA_SCIENTIST"}
+
+
 class IdeaGenerator:
-    """Generates specific, actionable research project ideas from trend analysis."""
+    """Generates specific, actionable ideas from trend analysis.
     
+    Two modes:
+    - ACADEMIC: research project ideas (methodology, thesis outline, key papers)
+    - PRODUCT: buildable product ideas (MVP features, tech stack, target user, revenue)
+    """
+
     DIFFICULTY_LEVELS = {
         "Undergraduate": {
             "cost": "Free Tier (Colab/Laptop)",
@@ -47,98 +60,414 @@ class IdeaGenerator:
     def __init__(self, llm_client: LLMClient):
         self.llm = llm_client
 
+    def _is_product_mode(self, goal: str) -> bool:
+        return goal.upper() in PRODUCT_GOALS
+
+    def _is_develop_mode(self, goal: str) -> bool:
+        return goal.upper() in DEVELOP_GOALS
+
     def _load_skill_constraints(self, goal: str) -> str:
-        """Load skill file and inject as context. LLM reads markdown natively."""
-        import os
+        """Load skill file from DEVELOP/, PRODUCT/, or ACADEMIC/ subfolder."""
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        skill_path = os.path.join(base_dir, "skills", goal, "SKILL.md")
-        
+
+        # Try new structure: skills/DEVELOP/FEATURE/SKILL.md, skills/PRODUCT/HACKATHON/SKILL.md, etc.
+        for category_dir in ("DEVELOP", "PRODUCT", "ACADEMIC"):
+            skill_path = os.path.join(base_dir, "skills", category_dir, goal, "SKILL.md")
+            if os.path.exists(skill_path):
+                break
+        else:
+            # Fallback: flat structure skills/HACKATHON/SKILL.md (backward compat)
+            skill_path = os.path.join(base_dir, "skills", goal, "SKILL.md")
+
         try:
             with open(skill_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            
-            # Trim to ~2000 chars to stay within token budget
             if len(content) > 2000:
                 content = content[:2000] + "\n..."
-            
             return f"\n--- SKILL PROFILE ({goal}) ---\n{content}\n--- END SKILL PROFILE ---\nGenerate ideas that fit within the constraints above.\n"
-        except:
+        except Exception:
             return ""
 
     def generate(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
-                 research_context: str = '', language: str = 'en', approach: str = 'any', goal: str = 'any') -> List[ProjectIdea]:
+                 research_context: str = '', language: str = 'en',
+                 approach: str = 'any', goal: str = 'any') -> List[ProjectIdea]:
+        """Route to academic, product, or develop generator based on goal."""
+        if self._is_develop_mode(goal):
+            return self._generate_develop(trend, existing_titles, n,
+                                          research_context, language, approach, goal)
+        if self._is_product_mode(goal):
+            return self._generate_product(trend, existing_titles, n,
+                                          research_context, language, approach, goal)
+        return self._generate_academic(trend, existing_titles, n,
+                                       research_context, language, approach, goal)
+
+    # ─── DEVELOP MODE ───────────────────────────────────────────────────────────
+
+    def _generate_develop(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
+                          research_context: str, language: str, approach: str, goal: str) -> List[ProjectIdea]:
+        """Generate feature/improvement ideas for an EXISTING project, grounded in papers."""
+        category = trend.category
+        available_papers = trend.ref_papers[:15]
+        paper_ctx = "\n".join(
+            f"  [P{i+1}] \"{p.title}\"\n       Abstract: {p.abstract[:200]}"
+            for i, p in enumerate(available_papers)
+        )
+        paper_count = len(available_papers)
+
+        goal_section = self._load_skill_constraints(goal)
+        avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
+
+        if not research_context:
+            research_context = "A software project (no further details provided)"
+
+        language_section = ""
+        if language == "id":
+            language_section = "\nWrite ALL fields in Bahasa Indonesia.\n"
+
+        prompt = textwrap.dedent(f"""
+You are a senior software architect who reads research papers to find techniques that can improve EXISTING projects.
+
+CRITICAL: The user has an existing project. Every idea you generate MUST be a feature, improvement, or extension for THEIR project. Do NOT suggest building a new standalone product. Do NOT suggest ideas unrelated to the project described below.
+
+=== THE USER'S PROJECT ===
+{research_context}
+=== END PROJECT DESCRIPTION ===
+
+Category: {category}
+Trending techniques in this area: {', '.join(trend.top_keywords)}
+
+=== RECENT PAPERS (P1 to P{paper_count}) ===
+{paper_ctx}
+=== END OF PAPERS ===
+
+Already suggested (DO NOT duplicate):
+{avoid_str}
+{language_section}{goal_section}
+Generate exactly {n} development ideas as a JSON array. Each idea is a concrete improvement to the user's project, inspired by a technique from the papers above.
+
+Each object MUST have:
+- "idea_title": Feature/improvement name (specific to the project, 5-15 words)
+- "target_user": Who benefits from this improvement (existing users, new segment, developers)
+- "problem_solved": What pain point or limitation of the current project this addresses (2 sentences)
+- "implementation_plan": Array of 3-5 concrete implementation steps
+- "tech_stack": Array of 2-4 technologies/libraries needed (prefer what the project already uses)
+- "effort_estimate": "hours" | "days" | "weeks" (realistic for a solo developer)
+- "inspired_by_ids": Array of paper IDs (e.g., ["P1", "P3"]) — which paper technique enables this
+- "risk": 1 sentence — what could go wrong or be harder than expected
+- "difficulty": "Hackathon" | "Side Project" | "Industry"
+- "quality_score": Integer 1-10 (relevance to the project + feasibility + impact)
+
+RULES:
+1. EVERY idea must be directly applicable to the project described above.
+2. If the project description mentions specific tech (Python, Flask, etc.), use that stack.
+3. Ideas must be ADDITIVE (don't suggest rewriting existing features).
+4. Reference papers using P-numbers only.
+5. If you cannot find relevant techniques for the project, say so — do NOT generate generic ideas.
+
+Respond ONLY with valid JSON array. No markdown.
+""").strip()
+
+        response = self.llm.call(prompt, task_type="idea_generation")
+        return self._parse_develop_response(response, available_papers, category, existing_titles, goal)
+
+    def _parse_develop_response(self, response: Optional[str], available_papers: list,
+                                 category: str, existing_titles: Set[str], goal: str) -> List[ProjectIdea]:
+        """Parse LLM response for develop mode into ProjectIdea objects."""
+        results: List[ProjectIdea] = []
+        if not response:
+            return results
+
+        cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
+        try:
+            ideas_raw = json.loads(cleaned)
+            if isinstance(ideas_raw, dict):
+                ideas_raw = [ideas_raw]
+        except Exception as e:
+            self.llm._emit("llm_error", msg=f"Develop idea parse failed {category}: {e}")
+            return results
+
+        for idea in ideas_raw:
+            title = idea.get("idea_title", "").strip()
+            if not title or title in existing_titles:
+                continue
+
+            try:
+                quality_score = int(idea.get("quality_score", 7))
+            except (ValueError, TypeError):
+                quality_score = 7
+            if quality_score < 5:
+                continue
+
+            # Map difficulty
+            diff = idea.get("difficulty", "Side Project")
+            if diff not in self.DIFFICULTY_LEVELS:
+                diff = "Side Project"
+            level_info = self.DIFFICULTY_LEVELS[diff]
+
+            # Map inspired_by_ids
+            insp = []
+            for pid in idea.get("inspired_by_ids", []):
+                try:
+                    idx = int(str(pid).replace("P", "").replace("p", "")) - 1
+                    if 0 <= idx < len(available_papers):
+                        insp.append(available_papers[idx])
+                except (ValueError, IndexError):
+                    pass
+            if not insp:
+                insp = available_papers[:2]
+
+            # Format arrays
+            impl_plan = idea.get("implementation_plan", [])
+            if isinstance(impl_plan, list):
+                impl_plan = " | ".join(impl_plan[:5])
+            tech = idea.get("tech_stack", [])
+            if isinstance(tech, list):
+                tech = ", ".join(tech[:6])
+
+            # Build abstract
+            problem = idea.get("problem_solved", "")
+            target = idea.get("target_user", "")
+            effort = idea.get("effort_estimate", "days")
+            abstract = f"Target: {target}. {problem} (Effort: {effort})" if target else problem
+
+            obj = ProjectIdea(
+                idea_title=title,
+                field=category,
+                difficulty=diff,
+                cost_estimate=level_info["cost"],
+                cost_note=f"Effort: {effort}",
+                why_hard=idea.get("risk", ""),
+                resources_needed=tech,
+                abstract=abstract,
+                methodology_hint=impl_plan,  # repurpose: implementation plan
+                next_steps=" | ".join(idea.get("implementation_plan", [])[:3]),
+                key_papers="",
+                why_this_idea=f"Effort: {effort}",
+                quality_score=quality_score,
+                prerequisites=target,
+                inspired_by="; ".join(p.id for p in insp),
+                inspiration_title="; ".join(p.title[:80] for p in insp),
+                inspiration_link="; ".join(p.link for p in insp),
+                generated_date=Config.TODAY_STR,
+            )
+            results.append(obj)
+            existing_titles.add(title)
+            self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
+
+        return results
+
+    # ─── PRODUCT MODE ─────────────────────────────────────────────────────────
+
+    def _generate_product(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
+                          research_context: str, language: str, approach: str, goal: str) -> List[ProjectIdea]:
+        """Generate buildable product ideas grounded in recent papers."""
+        category = trend.category
+        available_papers = trend.ref_papers[:15]
+        paper_ctx = "\n".join(
+            f"  [P{i+1}] \"{p.title}\"\n       Abstract: {p.abstract[:200]}"
+            for i, p in enumerate(available_papers)
+        )
+        paper_count = len(available_papers)
+
+        goal_section = self._load_skill_constraints(goal)
+        avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
+
+        context_section = ""
+        if research_context:
+            context_section = f"\nBuilder context: {research_context}\nTailor ideas to match this person's skills, available tools, and interests.\n"
+
+        language_section = ""
+        if language == "id":
+            language_section = "\nWrite ALL fields in Bahasa Indonesia. Product names can stay in English.\n"
+
+        prompt = textwrap.dedent(f"""
+You are a product strategist who reads research papers to find buildable product opportunities.
+Your job: identify problems that papers solve theoretically but NO existing tool/product addresses yet.
+
+Category: {category}
+Trending keywords: {', '.join(trend.top_keywords)}
+Research gaps (= unmet needs):
+{chr(10).join(f'  - {g}' for g in trend.research_gaps) if trend.research_gaps else '  (infer from papers)'}
+
+=== RECENT PAPERS (P1 to P{paper_count}) ===
+{paper_ctx}
+=== END OF PAPERS ===
+
+Already generated (DO NOT duplicate):
+{avoid_str}
+{context_section}{language_section}{goal_section}
+Generate exactly {n} PRODUCT ideas as a JSON array. Each idea is a buildable tool/app/service inspired by the papers above.
+
+Each object MUST have:
+- "idea_title": Product name or one-line description (catchy, specific, 5-12 words)
+- "target_user": Who would use this? Be specific (e.g., "ML engineers at startups with <10 people")
+- "problem_solved": 2 sentences. What pain point does this solve? Why do people need this NOW?
+- "mvp_features": Array of 3-5 core features for the minimum viable product
+- "tech_stack": Array of 3-6 technologies/frameworks/APIs needed to build this
+- "revenue_model": How does this make money? (freemium, API pricing, subscription, open-core, etc.)
+- "competitors": Array of 1-3 existing tools that partially solve this + what they're missing
+- "moat": 1-2 sentences. Why is this hard to copy? What's the unfair advantage?
+- "next_steps": Array of 3 concrete first actions to start building
+- "inspired_by_ids": Array of paper IDs (e.g., ["P1", "P3"])
+- "difficulty": "Hackathon" | "Side Project" | "Industry"
+- "quality_score": Integer 1-10. Is this viable, specific, and differentiated?
+
+RULES:
+1. Every idea must be GROUNDED in a technique/finding from the papers above.
+2. Do NOT suggest generic ideas ("build a chatbot"). Be specific about WHAT technique from WHICH paper.
+3. Ideas must be BUILDABLE with current technology (not research proposals).
+4. Reference papers using P-numbers only.
+
+Respond ONLY with valid JSON array. No markdown.
+""").strip()
+
+        response = self.llm.call(prompt, task_type="idea_generation")
+        return self._parse_product_response(response, available_papers, category, existing_titles, goal)
+
+    def _parse_product_response(self, response: Optional[str], available_papers: list,
+                                 category: str, existing_titles: Set[str], goal: str) -> List[ProjectIdea]:
+        """Parse LLM response for product mode into ProjectIdea objects."""
+        results: List[ProjectIdea] = []
+        if not response:
+            return results
+
+        cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
+        try:
+            ideas_raw = json.loads(cleaned)
+            if isinstance(ideas_raw, dict):
+                ideas_raw = [ideas_raw]
+        except Exception as e:
+            self.llm._emit("llm_error", msg=f"Product idea parse failed {category}: {e}")
+            return results
+
+        for idea in ideas_raw:
+            title = idea.get("idea_title", "").strip()
+            if not title or title in existing_titles:
+                continue
+
+            # Quality filter
+            try:
+                quality_score = int(idea.get("quality_score", 7))
+            except (ValueError, TypeError):
+                quality_score = 7
+            if quality_score < 5:
+                continue
+
+            # Map difficulty
+            diff = idea.get("difficulty", "Side Project")
+            if diff not in self.DIFFICULTY_LEVELS:
+                diff = "Side Project"
+            level_info = self.DIFFICULTY_LEVELS[diff]
+
+            # Map inspired_by_ids to paper objects
+            insp = []
+            for pid in idea.get("inspired_by_ids", []):
+                try:
+                    idx = int(str(pid).replace("P", "").replace("p", "")) - 1
+                    if 0 <= idx < len(available_papers):
+                        insp.append(available_papers[idx])
+                except (ValueError, IndexError):
+                    pass
+            if not insp:
+                insp = available_papers[:2]
+
+            # Format arrays to pipe-separated strings
+            mvp = idea.get("mvp_features", [])
+            if isinstance(mvp, list):
+                mvp = " | ".join(mvp[:5])
+            tech = idea.get("tech_stack", [])
+            if isinstance(tech, list):
+                tech = ", ".join(tech[:6])
+            competitors = idea.get("competitors", [])
+            if isinstance(competitors, list):
+                competitors = " | ".join(competitors[:3])
+            next_steps = idea.get("next_steps", [])
+            if isinstance(next_steps, list):
+                next_steps = " | ".join(next_steps[:3])
+
+            # Build abstract from product fields
+            problem = idea.get("problem_solved", "")
+            target = idea.get("target_user", "")
+            abstract = f"Target: {target}. {problem}" if target else problem
+
+            obj = ProjectIdea(
+                idea_title=title,
+                field=category,
+                difficulty=diff,
+                cost_estimate=level_info["cost"],
+                cost_note=level_info["note"],
+                why_hard=idea.get("moat", ""),
+                resources_needed=tech,
+                abstract=abstract,
+                methodology_hint=mvp,  # repurpose: MVP features
+                next_steps=next_steps,
+                key_papers=competitors,  # repurpose: competitors
+                why_this_idea=idea.get("revenue_model", ""),  # repurpose: revenue
+                quality_score=quality_score,
+                prerequisites=idea.get("target_user", ""),  # repurpose: target user
+                inspired_by="; ".join(p.id for p in insp),
+                inspiration_title="; ".join(p.title[:80] for p in insp),
+                inspiration_link="; ".join(p.link for p in insp),
+                generated_date=Config.TODAY_STR,
+            )
+            results.append(obj)
+            existing_titles.add(title)
+            self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
+
+        return results
+
+    # ─── ACADEMIC MODE (original) ─────────────────────────────────────────────
+
+    def _generate_academic(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
+                           research_context: str, language: str, approach: str, goal: str) -> List[ProjectIdea]:
+        """Generate research project ideas (original behavior)."""
         category = trend.category
         ref_papers = trend.ref_papers
-        
-        # Build numbered paper list (use ALL available ref_papers, not just 5)
-        available_papers = ref_papers[:15]  # Up to 15 papers for context
+
+        available_papers = ref_papers[:15]
         paper_ctx = "\n".join(
             f"  [P{i+1}] \"{p.title}\"\n       ID: {p.id}\n       Abstract: {p.abstract[:180]}"
             for i, p in enumerate(available_papers)
         )
         paper_count = len(available_papers)
-        
-        # Load skill constraints from file if goal is specified
+
         goal_section = ""
         if goal and goal != "any":
             goal_section = self._load_skill_constraints(goal)
-        
+
         methods_ctx = ""
         if trend.methodology_patterns:
             methods_ctx = f"\nCommon methodologies in this area:\n" + "\n".join(f"  - {m}" for m in trend.methodology_patterns)
-        
+
         gaps_ctx = "\n".join(f"  - {g}" for g in trend.research_gaps) if trend.research_gaps else "  (infer from the papers above)"
-        
+
         cross_ctx = ""
         if trend.cross_pollination:
             cross_ctx = f"\nCross-pollination opportunities (combine gap + external technique):\n" + "\n".join(f"  - {c}" for c in trend.cross_pollination)
-        
+
         saturation_ctx = ""
         if trend.saturation_level:
             saturation_ctx = f"\nField saturation: {trend.saturation_level} (if saturated, ideas must be highly specific and differentiated)"
-        
+
         avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
 
         context_section = ""
         if research_context:
-            context_section = f"""
-Student context: {research_context}
-Tailor ideas to match this student's background, available resources, and interests.
-"""
+            context_section = f"\nStudent context: {research_context}\nTailor ideas to match this student's background, available resources, and interests.\n"
 
         language_section = ""
         if language == "id":
-            language_section = """
-Write ALL fields including idea_title, abstract, why_hard, methodology_hint, and next_steps in formal academic Bahasa Indonesia.
-The idea_title MUST also be in Bahasa Indonesia. Use proper scientific terminology. Do not mix English and Indonesian in the same sentence.
-"""
+            language_section = "\nWrite ALL fields including idea_title, abstract, why_hard, methodology_hint, and next_steps in formal academic Bahasa Indonesia.\nThe idea_title MUST also be in Bahasa Indonesia. Use proper scientific terminology.\n"
 
-        # Research approach constraint
         approach_section = ""
-        if approach == "computational":
-            approach_section = """
-IMPORTANT CONSTRAINT: Generate ONLY computational/AI-based research ideas.
-Ideas must involve: machine learning, deep learning, data analysis, simulation, or computational modeling.
-All ideas must be implementable primarily through code and computation.
-"""
-        elif approach == "experimental":
-            approach_section = """
-IMPORTANT CONSTRAINT: Generate ONLY experimental/laboratory research ideas.
-Ideas must involve: wet lab experiments, hardware prototyping, physical measurements, material synthesis, or bench-top research.
-Do NOT suggest purely computational or AI/ML-based projects. The core contribution must come from physical experimentation.
-"""
-        elif approach == "clinical":
-            approach_section = """
-IMPORTANT CONSTRAINT: Generate ONLY clinical/field study research ideas.
-Ideas must involve: patient studies, clinical trials, observational cohorts, surveys, epidemiological analysis, or intervention studies.
-Do NOT suggest purely computational projects. The core contribution must come from real-world data collection with human subjects.
-"""
-        elif approach == "theoretical":
-            approach_section = """
-IMPORTANT CONSTRAINT: Generate ONLY theoretical/review research ideas.
-Ideas must involve: systematic reviews, meta-analyses, theoretical frameworks, mathematical proofs, or conceptual models.
-The core contribution should be synthesis of existing knowledge or new theoretical insights, not new experiments or code.
-"""
+        approach_map = {
+            "computational": "Generate ONLY computational/AI-based research ideas. Ideas must involve: machine learning, deep learning, data analysis, simulation, or computational modeling.",
+            "experimental": "Generate ONLY experimental/laboratory research ideas. Ideas must involve: wet lab experiments, hardware prototyping, physical measurements. Do NOT suggest purely computational projects.",
+            "clinical": "Generate ONLY clinical/field study research ideas. Ideas must involve: patient studies, clinical trials, observational cohorts, surveys.",
+            "theoretical": "Generate ONLY theoretical/review research ideas. Ideas must involve: systematic reviews, meta-analyses, theoretical frameworks, mathematical proofs.",
+        }
+        if approach in approach_map:
+            approach_section = f"\nIMPORTANT CONSTRAINT: {approach_map[approach]}\n"
 
         prompt = textwrap.dedent(f"""
 You are a research advisor. Generate project ideas STRICTLY grounded in the papers below.
@@ -160,182 +489,173 @@ Already generated (DO NOT duplicate):
 Generate exactly {n} research project ideas as a JSON array. Each object MUST have:
 
 - "idea_title": Specific, descriptive (8-18 words). NOT generic.
-
 - "difficulty": "Undergraduate" | "Master's" | "PhD" | "Hackathon" | "Side Project" | "Industry"
-
 - "abstract": 3-4 sentences. Problem, approach, expected outcome. Be concrete.
-
 - "why_hard": 2 sentences. The specific technical challenge.
-
 - "methodology_hint": 2-3 sentences. HOW to approach this technically.
-
 - "next_steps": Exactly 3 items as an array. First 3 actions to start.
-
 - "key_paper_ids": Array of 2-3 paper IDs from the list above (e.g., ["P1", "P3", "P7"]).
   CRITICAL: You may ONLY reference papers from the list above (P1 to P{paper_count}).
-  Do NOT invent paper titles. Do NOT reference papers not in the list.
-
 - "resources_needed": comma-separated list.
-
-- "prerequisites": Array of 3-5 skills/knowledge the student must have to execute this idea (e.g., "Python proficiency", "Understanding of Bayesian statistics", "Access to clinical data"). Be specific to THIS idea.
-
-- "inspired_by_ids": Array of paper IDs from above (e.g., ["P1", "P5"]).
-
-- "why_this_idea": 1-2 sentences explaining which research gap this fills and why NOW is the right time. Reference specific papers.
-
-- "quality_score": Integer 1-10. Self-evaluate: is this idea novel (not obvious), feasible (can be done), and specific (not vague)? Be honest. Score below 6 = idea is too generic or infeasible.
+- "prerequisites": Array of 3-5 skills/knowledge needed.
+- "inspired_by_ids": Array of paper IDs from above.
+- "why_this_idea": 1-2 sentences explaining which research gap this fills and why NOW.
+- "quality_score": Integer 1-10.
 
 ANTI-HALLUCINATION RULES:
 1. Every paper reference MUST use the P-number from the list above.
 2. Do NOT invent paper titles, author names, or URLs.
 3. Do NOT reference datasets you are not certain exist.
 4. If you are unsure about something, leave it out rather than fabricate.
-5. Ideas must be directly derivable from the papers provided — not from your general knowledge.
+5. Ideas must be directly derivable from the papers provided.
 
 Respond ONLY with a valid JSON array. No markdown, no explanation.
 """).strip()
 
         response = self.llm.call(prompt, task_type="idea_generation")
-        results: List[ProjectIdea] = []
-        
-        if response:
-            cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
-            try:
-                ideas_raw = json.loads(cleaned)
-                if isinstance(ideas_raw, dict): 
-                    ideas_raw = [ideas_raw]
-                    
-                for idea in ideas_raw[:n]:
-                    title = idea.get("idea_title", "").strip()
-                    if not title or title in existing_titles: 
-                        continue
-                    
-                    # Normalize difficulty
-                    diff = idea.get("difficulty", "Master's")
-                    if diff not in self.DIFFICULTY_LEVELS:
-                        diff_lower = diff.lower()
-                        if "under" in diff_lower or "sarjana" in diff_lower:
-                            diff = "Undergraduate"
-                        elif "phd" in diff_lower or "doktor" in diff_lower:
-                            diff = "PhD"
-                        elif "hack" in diff_lower:
-                            diff = "Hackathon"
-                        elif "side" in diff_lower or "weekend" in diff_lower:
-                            diff = "Side Project"
-                        elif "industry" in diff_lower or "company" in diff_lower:
-                            diff = "Industry"
-                        else:
-                            diff = "Master's"
-                    
-                    level_info = self.DIFFICULTY_LEVELS[diff]
-                    
-                    # Map key_paper_ids (P1, P2...) back to actual paper objects
-                    key_paper_ids = idea.get("key_paper_ids", [])
-                    key_paper_titles = []
-                    insp = []
-                    for pid in key_paper_ids:
-                        try:
-                            idx = int(pid.replace("P", "").replace("p", "")) - 1
-                            if 0 <= idx < len(available_papers):
-                                key_paper_titles.append(available_papers[idx].title[:80])
-                                if available_papers[idx] not in insp:
-                                    insp.append(available_papers[idx])
-                        except (ValueError, IndexError):
-                            pass
-                    
-                    # Also map inspired_by_ids
-                    for pid in idea.get("inspired_by_ids", []):
-                        try:
-                            idx = int(str(pid).replace("P", "").replace("p", "")) - 1
-                            if 0 <= idx < len(available_papers):
-                                if available_papers[idx] not in insp:
-                                    insp.append(available_papers[idx])
-                        except (ValueError, IndexError):
-                            pass
-                    
-                    if not insp:
-                        insp = available_papers[:2]
-                    
-                    # Format next_steps
-                    next_steps = idea.get("next_steps", "")
-                    if isinstance(next_steps, list):
-                        next_steps = " | ".join(next_steps[:3])
-                    
-                    # Format key_papers from mapped titles (grounded, not hallucinated)
-                    key_papers = " | ".join(key_paper_titles[:3]) if key_paper_titles else ""
-                    
-                    # Quality scoring — filter out low-quality ideas
-                    try:
-                        quality_score = int(idea.get("quality_score", 7))
-                    except (ValueError, TypeError):
-                        quality_score = 7
-                    if quality_score < 5:
-                        continue  # Skip ideas the LLM itself rates as poor
-                    
-                    # Why this idea
-                    why_this_idea = idea.get("why_this_idea", "")
-                    
-                    # Prerequisites
-                    prereqs = idea.get("prerequisites", [])
-                    if isinstance(prereqs, list):
-                        prereqs = " | ".join(prereqs[:5])
-                        
-                    obj = ProjectIdea(
-                        idea_title=title,
-                        field=category,
-                        difficulty=diff,
-                        cost_estimate=level_info["cost"],
-                        cost_note=level_info["note"],
-                        why_hard=idea.get("why_hard", ""),
-                        resources_needed=idea.get("resources_needed", ""),
-                        abstract=idea.get("abstract", ""),
-                        methodology_hint=idea.get("methodology_hint", ""),
-                        next_steps=next_steps,
-                        key_papers=key_papers,
-                        why_this_idea=why_this_idea,
-                        quality_score=quality_score,
-                        prerequisites=prereqs,
-                        inspired_by="; ".join(p.id for p in insp),
-                        inspiration_title="; ".join(p.title[:80] for p in insp),
-                        inspiration_link="; ".join(p.link for p in insp),
-                        generated_date=Config.TODAY_STR
-                    )
-                    results.append(obj)
-                    existing_titles.add(title)
-                    self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
-            except Exception as e:
-                self.llm._emit("llm_error", msg=f"Idea parse failed {category}: {e}")
+        return self._parse_academic_response(response, available_papers, category, existing_titles, trend)
 
-        # Fallback if LLM fails entirely
+    def _parse_academic_response(self, response: Optional[str], available_papers: list,
+                                  category: str, existing_titles: Set[str], trend: TrendAnalysis) -> List[ProjectIdea]:
+        """Parse LLM response for academic mode into ProjectIdea objects."""
+        results: List[ProjectIdea] = []
+        if not response:
+            return self._academic_fallback(trend, existing_titles)
+
+        cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
+        try:
+            ideas_raw = json.loads(cleaned)
+            if isinstance(ideas_raw, dict):
+                ideas_raw = [ideas_raw]
+        except Exception as e:
+            self.llm._emit("llm_error", msg=f"Idea parse failed {category}: {e}")
+            return self._academic_fallback(trend, existing_titles)
+
+        for idea in ideas_raw:
+            title = idea.get("idea_title", "").strip()
+            if not title or title in existing_titles:
+                continue
+
+            # Normalize difficulty
+            diff = idea.get("difficulty", "Master's")
+            if diff not in self.DIFFICULTY_LEVELS:
+                diff_lower = diff.lower()
+                if "under" in diff_lower or "sarjana" in diff_lower:
+                    diff = "Undergraduate"
+                elif "phd" in diff_lower or "doktor" in diff_lower:
+                    diff = "PhD"
+                elif "hack" in diff_lower:
+                    diff = "Hackathon"
+                elif "side" in diff_lower or "weekend" in diff_lower:
+                    diff = "Side Project"
+                elif "industry" in diff_lower or "company" in diff_lower:
+                    diff = "Industry"
+                else:
+                    diff = "Master's"
+
+            level_info = self.DIFFICULTY_LEVELS[diff]
+
+            # Map key_paper_ids back to paper objects
+            key_paper_ids = idea.get("key_paper_ids", [])
+            key_paper_titles = []
+            insp = []
+            for pid in key_paper_ids:
+                try:
+                    idx = int(pid.replace("P", "").replace("p", "")) - 1
+                    if 0 <= idx < len(available_papers):
+                        key_paper_titles.append(available_papers[idx].title[:80])
+                        if available_papers[idx] not in insp:
+                            insp.append(available_papers[idx])
+                except (ValueError, IndexError):
+                    pass
+
+            for pid in idea.get("inspired_by_ids", []):
+                try:
+                    idx = int(str(pid).replace("P", "").replace("p", "")) - 1
+                    if 0 <= idx < len(available_papers):
+                        if available_papers[idx] not in insp:
+                            insp.append(available_papers[idx])
+                except (ValueError, IndexError):
+                    pass
+
+            if not insp:
+                insp = available_papers[:2]
+
+            next_steps = idea.get("next_steps", "")
+            if isinstance(next_steps, list):
+                next_steps = " | ".join(next_steps[:3])
+
+            key_papers = " | ".join(key_paper_titles[:3]) if key_paper_titles else ""
+
+            try:
+                quality_score = int(idea.get("quality_score", 7))
+            except (ValueError, TypeError):
+                quality_score = 7
+            if quality_score < 5:
+                continue
+
+            prereqs = idea.get("prerequisites", [])
+            if isinstance(prereqs, list):
+                prereqs = " | ".join(prereqs[:5])
+
+            obj = ProjectIdea(
+                idea_title=title,
+                field=category,
+                difficulty=diff,
+                cost_estimate=level_info["cost"],
+                cost_note=level_info["note"],
+                why_hard=idea.get("why_hard", ""),
+                resources_needed=idea.get("resources_needed", ""),
+                abstract=idea.get("abstract", ""),
+                methodology_hint=idea.get("methodology_hint", ""),
+                next_steps=next_steps,
+                key_papers=key_papers,
+                why_this_idea=idea.get("why_this_idea", ""),
+                quality_score=quality_score,
+                prerequisites=prereqs,
+                inspired_by="; ".join(p.id for p in insp),
+                inspiration_title="; ".join(p.title[:80] for p in insp),
+                inspiration_link="; ".join(p.link for p in insp),
+                generated_date=Config.TODAY_STR,
+            )
+            results.append(obj)
+            existing_titles.add(title)
+            self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
+
         if not results:
-            for kw in trend.top_keywords[:n]:
-                title = f"Benchmarking {kw.title()} Methods on {category.split('.')[-1].upper()} Tasks with Limited Supervision"
-                if title in existing_titles: 
-                    continue
-                insp = ref_papers[:2]
-                
-                obj = ProjectIdea(
-                    idea_title=title,
-                    field=category,
-                    difficulty="Master's",
-                    cost_estimate="Cloud GPU ($50-200)",
-                    cost_note=self.DIFFICULTY_LEVELS["Master's"]["note"],
-                    why_hard="Requires careful experimental design and fair comparison across methods.",
-                    resources_needed="Cloud GPU, benchmark datasets, HuggingFace Transformers",
-                    abstract=f"Systematic comparison of recent {kw} approaches on standard benchmarks with limited labeled data.",
-                    methodology_hint=f"Implement 3-4 recent {kw} methods, evaluate on same splits, report with confidence intervals.",
-                    next_steps="Survey recent papers on this topic | Identify 2-3 standard benchmarks | Set up evaluation pipeline",
-                    key_papers="; ".join(p.title[:60] for p in insp[:2]),
-                    why_this_idea=f"No comprehensive benchmark exists for recent {kw} methods under limited supervision.",
-                    quality_score=6,
-                    prerequisites="Literature survey skills | Basic ML implementation | Experiment design",
-                    inspired_by="; ".join(p.id for p in insp),
-                    inspiration_title="; ".join(p.title[:80] for p in insp),
-                    inspiration_link="; ".join(p.link for p in insp),
-                    generated_date=Config.TODAY_STR
-                )
-                results.append(obj)
-                existing_titles.add(title)
-                self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
-                
+            return self._academic_fallback(trend, existing_titles)
+        return results
+
+    def _academic_fallback(self, trend: TrendAnalysis, existing_titles: Set[str]) -> List[ProjectIdea]:
+        """Fallback ideas when LLM fails entirely."""
+        results = []
+        ref_papers = trend.ref_papers
+        for kw in trend.top_keywords[:3]:
+            title = f"Benchmarking {kw.title()} Methods on {trend.category.split('.')[-1].upper()} Tasks with Limited Supervision"
+            if title in existing_titles:
+                continue
+            insp = ref_papers[:2]
+            obj = ProjectIdea(
+                idea_title=title,
+                field=trend.category,
+                difficulty="Master's",
+                cost_estimate="Cloud GPU ($50-200)",
+                cost_note=self.DIFFICULTY_LEVELS["Master's"]["note"],
+                why_hard="Requires careful experimental design and fair comparison across methods.",
+                resources_needed="Cloud GPU, benchmark datasets, HuggingFace Transformers",
+                abstract=f"Systematic comparison of recent {kw} approaches on standard benchmarks with limited labeled data.",
+                methodology_hint=f"Implement 3-4 recent {kw} methods, evaluate on same splits, report with confidence intervals.",
+                next_steps="Survey recent papers | Identify 2-3 benchmarks | Set up evaluation pipeline",
+                key_papers="; ".join(p.title[:60] for p in insp[:2]),
+                why_this_idea=f"No comprehensive benchmark exists for recent {kw} methods under limited supervision.",
+                quality_score=6,
+                prerequisites="Literature survey | Basic ML implementation | Experiment design",
+                inspired_by="; ".join(p.id for p in insp),
+                inspiration_title="; ".join(p.title[:80] for p in insp),
+                inspiration_link="; ".join(p.link for p in insp),
+                generated_date=Config.TODAY_STR,
+            )
+            results.append(obj)
+            existing_titles.add(title)
+            self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
         return results

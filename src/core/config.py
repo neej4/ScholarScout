@@ -102,7 +102,6 @@ class Config:
     
     # ─── PIPELINE SETTINGS ─────────────────────────────────────────────────────
     MAX_IDEAS     = int(os.environ.get("SCOUT_MAX_IDEAS", _app_conf.get("max_ideas", 50)))
-    MAX_PER_BATCH = 25
     
     # ─── KATEGORI ARXIV ────────────────────────────────────────────────────────
     _ui_cats = os.environ.get("SCOUT_CATEGORIES", "")

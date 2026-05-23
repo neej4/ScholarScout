@@ -112,13 +112,15 @@ class Orchestrator:
              model=Config.OPENROUTER_MODEL)
 
         try:
-            ping_ok = self.llm_client.ping()
+            ping_ok, ping_err = self.llm_client.ping()
         except Exception as e:
             self._emit("fatal_error", msg=f"Ping crashed: {e}")
             ping_ok = False
+            ping_err = str(e)
 
         if not ping_ok:
-            self._emit("fatal_error", msg="LLM unreachable. Check config.yaml (api_key, base_url, model).")
+            err_detail = ping_err if ping_err else "Check config.yaml (api_key, base_url, model)."
+            self._emit("fatal_error", msg=f"LLM unreachable. {err_detail}")
             self._emit("done", papers=0, ideas=0, errors=["LLM ping failed"],
                  msg="Pipeline aborted: LLM unreachable")
             return
@@ -176,6 +178,34 @@ class Orchestrator:
         for cat in Config.CATEGORIES:
             self._emit("cat_start", cat=cat, phase=1, msg=f"Fetching {cat} (parallel)")
             cat_papers = []
+
+            # Cache-aware: if we already have enough cached papers for this category,
+            # use them instead of fetching (avoids rate limits on repeated runs)
+            cached_for_cat = []
+            for v in cache.values():
+                if v.get("category") == cat:
+                    cached_for_cat.append(Paper(
+                        id=v.get("id", ""),
+                        title=v.get("title", ""),
+                        category=v.get("category", cat),
+                        authors=v.get("authors", ""),
+                        abstract=v.get("abstract", ""),
+                        link=v.get("link", ""),
+                        submitted_date=v.get("submitted", ""),
+                        source=v.get("source", "cache"),
+                        citations=v.get("citations", 0),
+                    ))
+            if len(cached_for_cat) >= papers_per_cat:
+                # Sort by recency, take what we need
+                cached_for_cat.sort(key=lambda p: p.submitted_date, reverse=True)
+                cat_papers = cached_for_cat[:papers_per_cat]
+                for p in cat_papers:
+                    seen_paper_titles.add(p.title.lower().strip())
+                all_papers.extend(cat_papers)
+                cat_counts[cat] = len(cat_papers)
+                self._emit("cat_done", cat=cat, count=len(cat_papers),
+                     phase=1, msg=f"{cat}: {len(cat_papers)} papers from cache (skipped fetch)")
+                continue
             
             # Fetch all 3 sources in parallel (saves ~60% time per category)
             with ThreadPoolExecutor(max_workers=3) as executor:
@@ -235,7 +265,8 @@ class Orchestrator:
                 trends.append(trend)
                 kw_preview = trend.top_keywords[:3] if trend.top_keywords else ["(none)"]
                 self._emit("trend", cat=cat, keywords=kw_preview,
-                     msg=f"{cat}: keywords={kw_preview}")
+                     confidence=trend.confidence,
+                     msg=f"{cat}: keywords={kw_preview} (confidence: {trend.confidence}/10)")
             except Exception as e:
                 self._emit("trend_error", cat=cat, msg=f"Trend analysis failed {cat}: {e}")
                 errors.append(f"Trend error: {cat}: {e}")

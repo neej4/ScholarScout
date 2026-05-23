@@ -39,6 +39,7 @@ class TrendAnalysis:
     saturation_level: str = "growing"  # saturated | growing | emerging
     cross_pollination: List[str] = field(default_factory=list)
     ref_papers: List[Paper] = field(default_factory=list)
+    confidence: int = 7  # 1-10 self-rated confidence in the analysis
     
 @dataclass
 class ProjectIdea:

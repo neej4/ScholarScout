@@ -1,4 +1,7 @@
+# Runtime dependencies
 Flask==3.0.0
 waitress==3.0.0
-pytest==8.0.0
-hypothesis==6.98.0
+PyYAML>=6.0
+
+# Dev / test dependencies (not needed in production)
+# Install with: pip install -r requirements-dev.txt

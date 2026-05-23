@@ -307,21 +307,21 @@ class TestNoveltyCheckerStatusMapping(unittest.TestCase):
     
     def test_score_to_status_novel(self):
         """Test status mapping for novel ideas."""
-        self.assertEqual(self.checker._score_to_status(0.0), "novel")
-        self.assertEqual(self.checker._score_to_status(0.1), "novel")
-        self.assertEqual(self.checker._score_to_status(0.39), "novel")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.0), "novel")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.1), "novel")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.39), "novel")
     
     def test_score_to_status_similar(self):
         """Test status mapping for similar ideas."""
-        self.assertEqual(self.checker._score_to_status(0.40), "similar")
-        self.assertEqual(self.checker._score_to_status(0.5), "similar")
-        self.assertEqual(self.checker._score_to_status(0.70), "similar")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.40), "similar")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.5), "similar")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.69), "similar")
     
     def test_score_to_status_exists(self):
         """Test status mapping for existing ideas."""
-        self.assertEqual(self.checker._score_to_status(0.71), "exists")
-        self.assertEqual(self.checker._score_to_status(0.9), "exists")
-        self.assertEqual(self.checker._score_to_status(1.0), "exists")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.70), "exists")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.9), "exists")
+        self.assertEqual(self.checker._jaccard_score_to_status(1.0), "exists")
 
 
 class TestNoveltyCheckerIntegration(unittest.TestCase):

@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "scholarscout"
+version = "1.4.0"
+description = "AI-powered research idea discovery for students and researchers"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["research", "arxiv", "llm", "idea-generation", "academic"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "Flask==3.0.0",
+    "waitress==3.0.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.0.0",
+    "hypothesis==6.98.0",
+]
+
+[project.scripts]
+scholarscout = "preview_server:app"
+
+[project.urls]
+Homepage    = "https://github.com/neej4/ScholarScout"
+Repository  = "https://github.com/neej4/ScholarScout"
+Changelog   = "https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/neej4/ScholarScout/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "skills*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: marks tests that make real API calls (deselect with -m 'not integration')",
+    "slow: marks tests that take more than 5 seconds",
+]

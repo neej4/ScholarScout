@@ -24,7 +24,7 @@ def mock_llm_client():
     """
     mock_client = Mock()
     mock_client.call = MagicMock(return_value='{"test": "response"}')
-    mock_client.ping = MagicMock(return_value=True)
+    mock_client.ping = MagicMock(return_value=(True, ""))
     mock_client.api_key = "test_api_key"
     mock_client.model = "test_model"
     mock_client.url = "https://test.api.url"
@@ -133,12 +133,18 @@ def stub_idea():
     return ProjectIdea(
         idea_title="Efficient Transformer for Low-Resource Languages",
         field="Natural Language Processing",
-        difficulty="Magister",
-        cost_estimate="Rp 5-10 juta",
-        cost_note="Biaya komputasi cloud untuk training",
+        difficulty="Master's",
+        cost_estimate="Cloud GPU ($50-200)",
+        cost_note="Needs cloud GPU access for training",
         why_hard="Requires handling limited training data and adapting pre-trained models",
         resources_needed="GPU access, multilingual datasets, transformer frameworks",
         abstract="This project aims to develop an efficient transformer architecture optimized for low-resource languages, addressing the gap in NLP tools for underrepresented languages.",
+        methodology_hint="Fine-tune multilingual model on low-resource data with curriculum learning.",
+        next_steps="Survey existing multilingual models | Collect low-resource dataset | Set up fine-tuning pipeline",
+        key_papers="Attention Is All You Need | mBERT: Multilingual BERT",
+        why_this_idea="No efficient transformer exists for languages with <10K training samples.",
+        quality_score=8,
+        prerequisites="PyTorch | NLP fundamentals | Transfer learning",
         inspired_by="2401.12345",
         inspiration_title="Attention Is All You Need",
         inspiration_link="https://arxiv.org/abs/1706.03762",
@@ -150,18 +156,22 @@ def stub_idea():
 def stub_idea_indonesian():
     """
     Stub ProjectIdea object in Bahasa Indonesia for testing language features.
-    
-    Returns a ProjectIdea instance with Indonesian language content.
     """
     return ProjectIdea(
         idea_title="Sistem Deteksi Penyakit Tanaman Berbasis Computer Vision",
         field="Computer Vision",
-        difficulty="Sarjana",
-        cost_estimate="Rp 2-5 juta",
+        difficulty="Undergraduate",
+        cost_estimate="Free Tier (Colab/Laptop)",
         cost_note="Biaya pengumpulan dataset dan komputasi",
         why_hard="Memerlukan dataset gambar penyakit tanaman yang beragam dan teknik augmentasi data",
         resources_needed="Kamera smartphone, dataset gambar tanaman, framework deep learning",
         abstract="Proyek ini bertujuan mengembangkan sistem deteksi otomatis penyakit tanaman menggunakan teknik computer vision dan deep learning untuk membantu petani Indonesia.",
+        methodology_hint="Transfer learning dari EfficientNet, fine-tune pada dataset PlantVillage.",
+        next_steps="Kumpulkan dataset | Implementasi model baseline | Evaluasi akurasi",
+        key_papers="EfficientNet | PlantVillage Dataset",
+        why_this_idea="Belum ada tool deteksi penyakit tanaman yang akurat untuk varietas lokal Indonesia.",
+        quality_score=7,
+        prerequisites="Python | Deep learning dasar | OpenCV",
         inspired_by="2402.11111",
         inspiration_title="Computer Vision for Medical Imaging",
         inspiration_link="https://arxiv.org/abs/2402.11111",

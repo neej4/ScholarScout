@@ -113,6 +113,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .idea-insp a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)}
 .idea-insp a:hover{color:#ffffff;border-color:#ffffff}
 .idea-method,.idea-steps{font-size:11px;color:var(--text);line-height:1.5;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:4px;border:1px solid var(--border)}
+.idea-why-this{font-size:11px;color:var(--muted);line-height:1.5;font-style:italic;padding:4px 0}
 .idea-method-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
 
 /* BOOKMARK BUTTON */
@@ -131,13 +132,84 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .novelty-result.exists{color:#ff6b6b}
 .novelty-result a{color:inherit;text-decoration:none;font-size:10px;display:block;margin-top:2px;opacity:0.7;border-bottom:1px solid currentColor}
 .novelty-result a:hover{opacity:1}
+.novelty-method{font-size:9px;opacity:0.5;margin-left:4px}
+
+/* TOOLTIP */
+[data-tooltip]{position:relative;cursor:help}
+[data-tooltip]::after{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#111;color:#ddd;font-size:10px;padding:5px 8px;border-radius:4px;white-space:pre-wrap;max-width:220px;width:max-content;pointer-events:none;opacity:0;transition:opacity 0.15s;z-index:999;border:1px solid var(--border);line-height:1.4;text-transform:none;letter-spacing:normal;font-weight:400}
+[data-tooltip]:hover::after{opacity:1}
+
+/* ONBOARDING WIZARD */
+.wizard-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px}
+.wizard-box{background:var(--card);border:1px solid var(--border);border-radius:10px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
+.wizard-header{padding:24px 28px 0;display:flex;justify-content:space-between;align-items:flex-start}
+.wizard-steps{display:flex;gap:6px;align-items:center}
+.wizard-step-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:0.2s}
+.wizard-step-dot.active{background:#ffffff;width:20px;border-radius:3px}
+.wizard-step-dot.done{background:var(--muted)}
+.wizard-skip{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;padding:0;transition:0.2s}
+.wizard-skip:hover{color:var(--text)}
+.wizard-body{padding:28px}
+.wizard-step{display:none}
+.wizard-step.active{display:block}
+.wizard-title{font-size:18px;font-weight:600;color:#ffffff;margin-bottom:6px;line-height:1.3}
+.wizard-sub{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.wizard-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.wizard-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.wizard-field input,.wizard-field select{width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:10px 12px;border-radius:6px;font-size:12px;font-family:inherit;outline:none;transition:border-color 0.2s}
+.wizard-field input:focus,.wizard-field select:focus{border-color:var(--muted)}
+.wizard-provider-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.wizard-provider-card{padding:12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;transition:all 0.15s;text-align:left}
+.wizard-provider-card:hover{border-color:var(--muted)}
+.wizard-provider-card.selected{border-color:#ffffff;background:rgba(255,255,255,0.05)}
+.wizard-provider-card .wpc-name{font-size:12px;font-weight:600;color:#fff;margin-bottom:2px}
+.wizard-provider-card .wpc-desc{font-size:10px;color:var(--muted);line-height:1.4}
+.wizard-provider-card .wpc-badge{display:inline-block;font-size:9px;padding:1px 6px;border-radius:2px;border:1px solid;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px}
+.wpc-badge.free{border-color:#66cc66;color:#66cc66}
+.wpc-badge.paid{border-color:var(--muted);color:var(--muted)}
+.wizard-footer{padding:0 28px 24px;display:flex;gap:10px;align-items:center}
+.wizard-status{font-size:11px;padding:10px 12px;border-radius:6px;display:none;margin-bottom:16px}
+.wizard-status.ok{background:rgba(102,204,102,0.1);border:1px solid #66cc66;color:#66cc66}
+.wizard-status.err{background:rgba(255,107,107,0.1);border:1px solid var(--err);color:var(--err)}
+.wizard-status.loading{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted)}
+.wizard-cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:16px}
+.wizard-cat-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:0.15s;font-size:11px;color:var(--muted)}
+.wizard-cat-item:hover{border-color:var(--muted);color:var(--text)}
+.wizard-cat-item.selected{border-color:#ffffff;color:#ffffff;background:rgba(255,255,255,0.04)}
+.wizard-cat-item input[type=checkbox]{accent-color:#fff;pointer-events:none}
+.wizard-progress{height:2px;background:var(--border)}
+.wizard-progress-bar{height:100%;background:#ffffff;transition:width 0.4s ease}
+
+/* SPRITE ANIMATION (logo mascot) */
+.sprite-anim{width:48px;height:48px;margin:0 auto 12px;position:relative}
+.sprite-anim img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity 0.15s;filter:invert(1)}
+.sprite-anim img.visible{opacity:1}
+.sprite-anim.static img:first-child{opacity:1}
+.sprite-anim.static img:not(:first-child){opacity:0}
+body.light .sprite-anim img{filter:none}
+
+/* DROP ZONE (file upload) */
+.drop-zone{border:2px dashed var(--border);border-radius:8px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg)}
+.drop-zone:hover{border-color:var(--muted);background:var(--hover)}
+.drop-zone.dragover{border-color:#ffffff;background:rgba(255,255,255,0.05)}
+.drop-zone.has-file{border-style:solid;border-color:var(--muted)}
+.drop-zone-icon{font-size:24px;margin-bottom:8px;opacity:0.6}
+.drop-zone-text{font-size:12px;color:var(--text);margin-bottom:4px}
+.drop-zone-hint{font-size:10px;color:var(--muted)}
+.drop-zone-status{font-size:11px;margin-top:8px;padding:8px 12px;border-radius:4px;display:none}
+.drop-zone-status.ok{display:block;background:rgba(102,204,102,0.08);border:1px solid rgba(102,204,102,0.3);color:#66cc66}
+.drop-zone-status.err{display:block;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3);color:var(--err)}
+.drop-zone-file{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:4px}
+.drop-zone-file .filename{font-size:11px;color:var(--text);font-weight:500}
+.drop-zone-file .remove-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:3px;transition:0.15s}
+.drop-zone-file .remove-btn:hover{color:var(--err);background:rgba(255,107,107,0.1)}
 
 /* RESEARCH CONTEXT (now in profile popup) */
 
-/* DEEP DIVE MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px}
+/* DEEP DIVE MODAL — unified with wizard style */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px}
 .modal-overlay.visible{display:flex}
-.modal-content{max-width:700px;width:100%;margin:auto;background:var(--card);border:1px solid var(--border);border-radius:8px;max-height:80vh;overflow-y:auto;padding:32px;position:relative}
+.modal-content{max-width:700px;width:100%;margin:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;max-height:80vh;overflow-y:auto;padding:32px;position:relative;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
 .modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px}
 .modal-close:hover{color:#ffffff}
 .modal-title{font-size:16px;font-weight:600;color:var(--active);margin-bottom:20px;padding-right:32px;line-height:1.4}
@@ -238,8 +310,9 @@ body.light .log-box{background:#fafafa}
     <div class="nav-tab" onclick="showTab('settings')">Settings</div>
   </div>
   <div class="header-right">
-    <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)" title="Release notes">v1.3</a>
+    <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)" title="Release notes">v1.4</a>
     <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode">◐</button>
+    <button class="theme-toggle" id="setupBtn" title="Open setup wizard" onclick="wizardOpen(0)">Setup</button>
     <span class="badge" id="statusBadge">Idle</span>
     <span class="badge" id="modelBadge" style="border:none;font-size:10px"></span>
   </div>
@@ -278,16 +351,162 @@ body.light .log-box{background:#fafafa}
     <option value="THESIS">Thesis</option>
     <option value="PUBLICATION">Publication</option>
     <option value="GRANT_PROPOSAL">Grant Proposal</option>
+    <option value="HACKATHON">Hackathon</option>
+    <option value="SIDE_PROJECT">Side Project</option>
+    <option value="AI_TOOL">AI Tool</option>
+    <option value="INDUSTRY_RND">Industry R&D</option>
+    <option value="FEATURE">Feature</option>
+    <option value="INTEGRATION">Integration</option>
+    <option value="OPTIMIZATION">Optimization</option>
+    <option value="EXTENSION">Extension</option>
+    <option value="PIVOT">Pivot</option>
   </select>
   <textarea id="researchContext" style="display:none"></textarea>
 </div>
 
+<!-- ONBOARDING WIZARD -->
+<div class="wizard-overlay" id="wizardOverlay" style="display:none">
+  <div class="wizard-box">
+    <!-- Progress bar -->
+    <div class="wizard-progress"><div class="wizard-progress-bar" id="wizardProgressBar" style="width:33%"></div></div>
+
+    <div class="wizard-header">
+      <div class="wizard-steps">
+        <div class="wizard-step-dot active" id="wdot0"></div>
+        <div class="wizard-step-dot" id="wdot1"></div>
+        <div class="wizard-step-dot" id="wdot2"></div>
+      </div>
+      <button class="wizard-skip" id="wizardSkipBtn">Skip setup</button>
+    </div>
+
+    <div class="wizard-body">
+
+      <!-- ── STEP 1: Choose provider + paste key ── -->
+      <div class="wizard-step active" id="wstep0">
+        <div class="wizard-title">Pick your AI provider</div>
+        <div class="wizard-sub">ScholarScout needs an LLM to analyze papers and generate ideas. Both free options work great to start.</div>
+
+        <div class="wizard-provider-cards" id="wizardProviderCards" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="wizard-provider-card selected" data-provider="gemini" data-docs="https://aistudio.google.com/app/apikey" data-model="gemini-2.0-flash">
+            <div class="wpc-name">Google Gemini</div>
+            <div class="wpc-desc">15 req/min free. Best for most users.</div>
+            <span class="wpc-badge free">Free</span>
+          </div>
+          <div class="wizard-provider-card" data-provider="groq" data-docs="https://console.groq.com/keys" data-model="llama-3.3-70b-versatile">
+            <div class="wpc-name">Groq</div>
+            <div class="wpc-desc">Very fast inference. Free tier available.</div>
+            <span class="wpc-badge free">Free</span>
+          </div>
+          <div class="wizard-provider-card" data-provider="openrouter" data-docs="https://openrouter.ai/keys" data-model="deepseek/deepseek-chat">
+            <div class="wpc-name">OpenRouter</div>
+            <div class="wpc-desc">Access 100+ models. Pay per token.</div>
+            <span class="wpc-badge paid">Paid</span>
+          </div>
+          <div class="wizard-provider-card" data-provider="ollama" data-docs="https://ollama.com/download" data-model="llama3.2">
+            <div class="wpc-name">Ollama</div>
+            <div class="wpc-desc">Runs locally. No internet, no cost.</div>
+            <span class="wpc-badge free">Local</span>
+          </div>
+          <div class="wizard-provider-card" data-provider="custom" data-docs="" data-model="">
+            <div class="wpc-name">Custom</div>
+            <div class="wpc-desc">Any OpenAI-compatible endpoint (local proxy, LM Studio, etc).</div>
+            <span class="wpc-badge free">Local</span>
+          </div>
+        </div>
+
+        <!-- Extra fields for Custom provider -->
+        <div class="wizard-field" id="wizardCustomUrlField" style="display:none">
+          <label class="wizard-label">Base URL</label>
+          <input type="text" id="wizardBaseUrl" placeholder="http://localhost:20128/v1">
+        </div>
+        <div class="wizard-field" id="wizardCustomModelField" style="display:none">
+          <label class="wizard-label">Model name</label>
+          <input type="text" id="wizardCustomModel" placeholder="e.g. kr/claude-sonnet-4.5">
+        </div>
+
+        <div class="wizard-field" id="wizardKeyField">
+          <label class="wizard-label">API Key</label>
+          <input type="password" id="wizardApiKey" placeholder="Paste your API key here...">
+          <div id="wizardKeyHint" style="font-size:10px;color:var(--muted);margin-top:4px">
+            Get a free key at <a id="wizardDocsLink" href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">aistudio.google.com</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STEP 2: Test connection ── -->
+      <div class="wizard-step" id="wstep1">
+        <div class="wizard-title">Test your connection</div>
+        <div class="wizard-sub">Let's make sure everything is working. You can skip this and test later from Settings.</div>
+
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px;font-size:12px;color:var(--muted)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span>Provider</span><span id="wTestProvider" style="color:#fff"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span>Model</span><span id="wTestModel" style="color:#fff"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span>API Key</span><span id="wTestKey" style="color:#fff"></span>
+          </div>
+        </div>
+
+        <div class="wizard-status" id="wizardTestStatus"></div>
+
+        <button class="btn btn-run" id="wizardTestBtn" style="width:100%;padding:10px" onclick="wizardTestConnection()">
+          Test Connection
+        </button>
+        <div style="text-align:center;margin-top:10px">
+          <button style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;text-decoration:underline" onclick="wizardSkipTest()">Skip test, continue anyway</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 3: Pick categories + profile ── -->
+      <div class="wizard-step" id="wstep2">
+        <div class="wizard-title">What do you research?</div>
+        <div class="wizard-sub">Pick 1–3 fields to start. You can change these anytime from the left panel.</div>
+
+        <div class="wizard-cat-grid" id="wizardCatGrid">
+          <!-- populated by JS -->
+        </div>
+
+        <div class="wizard-field">
+          <label class="wizard-label">Your goal <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+          <select id="wizardGoal">
+            <option value="any">Any / Exploring</option>
+            <option value="THESIS">Thesis / Skripsi</option>
+            <option value="PUBLICATION">Publication</option>
+            <option value="HACKATHON">Hackathon</option>
+            <option value="SIDE_PROJECT">Side Project</option>
+            <option value="AI_TOOL">AI Tool</option>
+            <option value="INDUSTRY_RND">Industry R&D</option>
+            <option value="GRANT_PROPOSAL">Grant Proposal</option>
+          </select>
+        </div>
+
+        <div class="wizard-field">
+          <label class="wizard-label">Your background <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+          <input type="text" id="wizardContext" placeholder="e.g. S2 Informatika, punya GPU RTX 3090, fokus NLP Bahasa Indonesia">
+        </div>
+      </div>
+
+    </div><!-- /wizard-body -->
+
+    <div class="wizard-footer">
+      <button class="btn" id="wizardBackBtn" style="display:none" onclick="wizardBack()">← Back</button>
+      <button class="btn btn-run" id="wizardNextBtn" style="flex:1;padding:10px" onclick="wizardNext()">Continue →</button>
+    </div>
+  </div>
+</div>
+
 <!-- PROFILE CONFIG POPUP -->
-<div class="modal-overlay" id="profileModal">
-  <div class="modal-content" style="max-width:520px">
-    <button class="modal-close" onclick="document.getElementById('profileModal').classList.remove('visible')">&times;</button>
-    <div class="modal-title" style="font-size:14px;margin-bottom:16px">Research Profile</div>
-    
+<div class="wizard-overlay" id="profileModal">
+  <div class="wizard-box" style="max-width:520px">
+    <div class="wizard-progress"><div class="wizard-progress-bar" style="width:100%"></div></div>
+    <div class="wizard-header" style="padding:20px 24px 0">
+      <div style="font-size:14px;font-weight:600;color:#fff">Research Profile</div>
+      <button class="wizard-skip" onclick="closePopup('profileModal')">&times;</button>
+    </div>
+    <div class="wizard-body" style="padding:20px 24px 0">
     <div class="profile-section">
       <div class="profile-label">Approach</div>
       <div class="profile-cards" id="approachCards">
@@ -301,26 +520,51 @@ body.light .log-box{background:#fafafa}
     
     <div class="profile-section">
       <div class="profile-label">Goal</div>
+      <div style="margin-bottom:6px;font-size:10px;color:var(--muted)">Academic</div>
       <div class="profile-cards" id="goalCards">
         <div class="profile-card selected" data-value="any">Any</div>
         <div class="profile-card" data-value="THESIS">Thesis</div>
         <div class="profile-card" data-value="PUBLICATION">Publication</div>
         <div class="profile-card" data-value="GRANT_PROPOSAL">Grant Proposal</div>
+      </div>
+      <div style="margin:10px 0 6px;font-size:10px;color:var(--muted)">Product / Build</div>
+      <div class="profile-cards" id="goalCardsProduct">
         <div class="profile-card" data-value="HACKATHON">Hackathon</div>
         <div class="profile-card" data-value="SIDE_PROJECT">Side Project</div>
         <div class="profile-card" data-value="AI_TOOL">AI Tool</div>
         <div class="profile-card" data-value="INDUSTRY_RND">Industry R&D</div>
       </div>
+      <div style="margin:10px 0 6px;font-size:10px;color:var(--muted)">Develop / Improve Existing Project</div>
+      <div class="profile-cards" id="goalCardsDevelop">
+        <div class="profile-card" data-value="FEATURE">Feature</div>
+        <div class="profile-card" data-value="INTEGRATION">Integration</div>
+        <div class="profile-card" data-value="OPTIMIZATION">Optimization</div>
+        <div class="profile-card" data-value="EXTENSION">Extension</div>
+        <div class="profile-card" data-value="PIVOT">Pivot</div>
+      </div>
     </div>
     
     <div class="profile-section">
-      <div class="profile-label">Context <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
-      <textarea id="profileContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:4px;font-size:11px;font-family:inherit;resize:none" placeholder="Your background: expertise, lab access, available compute, interests..."></textarea>
+      <div class="profile-label">Context <span style="font-weight:400;color:var(--muted)">(optional — describe your background, target platform, etc.)</span></div>
+      <textarea id="profileContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:4px;font-size:11px;font-family:inherit;resize:none" placeholder="e.g. S2 Informatika, punya GPU RTX 3090, mau bikin plugin TRAE IDE untuk code review..."></textarea>
+    </div>
+
+    <div class="profile-section">
+      <div class="profile-label">Attachment <span style="font-weight:400;color:var(--muted)">(optional — extra context for idea generation)</span></div>
+      <div id="profileDropZone" class="drop-zone" onclick="document.getElementById('profileFileInput').click()">
+        <div class="drop-zone-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg></div>
+        <div class="drop-zone-text">Drop file here or click to browse</div>
+        <div class="drop-zone-hint">.pdf .txt .md .json</div>
+        <input type="file" id="profileFileInput" accept=".pdf,.txt,.md,.json" style="display:none">
+      </div>
+      <div id="profileFileStatus" class="drop-zone-status"></div>
     </div>
     
     <button class="btn btn-run" style="width:100%;margin-top:12px" onclick="saveProfile()">Save Profile</button>
-  </div>
-</div>
+    </div><!-- /wizard-body -->
+    <div style="height:16px"></div>
+  </div><!-- /wizard-box -->
+</div><!-- /profileModal -->
 
 <!-- WARNING BANNER -->
 <div class="warning-banner" id="storageWarning">
@@ -331,6 +575,12 @@ body.light .log-box{background:#fafafa}
   <!-- LEFT: Progress -->
   <div class="left">
     <div>
+      <div class="sprite-anim static" id="spriteAnim">
+        <img src="/static/sprite-1.png" class="visible" alt="">
+        <img src="/static/sprite-2.png" alt="">
+        <img src="/static/sprite-3.png" alt="">
+        <img src="/static/sprite-4.png" alt="">
+      </div>
       <div class="section-title">Pipeline Status</div>
       <div class="progress-container"><div class="progress-bar" id="progBar"></div></div>
       <div class="phases">
@@ -352,6 +602,20 @@ body.light .log-box{background:#fafafa}
     <div>
       <div class="section-title">Console</div>
       <div class="log-box" id="logBox"></div>
+    </div>
+
+    <!-- Transparency panel: shown after pipeline completes -->
+    <div id="transparencyPanel" style="display:none;margin-top:8px">
+      <div class="section-title">Data Transparency</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:4px;padding:12px;font-size:11px;color:var(--muted);line-height:1.8">
+        <div id="tpSources"></div>
+        <div id="tpDateRange"></div>
+        <div id="tpPapers"></div>
+        <div id="tpCategories"></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;opacity:0.7">
+          ⚠ Results reflect papers in the selected date range only. Novelty check is not a substitute for a full literature review.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -380,8 +644,14 @@ body.light .log-box{background:#fafafa}
       <div class="ideas-grid" id="ideasGrid">
         <div class="welcome-guide" id="welcomeGuide">
           <div style="text-align:center;margin-bottom:32px">
+            <div class="sprite-anim static" id="spriteWelcome" style="width:64px;height:64px;margin:0 auto 16px">
+              <img src="/static/sprite-1.png" class="visible" alt="">
+              <img src="/static/sprite-2.png" alt="">
+              <img src="/static/sprite-3.png" alt="">
+              <img src="/static/sprite-4.png" alt="">
+            </div>
             <div style="font-size:20px;font-weight:600;color:#ffffff;margin-bottom:8px">Welcome to ScholarScout</div>
-            <p style="color:var(--muted);font-size:13px">AI-powered research idea discovery for students and researchers</p>
+            <p style="color:var(--muted);font-size:13px">From papers to ideas — research or product, your choice.</p>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:32px">
             <div style="padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px">
@@ -510,6 +780,12 @@ body.light .log-box{background:#fafafa}
                 <span style="font-size:10px;color:var(--muted)">/10 minimum (lower = more ideas, higher = stricter)</span>
               </div>
             </div>
+            <div class="settings-field">
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+                <input type="checkbox" id="settConfidence" style="accent-color:#fff"> Show confidence scores
+                <span style="color:var(--muted);font-size:10px;margin-left:4px">Display how confident the AI is in each trend analysis (visible in console log)</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -544,7 +820,7 @@ body.light .log-box{background:#fafafa}
         <!-- About -->
         <div style="padding-top:16px;border-top:1px solid var(--border)">
           <div style="font-size:11px;color:var(--muted);line-height:2">
-            ScholarScout v1.3.0 · <a href="https://github.com/neej4/ScholarScout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">GitHub</a> · <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Changelog</a> · MIT License
+            ScholarScout v1.4.0 · <a href="https://github.com/neej4/ScholarScout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">GitHub</a> · <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Changelog</a> · MIT License
             <br>
             <a href="https://ko-fi.com/scholarscout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Support (Ko-fi)</a> · <a href="https://saweria.co/scholarscout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Support (Saweria)</a>
           </div>
@@ -556,7 +832,7 @@ body.light .log-box{background:#fafafa}
 </div>
 
 <!-- DEEP DIVE MODAL -->
-<div class="modal-overlay" id="deepDiveModal" onclick="closeModalOnOverlay(event)">
+<div class="modal-overlay" id="deepDiveModal">
   <div class="modal-content" id="deepDiveContent">
     <button class="modal-close" onclick="closeModal()">&times;</button>
     <div id="deepDiveBody">
@@ -723,6 +999,361 @@ function initCategories() {
 }
 initCategories();
 
+// ── ONBOARDING WIZARD ──────────────────────────────────────────────────────────
+(function initWizard() {
+  // Quick-access categories shown in wizard (top picks across disciplines)
+  const WIZARD_CATS = [
+    {id:'cs.AI',    name:'Artificial Intelligence'},
+    {id:'cs.LG',    name:'Machine Learning'},
+    {id:'cs.CL',    name:'NLP / Language Models'},
+    {id:'cs.CV',    name:'Computer Vision'},
+    {id:'cs.RO',    name:'Robotics'},
+    {id:'cs.SE',    name:'Software Engineering'},
+    {id:'med.onco', name:'Oncology'},
+    {id:'med.neuro',name:'Neurology'},
+    {id:'bio.molecular',name:'Molecular Biology'},
+    {id:'q-bio.GN', name:'Genomics'},
+    {id:'soc.education',name:'Education'},
+    {id:'earth.climate',name:'Climate Science'},
+    {id:'eng.biomedical',name:'Biomedical Engineering'},
+    {id:'agri.crop', name:'Crop Science'},
+    {id:'stat.ML',  name:'Statistical ML'},
+    {id:'math.OC',  name:'Optimization'},
+  ];
+
+  // Populate category grid in step 3
+  const catGrid = document.getElementById('wizardCatGrid');
+  if (catGrid) {
+    catGrid.innerHTML = WIZARD_CATS.map(c => `
+      <label class="wizard-cat-item" data-id="${c.id}">
+        <input type="checkbox" value="${c.id}">
+        ${escapeHtml(c.name)}
+      </label>`).join('');
+    // Toggle selected class on click
+    catGrid.addEventListener('click', function(e) {
+      const item = e.target.closest('.wizard-cat-item');
+      if (!item) return;
+      const cb = item.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      item.classList.toggle('selected', cb.checked);
+    });
+  }
+
+  // Provider card selection
+  const providerCards = document.querySelectorAll('.wizard-provider-card');
+  providerCards.forEach(card => {
+    card.addEventListener('click', function() {
+      providerCards.forEach(c => c.classList.remove('selected'));
+      this.classList.add('selected');
+      const provider = this.dataset.provider;
+      const docs     = this.dataset.docs || '';
+      const keyField        = document.getElementById('wizardKeyField');
+      const customUrlField  = document.getElementById('wizardCustomUrlField');
+      const customModelField= document.getElementById('wizardCustomModelField');
+      const docsLink        = document.getElementById('wizardDocsLink');
+      const keyInput        = document.getElementById('wizardApiKey');
+      const keyHint         = document.getElementById('wizardKeyHint');
+
+      // Reset visibility
+      keyField.style.display         = 'block';
+      customUrlField.style.display   = 'none';
+      customModelField.style.display = 'none';
+
+      if (provider === 'ollama') {
+        keyField.style.display = 'none';
+      } else if (provider === 'custom') {
+        // Custom: show URL + model fields, key optional
+        customUrlField.style.display   = 'block';
+        customModelField.style.display = 'block';
+        keyInput.placeholder = 'API key (optional for local endpoints)';
+        keyHint.innerHTML = 'Any OpenAI-compatible endpoint. Key is optional for local proxies.';
+      } else {
+        keyInput.placeholder = 'Paste your API key here...';
+        if (docsLink && docs) {
+          docsLink.href = docs;
+          docsLink.textContent = docs.replace('https://', '').split('/')[0];
+        }
+        keyHint.innerHTML = 'Get a free key at <a id="wizardDocsLink" href="' + docs + '" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">' + docs.replace('https://','').split('/')[0] + '</a>';
+      }
+    });
+  });
+
+  // Skip button
+  document.getElementById('wizardSkipBtn').addEventListener('click', wizardClose);
+
+  // Show wizard on first visit (no setup done yet)
+  const setupDone = localStorage.getItem('scholarscout_setup_done');
+  if (!setupDone) {
+    setTimeout(() => wizardOpen(0), 400);
+  }
+})();
+
+let _wizardStep = 0;
+
+function wizardOpen(step) {
+  _wizardStep = step || 0;
+  _wizardRender();
+  document.getElementById('wizardOverlay').style.display = 'flex';
+}
+
+function wizardClose() {
+  document.getElementById('wizardOverlay').style.display = 'none';
+  // Mark as done regardless — skip counts as "user acknowledged setup"
+  localStorage.setItem('scholarscout_setup_done', '1');
+}
+
+function _wizardRender() {
+  const totalSteps = 3;
+  // Steps
+  document.querySelectorAll('.wizard-step').forEach((el, i) => {
+    el.classList.toggle('active', i === _wizardStep);
+  });
+  // Dots
+  document.querySelectorAll('.wizard-step-dot').forEach((dot, i) => {
+    dot.classList.remove('active', 'done');
+    if (i === _wizardStep) dot.classList.add('active');
+    else if (i < _wizardStep) dot.classList.add('done');
+  });
+  // Progress bar
+  document.getElementById('wizardProgressBar').style.width = ((_wizardStep + 1) / totalSteps * 100) + '%';
+  // Back button
+  document.getElementById('wizardBackBtn').style.display = _wizardStep > 0 ? 'inline-block' : 'none';
+  // Next button label
+  const nextBtn = document.getElementById('wizardNextBtn');
+  if (_wizardStep === 0) {
+    nextBtn.textContent = 'Continue →';
+    nextBtn.disabled = false;
+  } else if (_wizardStep === 1) {
+    nextBtn.textContent = 'Continue →';
+    nextBtn.disabled = true; // enabled after successful test
+  } else {
+    nextBtn.textContent = 'Start exploring →';
+    nextBtn.disabled = false;
+  }
+  // Reset test status when entering step 2
+  if (_wizardStep === 1) {
+    _wizardPopulateTestSummary();
+    const status = document.getElementById('wizardTestStatus');
+    status.style.display = 'none';
+    status.className = 'wizard-status';
+  }
+}
+
+function _wizardPopulateTestSummary() {
+  const selected = document.querySelector('.wizard-provider-card.selected');
+  if (!selected) return;
+  const provider = selected.dataset.provider;
+  const model    = provider === 'custom'
+    ? (document.getElementById('wizardCustomModel').value.trim() || selected.dataset.model || '')
+    : (selected.dataset.model || '');
+  const key      = document.getElementById('wizardApiKey').value;
+  let   baseUrl  = provider === 'custom' ? document.getElementById('wizardBaseUrl').value.trim() : '';
+
+  // Show the normalized URL (same logic as server-side Config.reload)
+  if (baseUrl && provider !== 'gemini' && !baseUrl.includes('chat/completions')) {
+    baseUrl = baseUrl.replace(/\/$/, '') + '/chat/completions';
+  }
+
+  document.getElementById('wTestProvider').textContent = provider + (baseUrl ? ' (' + baseUrl + ')' : '');
+  document.getElementById('wTestModel').textContent    = model || '(default)';
+  document.getElementById('wTestKey').textContent      =
+    (provider === 'ollama' || provider === 'custom') && !key
+      ? 'Not required'
+      : (key ? key.slice(0,8) + '...' : '(not set)');
+}
+
+function wizardNext() {
+  if (_wizardStep === 0) {
+    // Save provider + key to settings before moving on
+    const selected = document.querySelector('.wizard-provider-card.selected');
+    if (!selected) return;
+    const provider = selected.dataset.provider;
+    const key      = document.getElementById('wizardApiKey').value.trim();
+
+    // Determine model
+    let model = selected.dataset.model || '';
+    if (provider === 'custom') {
+      model = document.getElementById('wizardCustomModel').value.trim() || '';
+    }
+
+    // Determine base_url
+    let baseUrl = '';
+    if (provider === 'custom') {
+      baseUrl = document.getElementById('wizardBaseUrl').value.trim();
+      if (!baseUrl) {
+        const urlInput = document.getElementById('wizardBaseUrl');
+        urlInput.style.borderColor = 'var(--err)';
+        urlInput.placeholder = 'Base URL is required for Custom provider';
+        setTimeout(() => { urlInput.style.borderColor = ''; }, 2500);
+        return;
+      }
+    }
+
+    // Key required only for non-local providers
+    const noKeyNeeded = provider === 'ollama' || provider === 'custom';
+    if (!noKeyNeeded && !key) {
+      const hint = document.getElementById('wizardKeyHint');
+      hint.style.color = 'var(--err)';
+      hint.textContent = 'Please paste your API key to continue.';
+      setTimeout(() => {
+        hint.style.color = '';
+        const docs = selected.dataset.docs || '';
+        hint.innerHTML = 'Get a free key at <a href="' + docs + '" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">' + docs.replace('https://','').split('/')[0] + '</a>';
+      }, 2500);
+      return;
+    }
+
+    // Save to backend
+    const body = { provider, model };
+    if (key)     body.api_key  = key;
+    if (baseUrl) body.base_url = baseUrl;
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    }).catch(() => {}); // Non-blocking
+
+    _wizardStep = 1;
+    _wizardRender();
+  } else if (_wizardStep === 2) {
+    _wizardFinish();
+  }
+}
+
+function wizardBack() {
+  if (_wizardStep > 0) {
+    _wizardStep--;
+    _wizardRender();
+  }
+}
+
+function wizardSkipTest() {
+  // Allow user to proceed without successful test — they can fix in Settings later
+  document.getElementById('wizardNextBtn').disabled = false;
+  _wizardStep = 2;
+  _wizardRender();
+}
+
+function _wizardErrorHint(errorMsg, provider) {
+  const msg = (errorMsg || '').toLowerCase();
+  let hint = '';
+  if (msg.includes('api key') || msg.includes('kosong') || msg.includes('401')) {
+    hint = 'Check your API key — it may be wrong or expired.';
+  } else if (msg.includes('unreachable') || msg.includes('connection') || msg.includes('timeout')) {
+    if (provider === 'custom' || provider === 'ollama') {
+      hint = 'Make sure your local server is running and the Base URL is correct.';
+    } else {
+      hint = 'Check your internet connection or try again in a moment.';
+    }
+  } else if (msg.includes('model')) {
+    hint = 'The model name may be wrong. Check the model field.';
+  } else if (msg.includes('base_url') || msg.includes('url')) {
+    hint = 'The Base URL format looks wrong. Example: http://localhost:20128/v1';
+  }
+  return hint ? '<br><span style="font-size:10px;opacity:0.8">' + escapeHtml(hint) + '</span>' : '';
+}
+
+function wizardTestConnection() {
+  const selected = document.querySelector('.wizard-provider-card.selected');
+  if (!selected) return;
+  const provider = selected.dataset.provider;
+  const model    = provider === 'custom'
+    ? (document.getElementById('wizardCustomModel').value.trim() || '')
+    : (selected.dataset.model || '');
+  const key      = document.getElementById('wizardApiKey').value.trim();
+  const baseUrl  = provider === 'custom' ? document.getElementById('wizardBaseUrl').value.trim() : '';
+  const status   = document.getElementById('wizardTestStatus');
+  const testBtn  = document.getElementById('wizardTestBtn');
+  const nextBtn  = document.getElementById('wizardNextBtn');
+
+  status.className = 'wizard-status loading';
+  status.style.display = 'block';
+  status.textContent = 'Connecting...';
+  testBtn.disabled = true;
+
+  const body = { provider, model };
+  if (key)     body.api_key  = key;
+  if (baseUrl) body.base_url = baseUrl;
+
+  fetch('/api/settings/test', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  })
+  .then(r => r.json())
+  .then(data => {
+    testBtn.disabled = false;
+    if (data.success) {
+      status.className = 'wizard-status ok';
+      status.textContent = '✓ Connected! ' + data.provider + ' / ' + data.model;
+      nextBtn.disabled = false;
+      nextBtn.textContent = 'Continue →';
+      document.getElementById('modelBadge').textContent = data.provider + '/' + data.model;
+    } else {
+      status.className = 'wizard-status err';
+      // Show the actual error from server, not a generic message
+      const reason = data.error || 'Connection failed';
+      const urlUsed = data.base_url ? ' (URL: ' + data.base_url + ')' : '';
+      status.innerHTML = '✗ ' + escapeHtml(reason + urlUsed) + _wizardErrorHint(reason, provider);
+    }
+  })
+  .catch(err => {
+    testBtn.disabled = false;
+    status.className = 'wizard-status err';
+    status.textContent = '✗ Network error — make sure ScholarScout server is running (python preview_server.py).';
+  });
+}
+
+function _wizardFinish() {
+  // Apply selected categories to the main category checkboxes
+  const selectedCats = Array.from(document.querySelectorAll('#wizardCatGrid input:checked')).map(el => el.value);
+  if (selectedCats.length > 0) {
+    // Uncheck all first
+    document.querySelectorAll('.cat-item input[type=checkbox]').forEach(cb => { cb.checked = false; });
+    // Check selected ones
+    selectedCats.forEach(catId => {
+      const cb = document.querySelector(`.cat-item input[value="${catId}"]`);
+      if (cb) cb.checked = true;
+    });
+  }
+
+  // Apply goal
+  const goal = document.getElementById('wizardGoal').value;
+  if (goal && goal !== 'any') {
+    document.getElementById('goalSelect').value = goal;
+    sessionStorage.setItem('scholarscout_goal', goal);
+    // Sync to profile popup cards
+    document.querySelectorAll('#goalCards .profile-card').forEach(c => {
+      c.classList.toggle('selected', c.dataset.value === goal);
+    });
+  }
+
+  // Apply context
+  const ctx = document.getElementById('wizardContext').value.trim();
+  if (ctx) {
+    document.getElementById('researchContext').value = ctx;
+    document.getElementById('profileContext').value = ctx;
+    sessionStorage.setItem('scholarscout_context', ctx);
+  }
+
+  // Mark setup as done
+  localStorage.setItem('scholarscout_setup_done', '1');
+  sessionStorage.setItem('scholarscout_onboarded', '1');
+
+  wizardClose();
+
+  // Show a brief "ready" hint in the ideas grid
+  const grid = document.getElementById('ideasGrid');
+  if (grid && grid.querySelector('.welcome-guide')) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'grid-column:1/-1;text-align:center;padding:20px;font-size:12px;color:var(--muted);animation:fadeIn 0.4s ease';
+    hint.innerHTML = '✓ Setup complete. Click <strong style="color:#fff">Run</strong> to fetch papers and generate ideas, or <strong style="color:#fff">Quick</strong> for instant ideas from cache.';
+    grid.insertBefore(hint, grid.firstChild);
+    setTimeout(() => hint.remove(), 6000);
+  }
+}
+// ── END ONBOARDING WIZARD ──────────────────────────────────────────────────────
+
 // Set default dates
 (function(){
   const now=new Date();
@@ -752,9 +1383,26 @@ initCategories();
   });
 })();
 
+// ── Unified popup open/close ──────────────────────────────────────────────────
+// All popups (wizard-overlay and modal-overlay) use display:flex / display:none.
+// Never use classList.add/remove('visible') — that was the old pattern.
+function openPopup(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'flex';
+}
+function closePopup(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
 // ── Profile Popup ──
 document.getElementById('configBtn').addEventListener('click', function() {
-  document.getElementById('profileModal').classList.add('visible');
+  openPopup('profileModal');
+});
+
+// Close on overlay click (click outside the box)
+document.getElementById('profileModal').addEventListener('click', function(e) {
+  if (e.target === this) closePopup('profileModal');
 });
 
 // Card selection logic
@@ -776,7 +1424,8 @@ document.querySelectorAll('.profile-cards').forEach(group => {
   document.querySelectorAll('#approachCards .profile-card').forEach(c => {
     c.classList.toggle('selected', c.dataset.value === approach);
   });
-  document.querySelectorAll('#goalCards .profile-card').forEach(c => {
+  // Goal can be in any group
+  document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card').forEach(c => {
     c.classList.toggle('selected', c.dataset.value === goal);
   });
   document.getElementById('profileContext').value = ctx;
@@ -786,23 +1435,157 @@ document.querySelectorAll('.profile-cards').forEach(group => {
 })();
 
 function saveProfile() {
-  const approach = document.querySelector('#approachCards .profile-card.selected').dataset.value;
-  const goal = document.querySelector('#goalCards .profile-card.selected').dataset.value;
-  const ctx = document.getElementById('profileContext').value.trim();
+  const approachEl = document.querySelector('#approachCards .profile-card.selected');
+  // Goal can be in any of the three groups
+  const goalEl     = document.querySelector('#goalCards .profile-card.selected') ||
+                     document.querySelector('#goalCardsProduct .profile-card.selected') ||
+                     document.querySelector('#goalCardsDevelop .profile-card.selected');
+  const approach   = approachEl ? approachEl.dataset.value : 'any';
+  const goal       = goalEl     ? goalEl.dataset.value     : 'any';
+  const ctx        = document.getElementById('profileContext').value.trim();
   
-  // Save to session
+  // Persist to session
   sessionStorage.setItem('scholarscout_approach', approach);
   sessionStorage.setItem('scholarscout_goal', goal);
   sessionStorage.setItem('scholarscout_context', ctx);
   
-  // Sync to hidden selects/textarea
+  // Sync to hidden selects/textarea used by pipeline
   document.getElementById('approachSelect').value = approach;
   document.getElementById('goalSelect').value = goal;
   document.getElementById('researchContext').value = ctx;
   
-  // Close popup
-  document.getElementById('profileModal').classList.remove('visible');
+  closePopup('profileModal');
 }
+
+// Goal card selection — only one selected across all groups
+document.querySelectorAll('#goalCards, #goalCardsProduct, #goalCardsDevelop').forEach(group => {
+  group.addEventListener('click', function(e) {
+    const card = e.target.closest('.profile-card');
+    if (!card) return;
+    // Deselect all in ALL groups
+    document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+  });
+});
+
+// ── File Upload for Profile (drag & drop) ──
+(function initDropZone() {
+  const zone = document.getElementById('profileDropZone');
+  const input = document.getElementById('profileFileInput');
+  const status = document.getElementById('profileFileStatus');
+  if (!zone || !input) return;
+
+  // Drag events
+  zone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    zone.classList.add('dragover');
+  });
+  zone.addEventListener('dragleave', function() {
+    zone.classList.remove('dragover');
+  });
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      _uploadFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  // Click → file input
+  input.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+      _uploadFile(this.files[0]);
+    }
+  });
+
+  function _uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Show loading state
+    zone.querySelector('.drop-zone-text').textContent = 'Uploading...';
+    
+    fetch('/api/upload', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          _showStatus('err', data.error);
+          _resetZone();
+        } else {
+          _showFileAttached(data.filename, data.chars);
+        }
+      })
+      .catch(e => {
+        _showStatus('err', 'Upload failed: ' + e.message);
+        _resetZone();
+      });
+  }
+
+  function _showFileAttached(filename, chars) {
+    zone.classList.add('has-file');
+    zone.innerHTML = `
+      <div class="drop-zone-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#66cc66" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="drop-zone-file">
+        <span class="filename">${escapeHtml(filename)}</span>
+        <span style="font-size:10px;color:var(--muted)">(${chars} chars)</span>
+        <button class="remove-btn" title="Remove file">&times;</button>
+      </div>
+      <div class="drop-zone-hint">Click × to remove, or drop a new file to replace</div>
+      <input type="file" id="profileFileInput" accept=".pdf,.txt,.md,.json" style="display:none">
+    `;
+    // Re-wire events on new elements
+    const newInput = zone.querySelector('input[type=file]');
+    newInput.addEventListener('change', function() {
+      if (this.files && this.files[0]) _uploadFile(this.files[0]);
+    });
+    zone.querySelector('.remove-btn').addEventListener('click', function(e) {
+      e.stopPropagation();
+      _clearFile();
+    });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) _uploadFile(e.dataTransfer.files[0]);
+    });
+    status.className = 'drop-zone-status';
+    status.style.display = 'none';
+  }
+
+  function _clearFile() {
+    fetch('/api/upload', { method: 'DELETE' }).then(() => {
+      _resetZone();
+      status.className = 'drop-zone-status';
+      status.style.display = 'none';
+    });
+  }
+
+  function _resetZone() {
+    zone.classList.remove('has-file');
+    zone.innerHTML = `
+      <div class="drop-zone-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg></div>
+      <div class="drop-zone-text">Drop file here or click to browse</div>
+      <div class="drop-zone-hint">.pdf .txt .md .json</div>
+      <input type="file" id="profileFileInput" accept=".pdf,.txt,.md,.json" style="display:none">
+    `;
+    const newInput = zone.querySelector('input[type=file]');
+    newInput.addEventListener('change', function() {
+      if (this.files && this.files[0]) _uploadFile(this.files[0]);
+    });
+  }
+
+  function _showStatus(type, msg) {
+    status.className = 'drop-zone-status ' + type;
+    status.textContent = msg;
+    status.style.display = 'block';
+  }
+
+  // Check if file already uploaded on page load
+  fetch('/api/upload').then(r => r.json()).then(data => {
+    if (data.has_file) {
+      _showFileAttached('attached file', data.chars);
+    }
+  }).catch(() => {});
+})();
 let running = false, es = null, ideas = [], startTime = null, currentLanguage = 'en';
 
 // HTML-escape utility to prevent XSS (top-level so available everywhere)
@@ -1035,10 +1818,7 @@ function closeModal() {
   document.getElementById('deepDiveModal').classList.remove('visible');
 }
 function closeModalOnOverlay(event) {
-  // Only close if clicking on the overlay itself, not the content
-  if (event.target.id === 'deepDiveModal') {
-    closeModal();
-  }
+  if (event.target.id === 'deepDiveModal') closeModal();
 }
 
 // ── Idea Detail Popup ──
@@ -1241,9 +2021,11 @@ function checkNovelty(title, btnEl) {
     if (data.status === 'novel') {
       res.classList.add('novel');
       res.textContent = '● Likely Novel';
+      if (data.method === 'semantic') res.innerHTML += '<span class="novelty-method">(semantic)</span>';
     } else if (data.status === 'similar') {
       res.classList.add('similar');
       let html = '● Similar Exists';
+      if (data.method === 'semantic') html += '<span class="novelty-method">(semantic)</span>';
       if (data.papers && data.papers.length) {
         html += data.papers.map(p => `<a href="${escapeHtml(p.url || '#')}" target="_blank">${escapeHtml(p.title || p.url || '')}</a>`).join('');
       }
@@ -1251,6 +2033,7 @@ function checkNovelty(title, btnEl) {
     } else {
       res.classList.add('exists');
       let html = '● Already Researched';
+      if (data.method === 'semantic') html += '<span class="novelty-method">(semantic)</span>';
       if (data.papers && data.papers.length) {
         html += data.papers.map(p => `<a href="${escapeHtml(p.url || '#')}" target="_blank">${escapeHtml(p.title || p.url || '')}</a>`).join('');
       }
@@ -1322,17 +2105,19 @@ function addIdeaCard(idea) {
     <div class="idea-field">${escapeHtml(idea.field || 'Uncategorized')}</div>
     <div class="idea-title">${escapeHtml(title)}</div>
     <div class="idea-meta">
-      <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
+      <span class="chip" data-tooltip="${escapeHtml(_difficultyTooltip(idea.difficulty))}">${escapeHtml(idea.difficulty || "Master's")}</span>
       <span class="chip">${escapeHtml(idea.cost_estimate || 'Cloud GPU')}</span>
+      ${idea.quality_score ? `<span class="chip" data-tooltip="LLM self-rated quality: ${idea.quality_score}/10. Higher = more novel and feasible.">Q:${idea.quality_score}</span>` : ''}
       ${currentLanguage === 'id' ? '<span class="chip">ID</span>' : ''}
     </div>
     ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
     <div class="idea-why">${escapeHtml(idea.why_hard || '')}</div>
+    ${idea.why_this_idea ? `<div class="idea-why-this"><span class="idea-method-label">Why this idea:</span> ${escapeHtml(idea.why_this_idea)}</div>` : ''}
     ${idea.methodology_hint ? `<div class="idea-method"><span class="idea-method-label">Approach:</span> ${escapeHtml(idea.methodology_hint)}</div>` : ''}
     ${idea.next_steps ? `<div class="idea-steps"><span class="idea-method-label">Start here:</span> ${escapeHtml(idea.next_steps)}</div>` : ''}
     ${insp ? `<div class="idea-insp">REF: ${insp}</div>` : ''}
     <div class="idea-actions">
-      <button class="btn-sm" data-action="novelty">Check Novelty</button>
+      <button class="btn-sm" data-action="novelty" data-tooltip="Check if a similar paper already exists in Semantic Scholar / arXiv">Check Novelty</button>
     </div>
     <button class="expand-btn" data-action="expand">Show more ▾</button>`;
   
@@ -1365,6 +2150,18 @@ function addIdeaCard(idea) {
 
 function updateStats() {
   document.getElementById('sIdeas').textContent = ideas.length;
+}
+
+function _difficultyTooltip(level) {
+  const tips = {
+    "Undergraduate": "1 semester · runs on laptop/Colab · no paid compute needed",
+    "Master's":      "6-12 months · needs cloud GPU ($50-200) · thesis-level scope",
+    "PhD":           "1-3 years · institutional resources · original contribution required",
+    "Hackathon":     "4-12 hours · demo-able with existing APIs · no training needed",
+    "Side Project":  "1-4 weekends · deployable on free hosting · ship something real",
+    "Industry":      "1-6 months · company-funded · must show ROI",
+  };
+  return tips[level] || level;
 }
 
 function handleEvent(ev) {
@@ -1405,6 +2202,7 @@ function handleEvent(ev) {
     document.getElementById('statusBadge').textContent = 'ERROR';
     document.getElementById('statusBadge').className = 'badge error';
     document.getElementById('progBar').style.background = 'var(--err)';
+    stopSpriteAnim();
     // Show user-friendly error in ideas grid
     const grid = document.getElementById('ideasGrid');
     let hint = 'Check Settings tab for LLM configuration.';
@@ -1452,6 +2250,7 @@ function handleEvent(ev) {
     document.getElementById('btnStop').style.display = 'none';
     document.getElementById('statusBadge').textContent = 'READY';
     document.getElementById('statusBadge').className = 'badge';
+    stopSpriteAnim();
     playNotification(); // Sound alert when pipeline finishes
     // Mark all phases as done
     [0,1,2,3,4].forEach(n => {
@@ -1467,7 +2266,43 @@ function handleEvent(ev) {
     if (ev.errors && ev.errors.length > 0) {
       addLog(`[WARN] ${ev.errors.length} non-fatal error(s) during run`, 'warn');
     }
+    // Populate transparency panel
+    const tp = document.getElementById('transparencyPanel');
+    if (tp) {
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo   = document.getElementById('dateTo').value;
+      const cats     = Array.from(document.querySelectorAll('.cat-item input:checked')).map(el => el.value);
+      document.getElementById('tpSources').textContent   = 'Sources: arXiv · OpenAlex · Semantic Scholar';
+      document.getElementById('tpDateRange').textContent = `Date range: ${dateFrom} → ${dateTo}`;
+      document.getElementById('tpPapers').textContent    = `Papers fetched: ${ev.papers || 0}`;
+      document.getElementById('tpCategories').textContent = `Categories: ${cats.slice(0,5).join(', ')}${cats.length > 5 ? ` +${cats.length-5} more` : ''}`;
+      tp.style.display = 'block';
+    }
   }
+}
+
+// ── Sprite Animation ──
+let _spriteInterval = null;
+function startSpriteAnim() {
+  const containers = document.querySelectorAll('.sprite-anim');
+  containers.forEach(c => c.classList.remove('static'));
+  let frame = 0;
+  if (_spriteInterval) clearInterval(_spriteInterval);
+  _spriteInterval = setInterval(() => {
+    frame = (frame + 1) % 4;
+    containers.forEach(c => {
+      const imgs = c.querySelectorAll('img');
+      imgs.forEach((img, i) => img.classList.toggle('visible', i === frame));
+    });
+  }, 250);
+}
+function stopSpriteAnim() {
+  if (_spriteInterval) { clearInterval(_spriteInterval); _spriteInterval = null; }
+  document.querySelectorAll('.sprite-anim').forEach(c => {
+    c.classList.add('static');
+    const imgs = c.querySelectorAll('img');
+    imgs.forEach((img, i) => img.classList.toggle('visible', i === 0));
+  });
 }
 
 function clearStorage() {
@@ -1517,13 +2352,11 @@ function quickMode() {
 }
 
 function startPipeline() {
-  // Check if first time — show profile popup
-  if (!sessionStorage.getItem('scholarscout_onboarded')) {
-    document.getElementById('profileModal').classList.add('visible');
-    sessionStorage.setItem('scholarscout_onboarded', '1');
+  // If setup not done yet, open wizard first
+  if (!localStorage.getItem('scholarscout_setup_done')) {
+    wizardOpen(0);
     return;
   }
-  
   _doStartPipeline();
 }
 
@@ -1552,6 +2385,7 @@ function _doStartPipeline() {
   document.getElementById('statusBadge').textContent = 'RUNNING';
   document.getElementById('statusBadge').className = 'badge running';
   startTime = Date.now();
+  startSpriteAnim();
 
   if (es) es.close();
   es = new EventSource('/api/stream');
@@ -1575,6 +2409,7 @@ function stopPipeline() {
     running = false;
     document.getElementById('btnRun').disabled = false;
     document.getElementById('btnStop').style.display = 'none';
+    stopSpriteAnim();
     addLog('[SYS] Interrupted', 'warn');
     if (es) es.close();
   });
@@ -1582,7 +2417,10 @@ function stopPipeline() {
 
 // ── Modal keyboard / backdrop close ──
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') {
+    closeModal();
+    closePopup('profileModal');
+  }
 });
 document.getElementById('deepDiveModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
@@ -1816,7 +2654,8 @@ function testConnection() {
     if (data.success) {
       showSettingsStatus('Connected! ' + data.provider + '/' + data.model + ' (' + data.tokens_used + ' tokens used)', true);
     } else {
-      showSettingsStatus('Connection failed. Check API key and provider.', false);
+      const reason = data.error || 'Connection failed';
+      showSettingsStatus('✗ ' + reason, false);
     }
   })
   .catch(e => showSettingsStatus('Network error: ' + e.message, false));

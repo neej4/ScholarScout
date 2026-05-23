@@ -1,5 +1,84 @@
 # Changelog
 
+## v1.4.0 (2026-05-23)
+
+### Three Idea Generation Modes
+- **Academic mode** (existing) — research project ideas with methodology, thesis outline, key papers
+- **Product mode** (new) — buildable product ideas with MVP features, tech stack, revenue model, competitors, moat
+- **Develop mode** (new) — features/improvements for existing projects. Context is a hard constraint — every idea must be applicable to the user's project.
+- **5 Develop skills**: Feature, Integration, Optimization, Extension, Pivot
+- **Skills restructured**: `skills/ACADEMIC/` (9), `skills/PRODUCT/` (4), `skills/DEVELOP/` (5) — 18 total
+
+### Onboarding Wizard
+- 3-step setup: pick provider → test connection → choose categories
+- Custom provider card (9router, LM Studio, any OpenAI-compatible endpoint)
+- Skip test option (continue without successful connection)
+- Setup button always visible in header for re-access
+- First-time auto-trigger (localStorage-based)
+
+### File Upload
+- Drag-and-drop zone in Profile popup (.pdf, .txt, .md, .json)
+- SVG icons (no emoji)
+- PDF text extraction (basic, no external deps)
+- Max 50KB text content
+- Used in both Quick mode and full pipeline Run
+- Empty file rejection with clear error message
+
+### UI Improvements
+- "Why this idea?" visible directly on idea cards (not hidden in detail popup)
+- Confidence scoring in trend analysis (LLM self-rates 1-10, shown in console)
+- Tooltips on difficulty chips, quality scores, novelty button
+- Transparency panel after pipeline (sources, date range, papers count, disclaimer)
+- Animated sprite logo during pipeline run (invert for dark mode, normal for light)
+- Profile popup goals grouped: Academic / Product / Develop
+- Novelty check shows method badge `(semantic)` or `(jaccard)`
+- Settings: "Show confidence scores" toggle
+
+### Architecture Refactor
+- **Blueprint structure**: `preview_server.py` → 6 route modules (`pipeline`, `sessions`, `ideas`, `analysis`, `settings`, `upload`)
+- **`pyproject.toml`**: project metadata, scripts, optional deps, pytest markers
+- **`requirements-dev.txt`**: separated from runtime deps
+- **SSE response parser**: handles JSON, pure SSE stream, and JSON+SSE hybrid (9router compatibility)
+- **Base URL validation**: whitelist per provider, prevents SSRF
+- **Cache-aware fetching**: skip API calls if cache has enough papers for category
+- **Semantic Scholar API key**: `S2_API_KEY` env var support (10000 req/5min vs 100)
+- **Progressive backoff**: S2 rate limits 15s/30s/45s instead of flat 10s
+- **Token budget increased**: idea_generation 1500 → 3000 (product mode needs more)
+
+### Novelty Checker Upgrade
+- Semantic similarity via Gemini `text-embedding-004` (768-dim, cosine similarity)
+- Graceful fallback to Jaccard when embedding API fails
+- New thresholds: semantic (0.82/0.92), Jaccard (0.40/0.70)
+- Method transparency in API response and UI
+
+### LLM Client
+- Custom provider support (no key required for local endpoints)
+- `ping()` returns tuple `(bool, error_msg)` — callers get actionable error messages
+- Fast ping for local endpoints (10s timeout, 1 attempt, no delay)
+- Error capture via emit interception (actual error message reaches frontend)
+- Base URL empty guard with clear message
+
+### Testing
+- Property-based tests (Hypothesis) for novelty checker
+- Conftest fixtures updated with all required ProjectIdea fields
+- `mock_llm_client.ping` returns tuple
+- pytest markers: `integration`, `slow`
+
+### Bug Fixes
+- Hidden `<select id="goalSelect">` missing product/develop options → goal fell back to "any"
+- Quick mode always used academic prompt regardless of goal selection
+- Profile popup save broken after refactor (wrong open/close mechanism)
+- Wizard "Skip" didn't persist → wizard kept reappearing
+- Upload endpoint 404 until server restart (blueprint registration)
+- `max_tokens` 1500 too low for product mode → truncated JSON parse error
+- Empty file upload accepted silently
+- Deep Dive modal accidentally refactored (reverted to original mechanism)
+- Negative session index wrap-around bug
+- Unused `Config.MAX_PER_BATCH` constant removed
+- Unused `from src.core.config import Config` in analyzer.py removed
+
+---
+
 ## v1.3.0 (2026-05-22)
 
 ### New features

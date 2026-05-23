@@ -5,7 +5,6 @@ from typing import List
 
 from src.core.models import Paper, TrendAnalysis
 from src.core.llm import LLMClient
-from src.core.config import Config
 
 class TrendAnalyzer:
     """Analyzes research trends from a collection of papers using LLM."""
@@ -115,6 +114,7 @@ class TrendAnalyzer:
             - "saturation_level": one of "saturated" (many papers, incremental improvements only), "growing" (active area, still room for novelty), or "emerging" (few papers, wide open). Base this on how many papers cover similar ground.
             - "cross_pollination_opportunities": list of 2 suggestions for combining a gap from these papers with a technique from a DIFFERENT field (e.g., "Apply federated learning from cs.LG to solve the privacy gap in medical IoT sensors")
             - "representative_ids": list of 3 paper numbers (1-indexed) that best represent the current frontier
+            - "confidence": integer 1-10. How confident are you in this analysis? Lower if papers are few, diverse, or contradictory. Higher if clear consensus exists.
 
             Be SPECIFIC. Name concrete techniques, datasets, and evaluation methods.
 
@@ -153,7 +153,8 @@ class TrendAnalyzer:
                     methodology_patterns=parsed.get("methodology_patterns", []),
                     saturation_level=parsed.get("saturation_level", "growing"),
                     cross_pollination=parsed.get("cross_pollination_opportunities", []),
-                    ref_papers=ref_papers
+                    ref_papers=ref_papers,
+                    confidence=int(parsed.get("confidence", 7)),
                 )
             except Exception:
                 pass

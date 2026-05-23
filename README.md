@@ -2,73 +2,39 @@
   <img src="docs/banner.png" alt="ScholarScout" width="600">
 </p>
 
+<h3 align="center">Papers in. Ideas out. Research, product, or feature — you choose.</h3>
+
 <p align="center">
-  <strong>AI-powered research idea discovery for students and researchers.</strong><br>
-  <em>Scan 250M+ papers. Analyze trends. Generate actionable ideas. Verify novelty.</em>
+  ScholarScout reads 250M+ academic papers and generates actionable ideas<br>
+  tailored to your goal: thesis, hackathon demo, SaaS product, or your next feature.
 </p>
 
 <p align="center">
-  <a href="https://ko-fi.com/scholarscout">♥ Ko-fi</a> · 
-  <a href="https://saweria.co/scholarscout">♥ Saweria</a> · 
   <a href="#quick-start">Quick Start</a> · 
+  <a href="#three-modes">Three Modes</a> · 
   <a href="#features">Features</a> · 
-  <a href="#bahasa-indonesia">Bahasa Indonesia</a>
+  <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md">Changelog</a> · 
+  <a href="https://ko-fi.com/scholarscout">Ko-fi</a> · 
+  <a href="https://saweria.co/scholarscout">Saweria</a>
 </p>
 
 <p align="center">
-  <img src="docs/screenshot-welcome.png" alt="Welcome Screen" width="700"><br>
-  <em>Welcome screen with guided onboarding</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshot-ideas.png" alt="Generated Ideas" width="700"><br>
-  <em>Generated research ideas with methodology and next steps</em>
+  <img src="docs/screenshot-welcome.png" alt="Welcome Screen" width="700">
 </p>
 
 ---
 
-## Features
+## Three Modes
 
-### Data & Sources
-- **Multi-source paper fetching** — arXiv, OpenAlex, Semantic Scholar (250M+ papers combined)
-- **Parallel fetching** — 3 sources fetched simultaneously per category for speed
-- **80+ research categories** — CS, Medicine, Biology, Physics, Engineering, Chemistry, Social Sciences, Earth Sciences, Agriculture
-- **Smart deduplication** — Papers deduplicated across sources by title
+ScholarScout isn't just for researchers. Same papers, three different lenses:
 
-### Intelligence
-- **Trend analysis** — Identifies emerging methods, research gaps, and methodology patterns via LLM
-- **Idea generation** — Produces specific, feasible ideas with methodology hints, next steps, and key papers
-- **Research approach filter** — Computational/AI, Experimental/Lab, Clinical/Field, Theoretical/Review
-- **Novelty checking** — Compares ideas against Semantic Scholar and arXiv to verify originality
-- **Deep dive analysis** — Full research outline: methodology, datasets, timeline, tools, references
+| Mode | You ask | You get |
+|------|---------|---------|
+| **Academic** | "What can I research?" | Thesis topics, methodology, key papers, novelty check |
+| **Product** | "What can I build from scratch?" | MVP features, tech stack, revenue model, competitors |
+| **Develop** | "What can I add to my existing project?" | Features, integrations, optimizations — grounded in your codebase |
 
-### Personalization
-- **Research context** — Describe your background for tailored results
-- **Onboarding flow** — First-time users guided to set approach + context before generating
-- **Language support** — English or Bahasa Indonesia (including titles)
-- **Difficulty levels** — Undergraduate, Master's, PhD
-- **Skills system** — 9 customizable research profiles (Data Scientist, Lab Scientist, Clinical, Thesis, Grant Proposal, etc.)
-
-### Dashboard
-- **Real-time pipeline monitoring** — Watch papers being fetched and analyzed live
-- **Search & filter** — Find ideas by keyword or filter by difficulty level
-- **Show more popup** — Full idea detail in a clean modal
-- **Per-idea PDF export** — Export any single idea as a formatted PDF
-- **Bookmark system** — Save favorites to shortlist (localStorage)
-- **Recent ideas** — Access results from previous pipeline runs
-
-### LLM & Configuration
-- **6 LLM providers** — Gemini (free), Groq (free), OpenRouter, OpenAI, Ollama (local), Custom endpoint
-- **Settings UI** — Configure provider, API key, and model from the dashboard
-- **Test connection** — Verify LLM setup with one click
-- **Adaptive token budgets** — Different max_tokens per task type (saves ~48% cost)
-- **`stream: false`** — Compatible with streaming endpoints
-
-### Developer Experience
-- **100 automated tests** — Python (pytest) + JavaScript (Jest)
-- **Modular architecture** — Add new paper sources in 1 file
-- **Skills system** — Community-extensible research profiles
-- **MIT licensed** — Use, modify, distribute freely
+Develop mode treats your project description as a **hard constraint**. Every idea must be directly applicable to what you're building.
 
 ---
 
@@ -81,35 +47,62 @@ pip install -r requirements.txt
 python preview_server.py
 ```
 
-Open **http://localhost:5050** in your browser.
+Open **http://localhost:5050** — the setup wizard walks you through in 30 seconds.
 
-### First Run
+Need an LLM? Pick one:
 
-1. Click **Run Pipeline** — onboarding asks for your research approach and context
-2. Select categories from the left panel (only check what you need)
-3. Wait for papers to be fetched and analyzed
-4. Browse ideas → click **Show more** for details → **Deep Dive** for full analysis → **Export PDF**
+| Provider | Cost | Speed | Setup |
+|----------|------|-------|-------|
+| **Gemini** | Free (15 req/min) | Fast | [Get key](https://aistudio.google.com/app/apikey) |
+| **Groq** | Free tier | Very fast | [Get key](https://console.groq.com/keys) |
+| **Ollama** | Free (local) | GPU-dependent | [Download](https://ollama.com/download) |
+| **Custom** | Any | Any | Your local proxy (9router, LM Studio) |
+| OpenRouter | Pay-per-token | Varies | [Get key](https://openrouter.ai/keys) |
+| OpenAI | Pay-per-token | Fast | [Get key](https://platform.openai.com/api-keys) |
 
-### LLM Setup
+---
 
-Go to **Settings** tab and choose a provider:
+## Features
 
-| Provider | Free? | Speed | Get Key |
-|----------|-------|-------|---------|
-| Gemini | Yes (15 req/min) | Fast | [aistudio.google.com](https://aistudio.google.com/app/apikey) |
-| Groq | Yes (free tier) | Very fast | [console.groq.com](https://console.groq.com/keys) |
-| Ollama | Yes (local) | Depends on GPU | [ollama.com](https://ollama.com/download) |
-| OpenRouter | Pay-per-use | Varies | [openrouter.ai](https://openrouter.ai/keys) |
-| OpenAI | Pay-per-use | Fast | [platform.openai.com](https://platform.openai.com/api-keys) |
+### Intelligence
+- Trend analysis with confidence scoring (keywords, gaps, saturation, cross-pollination)
+- Anti-hallucination: P-number grounding (LLM can only cite papers from the provided list)
+- Novelty check: semantic similarity via Gemini embeddings, Jaccard fallback
+- Quality scoring: ideas self-rated 1-10, low-quality filtered out
+- Deep dive: full outline, methodology, datasets, timeline, tools, references
+- "Why this idea?" explanation visible on every card
 
-Or edit `config.yaml`:
+### Personalization
+- 18 skill profiles across Academic, Product, and Develop categories
+- File upload (drag-n-drop .pdf/.txt/.md/.json) as extra context
+- Research approach filter: Computational, Experimental, Clinical, Theoretical
+- Language: English or Bahasa Indonesia
+- Onboarding wizard: provider → test → categories in 3 steps
 
-```yaml
-llm:
-  provider: gemini
-  api_key: "your-key-here"
-  model: gemini-2.0-flash
-```
+### Data
+- arXiv + OpenAlex + Semantic Scholar (250M+ papers, fetched in parallel)
+- 80+ categories across 10 disciplines
+- Cache-aware: second run skips API calls, uses cached papers
+- Citation-based sorting: high-impact papers analyzed first
+- S2 API key support for 100x higher rate limit
+
+### Dashboard
+- Real-time pipeline monitoring (SSE streaming)
+- Search, filter by difficulty, bookmark, export PDF
+- Session history (last 20 runs)
+- Regenerate button (new idea, same field)
+- Thumbs up/down feedback
+- Dark/Light mode, keyboard shortcuts
+- Animated logo sprite during pipeline run
+
+### Architecture
+- Flask + Waitress (production WSGI server)
+- Blueprint-based routes (6 modules)
+- SSE response parser (handles streaming proxies like 9router)
+- Modular fetcher system (add sources in 1 file)
+- Skills loaded from markdown at runtime
+- 100+ automated tests (Python + JavaScript)
+- `pyproject.toml` with metadata and scripts
 
 ---
 
@@ -117,29 +110,45 @@ llm:
 
 ```
 ScholarScout/
-├── src/core/                # Core pipeline logic
-│   ├── orchestrator.py      # Pipeline controller (parallel multi-source)
-│   ├── analyzer.py          # Trend analysis via LLM
-│   ├── generator.py         # Idea generation via LLM
-│   ├── deep_dive.py         # Deep dive analysis via LLM
-│   ├── novelty_checker.py   # Novelty scoring (Semantic Scholar + arXiv)
-│   ├── llm.py               # Multi-provider LLM client (6 providers)
-│   ├── config.py            # Configuration loader
-│   ├── models.py            # Data models
-│   └── fetchers/            # Paper fetching modules
-│       ├── arxiv_fetcher.py
-│       ├── openalex_fetcher.py
-│       └── semanticscholar_fetcher.py
-├── src/web/                 # Dashboard UI
-│   ├── templates/dashboard.html
-│   └── static/
-├── tests/                   # Test suite (73 Python + 27 JS = 100 tests)
-├── skills/                  # Customizable research profiles (9 built-in)
-├── docs/                    # Documentation and assets
-├── preview_server.py        # Flask web server (entry point)
-├── run_pipeline.py          # CLI entry point
-└── config.yaml              # LLM and app configuration
+├── preview_server.py           # Entry point (app factory)
+├── run_pipeline.py             # CLI pipeline runner
+├── config.yaml                 # LLM and app config
+├── src/
+│   ├── core/
+│   │   ├── orchestrator.py     # Pipeline (parallel fetch → analyze → generate)
+│   │   ├── analyzer.py         # Trend analysis + confidence scoring
+│   │   ├── generator.py        # 3-mode idea generation (Academic/Product/Develop)
+│   │   ├── deep_dive.py        # Deep dive analysis
+│   │   ├── novelty_checker.py  # Semantic + Jaccard novelty scoring
+│   │   ├── llm.py              # Multi-provider LLM client (6 providers + SSE parser)
+│   │   ├── config.py           # Configuration
+│   │   ├── models.py           # Paper, TrendAnalysis, ProjectIdea
+│   │   └── fetchers/           # arXiv, OpenAlex, Semantic Scholar
+│   └── web/
+│       ├── routes/             # Flask blueprints (pipeline, sessions, ideas, analysis, settings, upload)
+│       ├── templates/          # Dashboard (single HTML file)
+│       └── static/             # JS, sprites, assets
+├── skills/
+│   ├── ACADEMIC/               # 9 research profiles
+│   ├── PRODUCT/                # 4 product profiles
+│   └── DEVELOP/                # 5 development profiles (Feature, Integration, Optimization, Extension, Pivot)
+├── tests/                      # 100+ tests
+└── pyproject.toml              # Project metadata
 ```
+
+---
+
+## Develop Mode — For Builders
+
+If you have an existing project and want paper-inspired improvements:
+
+1. Set goal to **Feature** / **Integration** / **Optimization** / **Extension** / **Pivot**
+2. Describe your project in the Context field (tech stack, current features, what you want)
+3. Optionally upload a file (README, CHANGELOG, or spec) for richer context
+4. Pick 2-3 relevant categories
+5. Click Run or Quick
+
+Every generated idea will be directly applicable to your project. Not generic. Not standalone products. Features you can build this weekend.
 
 ---
 
@@ -148,25 +157,45 @@ ScholarScout/
 ```bash
 python run_pipeline.py
 
-# With environment variables
-SCOUT_CONTEXT="NLP researcher" SCOUT_APPROACH="computational" python run_pipeline.py
-SCOUT_LANGUAGE="id" SCOUT_CATEGORIES="med.cardio,med.neuro" python run_pipeline.py
+# Academic mode
+SCOUT_GOAL="THESIS" SCOUT_CONTEXT="S2 Informatika, NLP" python run_pipeline.py
+
+# Product mode
+SCOUT_GOAL="HACKATHON" SCOUT_CATEGORIES="cs.AI,cs.IR" python run_pipeline.py
+
+# Develop mode
+SCOUT_GOAL="FEATURE" SCOUT_CONTEXT="Building a Flask app with LLM integration" python run_pipeline.py
 ```
+
+---
 
 ## Testing
 
 ```bash
-pytest tests/          # Python tests
-npm test               # JavaScript tests
+pip install -r requirements-dev.txt
+pytest tests/                          # Unit tests
+pytest tests/ -m "not integration"     # Skip integration tests
+npm test                               # JavaScript tests
 ```
+
+---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Key areas:
-- Add new paper sources (fetchers)
-- Create custom skills (research profiles)
-- Improve LLM prompts
-- Add new categories
+See [CONTRIBUTING.md](CONTRIBUTING.md). High-impact areas:
+
+- **New fetchers**: PubMed, IEEE, DBLP (implement `BaseFetcher`, 1 file)
+- **New skill profiles**: add markdown to `skills/ACADEMIC/`, `skills/PRODUCT/`, or `skills/DEVELOP/`
+- **Prompt improvements**: `generator.py`, `analyzer.py`
+- **New categories**: `analyzer.py` → `KEYWORD_SEEDS`
+
+---
+
+## Support
+
+- [Ko-fi (International)](https://ko-fi.com/scholarscout)
+- [Saweria (Indonesia)](https://saweria.co/scholarscout)
+- Star this repo
 
 ## License
 
@@ -174,70 +203,27 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-## Support
-
-If ScholarScout helps your research:
-
-- [♥ Ko-fi (International)](https://ko-fi.com/scholarscout)
-- [♥ Saweria (Indonesia)](https://saweria.co/scholarscout)
-- Star this repo on GitHub
-
----
-
 ---
 
 # Bahasa Indonesia
 
-<p align="center">
-  <img src="docs/banner.png" alt="ScholarScout" width="600">
-</p>
+<h3 align="center">Paper masuk. Ide keluar. Riset, produk, atau fitur — kamu yang pilih.</h3>
 
-<p align="center">
-  <strong>Platform penemuan ide riset berbasis AI untuk mahasiswa dan peneliti.</strong><br>
-  <em>Scan 250 juta+ paper. Analisis tren. Generate ide actionable. Verifikasi kebaruan.</em>
-</p>
+ScholarScout baca 250 juta+ paper akademik dan generate ide yang actionable sesuai tujuanmu: skripsi, demo hackathon, produk SaaS, atau fitur baru untuk project yang sudah ada.
 
 ---
 
-## Fitur Lengkap
+## Tiga Mode
 
-### Data & Sumber
-- **Multi-sumber** — arXiv, OpenAlex, Semantic Scholar (250M+ paper)
-- **Fetch paralel** — 3 sumber diambil bersamaan per kategori
-- **80+ kategori** — Ilmu Komputer, Kedokteran, Biologi, Fisika, Teknik, Kimia, Ilmu Sosial, Ilmu Bumi, Pertanian
-- **Deduplikasi otomatis** — Paper tidak duplikat antar sumber
-
-### Kecerdasan
-- **Analisis tren** — Identifikasi metode baru, celah riset, pola metodologi
-- **Generasi ide** — Ide spesifik dengan hint metodologi, langkah awal, paper kunci
-- **Filter pendekatan** — Komputasi/AI, Eksperimental/Lab, Klinis/Lapangan, Teoritis/Review
-- **Cek kebaruan** — Bandingkan ide dengan paper yang sudah ada
-- **Deep dive** — Outline riset lengkap: metodologi, dataset, timeline, tools, referensi
-
-### Personalisasi
-- **Konteks riset** — Deskripsikan latar belakang untuk hasil yang relevan
-- **Onboarding** — User baru dipandu pilih approach + konteks sebelum generate
-- **Bahasa** — English atau Bahasa Indonesia (termasuk judul)
-- **Level** — Undergraduate, Master's, PhD
-- **Skills** — 9 profil riset yang bisa di-customize
-
-### Dashboard
-- **Monitoring real-time** — Lihat paper di-fetch dan dianalisis secara live
-- **Search & filter** — Cari ide by keyword atau filter by level
-- **Popup detail** — Full detail ide dalam modal yang bersih
-- **Export PDF per ide** — Export satu ide sebagai PDF terformat
-- **Bookmark** — Simpan favorit ke shortlist
-- **Recent ideas** — Akses hasil pipeline sebelumnya
-
-### LLM & Konfigurasi
-- **6 provider LLM** — Gemini (gratis), Groq (gratis), OpenRouter, OpenAI, Ollama (lokal), Custom
-- **Settings UI** — Konfigurasi dari dashboard tanpa edit file
-- **Test connection** — Verifikasi setup dengan 1 klik
-- **Token budget adaptif** — Hemat ~48% biaya token
+| Mode | Pertanyaan | Output |
+|------|-----------|--------|
+| **Academic** | "Apa yang bisa diteliti?" | Judul riset, metodologi, paper kunci |
+| **Product** | "Apa yang bisa dibangun dari nol?" | Fitur MVP, tech stack, model revenue |
+| **Develop** | "Apa yang bisa ditambahkan ke project ini?" | Fitur, integrasi, optimisasi — relevan ke project kamu |
 
 ---
 
-## Cara Memulai
+## Cara Mulai
 
 ```bash
 git clone https://github.com/neej4/ScholarScout.git
@@ -246,31 +232,44 @@ pip install -r requirements.txt
 python preview_server.py
 ```
 
-Buka **http://localhost:5050** di browser.
+Buka **http://localhost:5050** — wizard setup memandu dalam 30 detik.
 
-### Setup LLM
+Provider gratis: **Gemini** ([key](https://aistudio.google.com/app/apikey)) atau **Groq** ([key](https://console.groq.com/keys)).
 
-Buka tab **Settings** → pilih provider → paste API key → **Test Connection** → **Save**.
+---
 
-Provider gratis: **Gemini** ([dapatkan key](https://aistudio.google.com/app/apikey)) atau **Groq** ([dapatkan key](https://console.groq.com/keys)).
+## Fitur Utama
+
+- 3 mode generasi ide (Academic, Product, Develop)
+- 18 skill profile (9 riset + 4 produk + 5 development)
+- 80+ kategori riset, 10 disiplin ilmu
+- Upload file (.pdf/.txt/.md/.json) sebagai konteks
+- Novelty check berbasis embedding
+- Deep dive: outline, metodologi, dataset, timeline, tools
+- Dashboard real-time, bookmark, export PDF
+- 6 provider LLM (termasuk lokal/custom)
+- Dark/Light mode, keyboard shortcuts
+- 100+ automated tests
+
+---
+
+## Develop Mode — Untuk Builder
+
+Punya project yang mau dikembangin? Pilih goal **Feature** / **Integration** / **Optimization** / **Extension** / **Pivot**, isi context dengan deskripsi project kamu, dan setiap ide yang dihasilkan pasti relevan ke project itu.
 
 ---
 
 ## Kontribusi
 
-Lihat [CONTRIBUTING.md](CONTRIBUTING.md). Area kontribusi:
-- Tambah sumber paper baru (fetcher)
-- Buat custom skills (profil riset)
+- Tambah sumber paper (implement `BaseFetcher`)
+- Buat skill profile (tambah markdown ke `skills/`)
 - Perbaiki prompt LLM
-- Tambah kategori baru
+- Tambah kategori
+
+## Dukung
+
+- [Ko-fi](https://ko-fi.com/scholarscout) · [Saweria](https://saweria.co/scholarscout) · Star repo ini
 
 ## Lisensi
 
-MIT — lihat [LICENSE](LICENSE).
-
-## Dukung Proyek Ini
-
-- [♥ Ko-fi (International)](https://ko-fi.com/scholarscout)
-- [♥ Saweria (Indonesia)](https://saweria.co/scholarscout)
-- Beri bintang di GitHub
-
+MIT

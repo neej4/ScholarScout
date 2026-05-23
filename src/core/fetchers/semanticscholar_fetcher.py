@@ -7,6 +7,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 import json
+import os
 import time
 from datetime import datetime, timezone
 from typing import List, Callable, Optional
@@ -107,7 +108,11 @@ CATEGORY_TO_KEYWORDS = {
 
 
 class SemanticScholarFetcher(BaseFetcher):
-    """Fetches papers from Semantic Scholar API (free, no key needed)."""
+    """Fetches papers from Semantic Scholar API.
+    
+    Free tier: 100 req/5min (unauthenticated).
+    With API key: 10,000 req/5min (free, register at semanticscholar.org/product/api).
+    """
     
     BASE_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
     
@@ -115,6 +120,8 @@ class SemanticScholarFetcher(BaseFetcher):
         self.start_date = start_date
         self.end_date = end_date
         self.emit_fn = emit_fn
+        # S2 API key from environment (optional, massively increases rate limit)
+        self.api_key = os.environ.get("S2_API_KEY", "")
 
     def _emit(self, event: str, **kwargs):
         if self.emit_fn:
@@ -138,12 +145,14 @@ class SemanticScholarFetcher(BaseFetcher):
         
         url = f"{self.BASE_URL}?{params}"
         
-        for attempt in range(2):
+        for attempt in range(3):
             try:
                 req = urllib.request.Request(url)
-                req.add_header("User-Agent", "ScholarScout/1.0")
+                req.add_header("User-Agent", "ScholarScout/1.4")
+                if self.api_key:
+                    req.add_header("x-api-key", self.api_key)
                 
-                with urllib.request.urlopen(req, timeout=15) as resp:
+                with urllib.request.urlopen(req, timeout=20) as resp:
                     data = json.loads(resp.read().decode())
                 
                 results = data.get("data", [])
@@ -165,20 +174,31 @@ class SemanticScholarFetcher(BaseFetcher):
                 
             except urllib.error.HTTPError as e:
                 if e.code == 429:
-                    wait = 10
+                    # Progressive backoff: 15s, 30s, 60s
+                    wait = 15 * (attempt + 1)
                     self._emit("fetch_retry", cat=category,
-                         msg=f"S2 rate limited — waiting {wait}s (attempt {attempt+1}/2)")
+                         msg=f"S2 rate limited (429) — waiting {wait}s (attempt {attempt+1}/3)")
+                    time.sleep(wait)
+                elif e.code == 504 or e.code == 503:
+                    # Server overloaded — wait and retry
+                    wait = 10 * (attempt + 1)
+                    self._emit("fetch_retry", cat=category,
+                         msg=f"S2 server busy ({e.code}) — waiting {wait}s")
                     time.sleep(wait)
                 else:
                     self._emit("fetch_retry", cat=category,
                          msg=f"S2 HTTP {e.code} for {category}")
-                    return []  # Don't retry non-429 errors
+                    return []
             except Exception as e:
-                self._emit("fetch_retry", cat=category,
-                     msg=f"S2 error for {category}: {str(e)[:40]}")
-                return []  # Don't retry network errors
+                if attempt < 2:
+                    self._emit("fetch_retry", cat=category,
+                         msg=f"S2 error for {category}: {str(e)[:40]} — retrying")
+                    time.sleep(5)
+                else:
+                    self._emit("fetch_retry", cat=category,
+                         msg=f"S2 failed for {category} after 3 attempts")
+                    return []
         
-        # After retries exhausted, return empty silently (don't block pipeline)
         return []
 
     def _parse_paper(self, item: dict, category: str) -> Optional[Paper]:
