@@ -186,7 +186,6 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .sprite-anim img.visible{opacity:1}
 .sprite-anim.static img:first-child{opacity:1}
 .sprite-anim.static img:not(:first-child){opacity:0}
-body.light .sprite-anim img{filter:none}
 
 /* DROP ZONE (file upload) */
 .drop-zone{border:2px dashed var(--border);border-radius:8px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg)}
@@ -255,13 +254,7 @@ body.light .sprite-anim img{filter:none}
 .warning-banner{background:rgba(255,107,107,0.1);border:1px solid var(--err);border-radius:4px;padding:12px 16px;margin:0 32px 16px;color:var(--err);font-size:12px;display:none}
 .warning-banner.visible{display:block}
 
-/* LIGHT MODE */
-body.light{background:#f5f5f5;color:#333}
-body.light{--bg:#f5f5f5;--card:#ffffff;--border:#e0e0e0;--text:#333;--muted:#666;--hover:#f0f0f0;--active:#111;--err:#d32f2f}
-body.light .logo-img{filter:none}
-body.light .header{border-color:var(--border)}
-body.light .badge{color:#666;border-color:#ddd}
-body.light .log-box{background:#fafafa}
+/* LIGHT MODE — removed, dark only */
 .theme-toggle{background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--muted);cursor:pointer;font-size:11px;font-family:inherit;transition:0.2s}
 .theme-toggle:hover{color:var(--text);border-color:var(--text)}
 
@@ -311,7 +304,6 @@ body.light .log-box{background:#fafafa}
   </div>
   <div class="header-right">
     <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)" title="Release notes">v1.4</a>
-    <button class="theme-toggle" id="themeToggle" title="Toggle light/dark mode">◐</button>
     <button class="theme-toggle" id="setupBtn" title="Open setup wizard" onclick="wizardOpen(0)">Setup</button>
     <span class="badge" id="statusBadge">Idle</span>
     <span class="badge" id="modelBadge" style="border:none;font-size:10px"></span>
@@ -2661,17 +2653,7 @@ function testConnection() {
   .catch(e => showSettingsStatus('Network error: ' + e.message, false));
 }
 
-// ── Theme Toggle ──
-(function initTheme() {
-  const toggle = document.getElementById('themeToggle');
-  const saved = localStorage.getItem('scholarscout_theme');
-  if (saved === 'light') document.body.classList.add('light');
-  
-  toggle.addEventListener('click', function() {
-    document.body.classList.toggle('light');
-    localStorage.setItem('scholarscout_theme', document.body.classList.contains('light') ? 'light' : 'dark');
-  });
-})();
+// ── Theme: dark only (light mode removed) ──
 
 // ── Keyboard Shortcuts ──
 document.addEventListener('keydown', function(e) {

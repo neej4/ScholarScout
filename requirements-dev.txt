@@ -1,4 +1,0 @@
-# Development and testing dependencies
--r requirements.txt
-pytest==8.0.0
-hypothesis==6.98.0

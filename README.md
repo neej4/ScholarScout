@@ -172,7 +172,7 @@ SCOUT_GOAL="FEATURE" SCOUT_CONTEXT="Building a Flask app with LLM integration" p
 ## Testing
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 pytest tests/                          # Unit tests
 pytest tests/ -m "not integration"     # Skip integration tests
 npm test                               # JavaScript tests
