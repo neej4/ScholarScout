@@ -25,7 +25,7 @@ class TestNoveltyEndpoint(unittest.TestCase):
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
     
-    @patch('preview_server.NoveltyChecker')
+    @patch('src.web.routes.analysis.NoveltyChecker')
     def test_novelty_endpoint_success_novel(self, mock_checker_class):
         """Test successful novelty check returning novel status."""
         # Mock NoveltyChecker
@@ -51,7 +51,7 @@ class TestNoveltyEndpoint(unittest.TestCase):
         self.assertEqual(len(data["papers"]), 0)
         self.assertNotIn("max_similarity", data)  # Should be excluded from API response
     
-    @patch('preview_server.NoveltyChecker')
+    @patch('src.web.routes.analysis.NoveltyChecker')
     def test_novelty_endpoint_success_similar(self, mock_checker_class):
         """Test successful novelty check returning similar status."""
         # Mock NoveltyChecker
@@ -81,7 +81,7 @@ class TestNoveltyEndpoint(unittest.TestCase):
         self.assertEqual(data["papers"][0]["title"], "Similar Paper 1")
         self.assertEqual(data["papers"][0]["url"], "https://example.com/1")
     
-    @patch('preview_server.NoveltyChecker')
+    @patch('src.web.routes.analysis.NoveltyChecker')
     def test_novelty_endpoint_success_exists(self, mock_checker_class):
         """Test successful novelty check returning exists status."""
         # Mock NoveltyChecker
@@ -148,7 +148,7 @@ class TestNoveltyEndpoint(unittest.TestCase):
         data = json.loads(response.data)
         self.assertIn("error", data)
     
-    @patch('preview_server.NoveltyChecker')
+    @patch('src.web.routes.analysis.NoveltyChecker')
     def test_novelty_endpoint_runtime_error(self, mock_checker_class):
         """Test endpoint returns 503 when both APIs fail."""
         # Mock NoveltyChecker to raise RuntimeError
@@ -169,7 +169,7 @@ class TestNoveltyEndpoint(unittest.TestCase):
         self.assertIn("error", data)
         self.assertIn("failed", data["error"].lower())
     
-    @patch('preview_server.NoveltyChecker')
+    @patch('src.web.routes.analysis.NoveltyChecker')
     def test_novelty_endpoint_unexpected_error(self, mock_checker_class):
         """Test endpoint returns 500 for unexpected errors."""
         # Mock NoveltyChecker to raise unexpected exception
@@ -189,7 +189,7 @@ class TestNoveltyEndpoint(unittest.TestCase):
         data = json.loads(response.data)
         self.assertIn("error", data)
     
-    @patch('preview_server.NoveltyChecker')
+    @patch('src.web.routes.analysis.NoveltyChecker')
     def test_novelty_endpoint_strips_whitespace(self, mock_checker_class):
         """Test endpoint strips whitespace from idea_title."""
         # Mock NoveltyChecker

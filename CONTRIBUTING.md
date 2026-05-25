@@ -7,7 +7,7 @@ Thanks for your interest in contributing! Here's how you can help.
 ```bash
 git clone https://github.com/neej4/ScholarScout.git
 cd ScholarScout
-pip install -r requirements.txt
+pip install -e ".[dev]"
 npm install
 python preview_server.py
 ```

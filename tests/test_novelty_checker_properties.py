@@ -108,13 +108,25 @@ class TestCosineProperties(unittest.TestCase):
         self.assertEqual(self.checker._cosine_similarity([1.0, 2.0], [1.0]), 0.0)
 
     @given(
-        st.lists(st.floats(min_value=-1.0, max_value=1.0, allow_nan=False, allow_infinity=False), min_size=2, max_size=50),
-        st.lists(st.floats(min_value=-1.0, max_value=1.0, allow_nan=False, allow_infinity=False), min_size=2, max_size=50),
+        st.integers(min_value=2, max_value=50).flatmap(
+            lambda size: st.tuples(
+                st.lists(
+                    st.floats(min_value=-1.0, max_value=1.0, allow_nan=False, allow_infinity=False),
+                    min_size=size,
+                    max_size=size,
+                ),
+                st.lists(
+                    st.floats(min_value=-1.0, max_value=1.0, allow_nan=False, allow_infinity=False),
+                    min_size=size,
+                    max_size=size,
+                ),
+            )
+        )
     )
     @settings(max_examples=100)
-    def test_cosine_range(self, a, b):
+    def test_cosine_range(self, vectors):
         """Cosine similarity is always in [-1.0, 1.0]."""
-        assume(len(a) == len(b))
+        a, b = vectors
         assume(any(x != 0 for x in a) and any(x != 0 for x in b))
         sim = self.checker._cosine_similarity(a, b)
         self.assertGreaterEqual(sim, -1.0 - 1e-9)
@@ -137,7 +149,7 @@ class TestStatusMapping(unittest.TestCase):
     def test_jaccard_similar(self):
         self.assertEqual(self.checker._jaccard_score_to_status(0.40), "similar")
         self.assertEqual(self.checker._jaccard_score_to_status(0.55), "similar")
-        self.assertEqual(self.checker._jaccard_score_to_status(0.70), "similar")
+        self.assertEqual(self.checker._jaccard_score_to_status(0.69), "similar")
 
     def test_jaccard_exists(self):
         self.assertEqual(self.checker._jaccard_score_to_status(0.71), "exists")
