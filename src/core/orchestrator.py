@@ -11,6 +11,8 @@ from src.core.models import Paper, ProjectIdea
 from src.core.fetchers.arxiv_fetcher import ArxivFetcher
 from src.core.fetchers.openalex_fetcher import OpenAlexFetcher
 from src.core.fetchers.semanticscholar_fetcher import SemanticScholarFetcher
+from src.core.fetchers.pubmed_fetcher import PubMedFetcher
+from src.core.fetchers.crossref_fetcher import CrossrefFetcher
 from src.core.llm import LLMClient
 from src.core.analyzer import TrendAnalyzer
 from src.core.generator import IdeaGenerator
@@ -45,6 +47,16 @@ class Orchestrator:
                 emit_fn=self._emit
             )),
             ("Semantic Scholar", SemanticScholarFetcher(
+                start_date=Config.START_DATE,
+                end_date=Config.END_DATE,
+                emit_fn=self._emit
+            )),
+            ("PubMed", PubMedFetcher(
+                start_date=Config.START_DATE,
+                end_date=Config.END_DATE,
+                emit_fn=self._emit
+            )),
+            ("Crossref", CrossrefFetcher(
                 start_date=Config.START_DATE,
                 end_date=Config.END_DATE,
                 emit_fn=self._emit
@@ -220,8 +232,8 @@ class Orchestrator:
                      phase=1, msg=f"{cat}: {len(cat_papers)} papers from cache (skipped fetch)")
                 continue
             
-            # Fetch all 3 sources in parallel (saves ~60% time per category)
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            # Fetch all sources in parallel (saves ~60% time per category)
+            with ThreadPoolExecutor(max_workers=5) as executor:
                 futures = {
                     executor.submit(_fetch_one_source, name, fetcher, cat): name
                     for name, fetcher in self.fetchers
