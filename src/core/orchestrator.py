@@ -3,7 +3,7 @@ import csv
 import os
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Callable, Optional, Dict
 
 from src.core.config import Config
@@ -76,9 +76,20 @@ class Orchestrator:
     def load_cache(self) -> Dict[str, dict]:
         try:
             with open(Config.CACHE_FILE, encoding="utf-8") as f:
-                return json.load(f)
+                cache = json.load(f)
         except Exception:
             return {}
+
+        # Expire papers older than CACHE_EXPIRY_DAYS
+        expiry_days = Config.CACHE_EXPIRY_DAYS
+        if expiry_days > 0:
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=expiry_days)).strftime("%Y-%m-%d")
+            before = len(cache)
+            cache = {k: v for k, v in cache.items() if v.get("submitted", "9999") >= cutoff}
+            expired = before - len(cache)
+            if expired > 0:
+                self._emit("cache_expiry", msg=f"Expired {expired} papers older than {expiry_days} days")
+        return cache
 
     def save_cache(self, cache: Dict[str, dict]):
         try:

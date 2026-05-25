@@ -88,20 +88,41 @@ class IdeaGenerator:
         except Exception:
             return ""
 
+    # Max ideas per single LLM call to avoid truncated JSON
+    CHUNK_SIZE = 3
+
     def generate(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
                  research_context: str = '', language: str = 'en',
                  approach: str = 'any', goal: str = 'any',
                  refine: bool = False) -> List[ProjectIdea]:
-        """Route to academic, product, or develop generator based on goal."""
+        """Route to academic, product, or develop generator based on goal.
+        
+        If n > CHUNK_SIZE, splits into multiple LLM calls to avoid truncated JSON.
+        """
+        # Pick the right sub-generator
         if self._is_develop_mode(goal):
-            ideas = self._generate_develop(trend, existing_titles, n,
-                                           research_context, language, approach, goal)
+            gen_fn = self._generate_develop
         elif self._is_product_mode(goal):
-            ideas = self._generate_product(trend, existing_titles, n,
-                                           research_context, language, approach, goal)
+            gen_fn = self._generate_product
         else:
-            ideas = self._generate_academic(trend, existing_titles, n,
-                                            research_context, language, approach, goal)
+            gen_fn = self._generate_academic
+
+        # Chunked generation: split into batches of CHUNK_SIZE
+        ideas: List[ProjectIdea] = []
+        remaining = n
+        while remaining > 0 and len(ideas) < n:
+            batch_size = min(remaining, self.CHUNK_SIZE)
+            try:
+                batch = gen_fn(trend, existing_titles, batch_size,
+                               research_context, language, approach, goal)
+                ideas.extend(batch)
+            except Exception as e:
+                self.llm._emit("llm_error", msg=f"Batch generation failed: {e}")
+                # Continue with next batch — partial results better than nothing
+            remaining = n - len(ideas)
+
+        # Trim to exactly n
+        ideas = ideas[:n]
 
         # Optional self-distillation refinement step
         if refine and ideas:

@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.5.1 (2026-05-25)
+
+### UI overhaul
+- Compact idea cards: title + abstract preview + difficulty chip + quality score. All detail in popup via "Details" button.
+- Clean controls bar: Profile / Run / Quick (left), date / language / max ideas (right). Removed Clear button from controls.
+- Donate link in header next to logo (Ko-fi).
+- Consistent card footer across all views (main ideas, shortlist, session detail).
+
+### Pipeline reliability
+- Chunked generation: max 3 ideas per LLM call. If one batch fails (truncated JSON), others still succeed. No more `Unterminated string` errors.
+- Token budget stays at 3000 — chunking makes it always sufficient.
+
+---
+
 ## v1.5.0 (2026-05-23)
 
 ### Grounding verification for Deep Dive

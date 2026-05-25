@@ -102,6 +102,14 @@ class Config:
     
     # ─── PIPELINE SETTINGS ─────────────────────────────────────────────────────
     MAX_IDEAS     = int(os.environ.get("SCOUT_MAX_IDEAS", _app_conf.get("max_ideas", 50)))
+
+    # ─── FEATURE FLAGS ─────────────────────────────────────────────────────────
+    # Centralized registry. Overridable via env vars or config.yaml "features" section.
+    _features_conf = _yaml_data.get("features", {})
+    FEATURE_REFINE      = os.environ.get("SCOUT_REFINE", str(_features_conf.get("refine", False))) == '1'
+    FEATURE_SENSITIVITY = os.environ.get("SCOUT_SENSITIVITY", str(_features_conf.get("sensitivity", False))) == '1'
+    FEATURE_GROUNDING   = _features_conf.get("grounding", False)
+    CACHE_EXPIRY_DAYS   = int(_features_conf.get("cache_expiry_days", 7))
     
     # ─── KATEGORI ARXIV ────────────────────────────────────────────────────────
     _ui_cats = os.environ.get("SCOUT_CATEGORIES", "")
