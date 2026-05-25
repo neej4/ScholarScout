@@ -673,7 +673,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:32px">
             <div style="text-align:center;padding:12px">
-              <div style="font-size:18px;font-weight:300;color:#fff;font-family:monospace">3</div>
+              <div style="font-size:18px;font-weight:300;color:#fff;font-family:monospace">8</div>
               <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Data Sources</div>
             </div>
             <div style="text-align:center;padding:12px">
@@ -688,6 +688,16 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
               <div style="font-size:18px;font-weight:300;color:#fff;font-family:monospace">5</div>
               <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Research Approaches</div>
             </div>
+          </div>
+          <div style="margin-bottom:24px;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px">
+            <div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">What's New in v1.5.2</div>
+            <ul style="font-size:11px;color:var(--muted);line-height:2;padding-left:16px;list-style:disc">
+              <li><span style="color:var(--text)">8 paper sources</span> — arXiv, OpenAlex, Semantic Scholar, PubMed, Crossref, DOAJ, Scopus, DBLP</li>
+              <li><span style="color:var(--text)">Smart source routing</span> — auto-selects best sources per category (CS uses arXiv+DBLP, Medicine uses PubMed+Scopus)</li>
+              <li><span style="color:var(--text)">Chunked generation</span> — large requests split into batches, no more truncated ideas</li>
+              <li><span style="color:var(--text)">Docs tab</span> — links to full documentation at scholarscout.pages.dev</li>
+              <li><span style="color:var(--text)">All English UI</span> — consistent language across the platform</li>
+            </ul>
           </div>
           <div style="text-align:center;padding:16px;border-top:1px solid var(--border)">
             <p style="font-size:11px;color:var(--muted);margin-bottom:8px">ScholarScout is free and open source</p>
@@ -810,16 +820,31 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <!-- Data Sources -->
         <div>
           <div class="section-title" style="margin-bottom:4px">Data sources</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">Where to fetch papers from. Disable a source if it's slow or rate-limiting you.</p>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">8 sources available. ScholarScout auto-selects the best 3-4 per category. Disable a source if it's slow or rate-limiting you.</p>
           <div class="settings-form" style="gap:10px">
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
-              <input type="checkbox" id="settArxiv" checked style="accent-color:#fff"> arXiv <span style="color:var(--muted);font-size:10px;margin-left:4px">preprints, mostly CS/Physics/Math</span>
+              <input type="checkbox" id="settArxiv" checked style="accent-color:#fff"> arXiv <span style="color:var(--muted);font-size:10px;margin-left:4px">preprints — CS, Physics, Math</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
-              <input type="checkbox" id="settOpenAlex" checked style="accent-color:#fff"> OpenAlex <span style="color:var(--muted);font-size:10px;margin-left:4px">250M+ works, all fields, most reliable</span>
+              <input type="checkbox" id="settOpenAlex" checked style="accent-color:#fff"> OpenAlex <span style="color:var(--muted);font-size:10px;margin-left:4px">250M+ works, all fields</span>
             </label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
-              <input type="checkbox" id="settS2" checked style="accent-color:#fff"> Semantic Scholar <span style="color:var(--muted);font-size:10px;margin-left:4px">citation data, often rate-limited</span>
+              <input type="checkbox" id="settS2" checked style="accent-color:#fff"> Semantic Scholar <span style="color:var(--muted);font-size:10px;margin-left:4px">200M+ papers, citation graph</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="settPubMed" checked style="accent-color:#fff"> PubMed <span style="color:var(--muted);font-size:10px;margin-left:4px">36M+ biomedical papers</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="settCrossref" checked style="accent-color:#fff"> Crossref <span style="color:var(--muted);font-size:10px;margin-left:4px">150M+ DOI records, all fields</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="settDOAJ" checked style="accent-color:#fff"> DOAJ <span style="color:var(--muted);font-size:10px;margin-left:4px">9M+ open access articles</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="settScopus" checked style="accent-color:#fff"> Scopus <span style="color:var(--muted);font-size:10px;margin-left:4px">90M+ records (needs SCOPUS_API_KEY env var)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="settDBLP" checked style="accent-color:#fff"> DBLP <span style="color:var(--muted);font-size:10px;margin-left:4px">6M+ CS conference papers</span>
             </label>
           </div>
         </div>
