@@ -13,6 +13,9 @@ from src.core.fetchers.openalex_fetcher import OpenAlexFetcher
 from src.core.fetchers.semanticscholar_fetcher import SemanticScholarFetcher
 from src.core.fetchers.pubmed_fetcher import PubMedFetcher
 from src.core.fetchers.crossref_fetcher import CrossrefFetcher
+from src.core.fetchers.doaj_fetcher import DOAJFetcher
+from src.core.fetchers.scopus_fetcher import ScopusFetcher
+from src.core.fetchers.dblp_fetcher import DBLPFetcher
 from src.core.llm import LLMClient
 from src.core.analyzer import TrendAnalyzer
 from src.core.generator import IdeaGenerator
@@ -34,34 +37,38 @@ class Orchestrator:
         self.sensitivity = os.environ.get('SCOUT_SENSITIVITY', '0') == '1'
         self.llm_client = LLMClient(emit_fn=self._emit)
         
-        # Initialize multi-source fetchers
-        self.fetchers = [
-            ("arXiv", ArxivFetcher(
-                start_date=Config.START_DATE, 
-                end_date=Config.END_DATE, 
-                emit_fn=self._emit
-            )),
-            ("OpenAlex", OpenAlexFetcher(
-                start_date=Config.START_DATE,
-                end_date=Config.END_DATE,
-                emit_fn=self._emit
-            )),
-            ("Semantic Scholar", SemanticScholarFetcher(
-                start_date=Config.START_DATE,
-                end_date=Config.END_DATE,
-                emit_fn=self._emit
-            )),
-            ("PubMed", PubMedFetcher(
-                start_date=Config.START_DATE,
-                end_date=Config.END_DATE,
-                emit_fn=self._emit
-            )),
-            ("Crossref", CrossrefFetcher(
-                start_date=Config.START_DATE,
-                end_date=Config.END_DATE,
-                emit_fn=self._emit
-            )),
-        ]
+        # Initialize multi-source fetchers (all available)
+        _common = dict(start_date=Config.START_DATE, end_date=Config.END_DATE, emit_fn=self._emit)
+        self.all_fetchers = {
+            "arXiv":    ArxivFetcher(**_common),
+            "OpenAlex": OpenAlexFetcher(**_common),
+            "S2":       SemanticScholarFetcher(**_common),
+            "PubMed":   PubMedFetcher(**_common),
+            "Crossref": CrossrefFetcher(**_common),
+            "DOAJ":     DOAJFetcher(**_common),
+            "Scopus":   ScopusFetcher(**_common),
+            "DBLP":     DBLPFetcher(**_common),
+        }
+        
+        # Source routing: which sources to use per category prefix
+        # Each category gets 3-4 most relevant sources (avoids noise + saves rate limits)
+        self._source_routes = {
+            "cs":      ["arXiv", "S2", "OpenAlex", "DBLP"],
+            "stat":    ["arXiv", "S2", "OpenAlex", "DBLP"],
+            "eess":    ["arXiv", "S2", "OpenAlex", "DBLP"],
+            "med":     ["PubMed", "S2", "Crossref", "Scopus"],
+            "q-bio":   ["PubMed", "S2", "OpenAlex", "Crossref"],
+            "bio":     ["PubMed", "OpenAlex", "Crossref", "DOAJ"],
+            "physics": ["arXiv", "S2", "OpenAlex", "Crossref"],
+            "eng":     ["Crossref", "OpenAlex", "S2", "Scopus"],
+            "chem":    ["Crossref", "OpenAlex", "S2", "PubMed"],
+            "math":    ["arXiv", "S2", "OpenAlex", "Crossref"],
+            "soc":     ["Crossref", "OpenAlex", "DOAJ", "S2"],
+            "earth":   ["Crossref", "OpenAlex", "DOAJ", "S2"],
+            "agri":    ["Crossref", "OpenAlex", "DOAJ", "PubMed"],
+        }
+        # Fallback: if category prefix not in routes, use these universal sources
+        self._default_sources = ["OpenAlex", "S2", "Crossref"]
         self.analyzer = TrendAnalyzer(self.llm_client)
         self.generator = IdeaGenerator(self.llm_client)
         
@@ -232,11 +239,16 @@ class Orchestrator:
                      phase=1, msg=f"{cat}: {len(cat_papers)} papers from cache (skipped fetch)")
                 continue
             
-            # Fetch all sources in parallel (saves ~60% time per category)
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            # Determine which sources to use for this category (source routing)
+            cat_prefix = cat.split(".")[0] if "." in cat else cat
+            source_names = self._source_routes.get(cat_prefix, self._default_sources)
+            cat_fetchers = [(name, self.all_fetchers[name]) for name in source_names if name in self.all_fetchers]
+            
+            # Fetch selected sources in parallel
+            with ThreadPoolExecutor(max_workers=len(cat_fetchers)) as executor:
                 futures = {
                     executor.submit(_fetch_one_source, name, fetcher, cat): name
-                    for name, fetcher in self.fetchers
+                    for name, fetcher in cat_fetchers
                 }
                 for future in as_completed(futures):
                     source_name, papers = future.result()
