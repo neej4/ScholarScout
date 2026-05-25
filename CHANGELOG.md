@@ -2,15 +2,28 @@
 
 ## v1.5.1 (2026-05-25)
 
-### UI overhaul
-- Compact idea cards: title + abstract preview + difficulty chip + quality score. All detail in popup via "Details" button.
-- Clean controls bar: Profile / Run / Quick (left), date / language / max ideas (right). Removed Clear button from controls.
-- Donate link in header next to logo (Ko-fi).
-- Consistent card footer across all views (main ideas, shortlist, session detail).
+### UX
+- Controls bar rearranged: action buttons (Profile, Run, Quick, Clear) on the left, settings (date range, language, max ideas) on the right
+- Donate link added to header (Ko-fi)
+- White logo variant (`logo_purewhite.png`)
 
 ### Pipeline reliability
-- Chunked generation: max 3 ideas per LLM call. If one batch fails (truncated JSON), others still succeed. No more `Unterminated string` errors.
-- Token budget stays at 3000 — chunking makes it always sufficient.
+- Chunked generation: splits large requests into batches of 3 ideas per LLM call. If one batch fails (truncated JSON), remaining batches still succeed.
+- Cache expiry: papers older than 7 days (configurable via `features.cache_expiry_days` in config.yaml) are automatically pruned from cache on next run.
+
+### Configuration
+- Feature flags centralized in `config.py`: `FEATURE_REFINE`, `FEATURE_SENSITIVITY`, `FEATURE_GROUNDING`, `CACHE_EXPIRY_DAYS`
+- Overridable via `config.yaml` `features:` section or environment variables
+
+### CI/CD
+- GitHub Actions workflow added (`.github/workflows/ci.yml`)
+- Python 3.10, 3.11, 3.12 matrix
+- Runs pytest (unit tests) + npm test (JS tests) on every push/PR
+- Node.js 22, forced Node 24 action runtime
+
+### Bug fixes
+- Deep Dive modal appearing on page refresh (CSS `display:flex` without `display:none` default)
+- Structural tests expecting exact string patterns that diverged from actual code (relaxed assertions)
 
 ---
 
