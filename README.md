@@ -5,7 +5,7 @@
 <h3 align="center">Papers in. Ideas out. Research, product, or feature — you choose.</h3>
 
 <p align="center">
-  ScholarScout reads 250M+ academic papers and generates actionable ideas<br>
+  ScholarScout reads 250M+ academic papers from 8 sources and generates actionable ideas<br>
   tailored to your goal: thesis, hackathon demo, SaaS product, or your next feature.
 </p>
 
@@ -13,6 +13,8 @@
   <a href="#quick-start">Quick Start</a> · 
   <a href="#three-modes">Three Modes</a> · 
   <a href="#features">Features</a> · 
+  <a href="https://scholarscout.neej4.workers.dev/docs">Documentation</a> · 
+  <a href="https://scholarscout.neej4.workers.dev">Live Demo</a> · 
   <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md">Changelog</a> · 
   <a href="https://ko-fi.com/scholarscout">Ko-fi</a> · 
   <a href="https://saweria.co/scholarscout">Saweria</a>
@@ -76,11 +78,12 @@ Need an LLM? Pick one:
 - 18 skill profiles across Academic, Product, and Develop categories
 - File upload (drag-n-drop .pdf/.txt/.md/.json) as extra context
 - Research approach filter: Computational, Experimental, Clinical, Theoretical
-- Language: English or Bahasa Indonesia
+- Language: English (Bahasa Indonesia output available)
 - Onboarding wizard: provider → test → categories in 3 steps
 
 ### Data
-- arXiv + OpenAlex + Semantic Scholar (250M+ papers, fetched in parallel)
+- arXiv + OpenAlex + Semantic Scholar + PubMed + Crossref + DOAJ + Scopus + DBLP (8 sources, 250M+ papers)
+- Smart source routing: auto-selects best 3-4 sources per category
 - 80+ categories across 10 disciplines
 - Cache-aware: second run skips API calls, uses cached papers
 - Citation-based sorting: high-impact papers analyzed first
@@ -123,7 +126,7 @@ ScholarScout/
 │   │   ├── llm.py              # Multi-provider LLM client (6 providers + SSE parser)
 │   │   ├── config.py           # Configuration
 │   │   ├── models.py           # Paper, TrendAnalysis, ProjectIdea
-│   │   └── fetchers/           # arXiv, OpenAlex, Semantic Scholar
+│   │   └── fetchers/           # 8 sources: arXiv, OpenAlex, S2, PubMed, Crossref, DOAJ, Scopus, DBLP
 │   └── web/
 │       ├── routes/             # Flask blueprints (pipeline, sessions, ideas, analysis, settings, upload)
 │       ├── templates/          # Dashboard (single HTML file)
@@ -205,71 +208,4 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-# Bahasa Indonesia
-
-<h3 align="center">Paper masuk. Ide keluar. Riset, produk, atau fitur — kamu yang pilih.</h3>
-
-ScholarScout baca 250 juta+ paper akademik dan generate ide yang actionable sesuai tujuanmu: skripsi, demo hackathon, produk SaaS, atau fitur baru untuk project yang sudah ada.
-
----
-
-## Tiga Mode
-
-| Mode | Pertanyaan | Output |
-|------|-----------|--------|
-| **Academic** | "Apa yang bisa diteliti?" | Judul riset, metodologi, paper kunci |
-| **Product** | "Apa yang bisa dibangun dari nol?" | Fitur MVP, tech stack, model revenue |
-| **Develop** | "Apa yang bisa ditambahkan ke project ini?" | Fitur, integrasi, optimisasi — relevan ke project kamu |
-
----
-
-## Cara Mulai
-
-```bash
-git clone https://github.com/neej4/ScholarScout.git
-cd ScholarScout
-pip install -r requirements.txt
-python preview_server.py
-```
-
-Buka **http://localhost:5050** — wizard setup memandu dalam 30 detik.
-
-Provider gratis: **Gemini** ([key](https://aistudio.google.com/app/apikey)) atau **Groq** ([key](https://console.groq.com/keys)).
-
----
-
-## Fitur Utama
-
-- 3 mode generasi ide (Academic, Product, Develop)
-- 18 skill profile (9 riset + 4 produk + 5 development)
-- 80+ kategori riset, 10 disiplin ilmu
-- Upload file (.pdf/.txt/.md/.json) sebagai konteks
-- Novelty check berbasis embedding
-- Deep dive: outline, metodologi, dataset, timeline, tools
-- Dashboard real-time, bookmark, export PDF
-- 6 provider LLM (termasuk lokal/custom)
-- Dark/Light mode, keyboard shortcuts
-- 100+ automated tests
-
----
-
-## Develop Mode — Untuk Builder
-
-Punya project yang mau dikembangin? Pilih goal **Feature** / **Integration** / **Optimization** / **Extension** / **Pivot**, isi context dengan deskripsi project kamu, dan setiap ide yang dihasilkan pasti relevan ke project itu.
-
----
-
-## Kontribusi
-
-- Tambah sumber paper (implement `BaseFetcher`)
-- Buat skill profile (tambah markdown ke `skills/`)
-- Perbaiki prompt LLM
-- Tambah kategori
-
-## Dukung
-
-- [Ko-fi](https://ko-fi.com/scholarscout) · [Saweria](https://saweria.co/scholarscout) · Star repo ini
-
-## Lisensi
-
-MIT
+MIT — see [LICENSE](LICENSE).

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scholarscout"
-version = "1.5.1"
+version = "1.5.2"
 description = "AI-powered research idea discovery for students and researchers"
 readme = "README.md"
 license = { text = "MIT" }

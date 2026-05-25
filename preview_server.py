@@ -62,7 +62,7 @@ app = create_app()
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("  ScholarScout v1.5.1")
+    print("  ScholarScout v1.5.2")
     print("  http://localhost:5050")
     print("=" * 50)
 
