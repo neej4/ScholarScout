@@ -13,8 +13,8 @@
   <a href="#quick-start">Quick Start</a> · 
   <a href="#three-modes">Three Modes</a> · 
   <a href="#features">Features</a> · 
-  <a href="https://scholarscout.neej4.workers.dev/docs">Documentation</a> · 
-  <a href="https://scholarscout.neej4.workers.dev">Live Demo</a> · 
+  <a href="https://scholarscout.pages.dev/docs">Documentation</a> · 
+  <a href="https://scholarscout.pages.dev">Live Demo</a> · 
   <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md">Changelog</a> · 
   <a href="https://ko-fi.com/scholarscout">Ko-fi</a> · 
   <a href="https://saweria.co/scholarscout">Saweria</a>
