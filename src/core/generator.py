@@ -90,16 +90,95 @@ class IdeaGenerator:
 
     def generate(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
                  research_context: str = '', language: str = 'en',
-                 approach: str = 'any', goal: str = 'any') -> List[ProjectIdea]:
+                 approach: str = 'any', goal: str = 'any',
+                 refine: bool = False) -> List[ProjectIdea]:
         """Route to academic, product, or develop generator based on goal."""
         if self._is_develop_mode(goal):
-            return self._generate_develop(trend, existing_titles, n,
-                                          research_context, language, approach, goal)
-        if self._is_product_mode(goal):
-            return self._generate_product(trend, existing_titles, n,
-                                          research_context, language, approach, goal)
-        return self._generate_academic(trend, existing_titles, n,
-                                       research_context, language, approach, goal)
+            ideas = self._generate_develop(trend, existing_titles, n,
+                                           research_context, language, approach, goal)
+        elif self._is_product_mode(goal):
+            ideas = self._generate_product(trend, existing_titles, n,
+                                           research_context, language, approach, goal)
+        else:
+            ideas = self._generate_academic(trend, existing_titles, n,
+                                            research_context, language, approach, goal)
+
+        # Optional self-distillation refinement step
+        if refine and ideas:
+            ideas = self._refine_ideas(ideas, language)
+
+        return ideas
+
+    # ─── SELF-DISTILLATION REFINEMENT ─────────────────────────────────────────
+
+    def _refine_ideas(self, ideas: List[ProjectIdea], language: str = 'en') -> List[ProjectIdea]:
+        """
+        Re-prompt LLM with generated ideas for self-distillation:
+        remove redundancy, sharpen specificity, improve feasibility.
+        Returns refined ideas (same count, same structure).
+        """
+        if not ideas:
+            return ideas
+
+        # Serialize ideas to JSON for the refinement prompt
+        ideas_json = json.dumps([i.to_dict() for i in ideas], ensure_ascii=False, indent=1)
+
+        lang_hint = "Respond in Bahasa Indonesia." if language == "id" else ""
+
+        prompt = textwrap.dedent(f"""
+You are a senior research advisor reviewing draft project ideas. Your job is to REFINE them — not generate new ones.
+
+For each idea below:
+1. Remove redundant or vague phrasing — make every sentence count
+2. Sharpen the title to be more specific and memorable
+3. Improve feasibility — if an idea is unrealistic, scope it down
+4. Ensure next_steps are concrete first actions (not restatements of methodology)
+5. If two ideas are too similar, differentiate them clearly
+
+Return the SAME number of ideas in the SAME JSON array format. Keep all fields. Only improve the text content.
+{lang_hint}
+
+=== IDEAS TO REFINE ===
+{ideas_json}
+=== END ===
+
+Respond ONLY with valid JSON array. No markdown, no explanation.
+""").strip()
+
+        response = self.llm.call(prompt, task_type="idea_generation")
+        if not response:
+            return ideas  # Refinement failed — return originals
+
+        try:
+            cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
+            refined_raw = json.loads(cleaned)
+            if isinstance(refined_raw, dict):
+                refined_raw = [refined_raw]
+        except Exception:
+            return ideas  # Parse failed — return originals
+
+        # Map refined data back onto existing ProjectIdea objects (preserve metadata)
+        for i, idea in enumerate(ideas):
+            if i >= len(refined_raw):
+                break
+            r = refined_raw[i]
+            # Only update text fields — preserve IDs, links, dates, scores
+            if r.get("idea_title"):
+                idea.idea_title = r["idea_title"]
+            if r.get("abstract"):
+                idea.abstract = r["abstract"]
+            if r.get("why_hard"):
+                idea.why_hard = r["why_hard"]
+            if r.get("methodology_hint"):
+                idea.methodology_hint = r["methodology_hint"]
+            if r.get("next_steps"):
+                ns = r["next_steps"]
+                idea.next_steps = " | ".join(ns) if isinstance(ns, list) else ns
+            if r.get("why_this_idea"):
+                idea.why_this_idea = r["why_this_idea"]
+
+        self.llm._emit("refine_done", msg=f"Refined {len(ideas)} ideas via self-distillation")
+        return ideas
 
     # ─── DEVELOP MODE ───────────────────────────────────────────────────────────
 

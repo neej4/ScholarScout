@@ -12,7 +12,7 @@ Routes are split into Blueprints under src/web/routes/:
                   /api/clear-cache, /api/clear-sessions
 """
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, render_template_string
 
 from src.web.routes.pipeline import pipeline_bp
 from src.web.routes.sessions import sessions_bp
@@ -36,7 +36,22 @@ def create_app() -> Flask:
 
     @app.route("/")
     def index():
-        return send_from_directory("src/web/templates", "dashboard.html")
+        # Read version from VERSION file — injected into dashboard JS
+        # so CURRENT_VERSION never needs to be hardcoded in the HTML.
+        version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION")
+        try:
+            app_version = open(version_file).read().strip()
+        except Exception:
+            app_version = "0.0.0"
+
+        html = open(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "src/web/templates/dashboard.html"),
+            encoding="utf-8"
+        ).read()
+
+        # Replace the hardcoded CURRENT_VERSION placeholder with the real version
+        html = html.replace("__APP_VERSION__", app_version)
+        return html
 
     return app
 
@@ -47,7 +62,7 @@ app = create_app()
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("  ScholarScout v1.4")
+    print("  ScholarScout v1.5")
     print("  http://localhost:5050")
     print("=" * 50)
 

@@ -1,7 +1,7 @@
 import textwrap
 import re
 import json
-from typing import List
+from typing import List, Optional
 
 from src.core.models import Paper, TrendAnalysis
 from src.core.llm import LLMClient
@@ -91,7 +91,44 @@ class TrendAnalyzer:
     def __init__(self, llm_client: LLMClient):
         self.llm = llm_client
 
-    def analyze(self, papers: List[Paper], category: str) -> TrendAnalysis:
+    def analyze(self, papers: List[Paper], category: str, sensitivity: bool = False) -> TrendAnalysis:
+        """Analyze trends. If sensitivity=True, run a second variant prompt and merge results."""
+        result = self._analyze_single(papers, category)
+
+        if sensitivity and result.top_keywords:
+            # Run variant prompt with different framing
+            variant = self._analyze_variant(papers, category)
+            if variant:
+                # Compute agreement score
+                kw_set_a = set(k.lower() for k in result.top_keywords)
+                kw_set_b = set(k.lower() for k in variant.top_keywords)
+                overlap = len(kw_set_a & kw_set_b)
+                total = max(len(kw_set_a | kw_set_b), 1)
+                agreement = round(overlap / total * 100)
+
+                # Merge: add unique keywords from variant
+                for kw in variant.top_keywords:
+                    if kw.lower() not in kw_set_a:
+                        result.top_keywords.append(kw)
+
+                # Merge gaps (deduplicated)
+                existing_gaps = set(g.lower()[:50] for g in result.research_gaps)
+                for gap in variant.research_gaps:
+                    if gap.lower()[:50] not in existing_gaps:
+                        result.research_gaps.append(gap)
+
+                # Adjust confidence based on agreement
+                if agreement >= 60:
+                    result.confidence = min(10, result.confidence + 1)
+                elif agreement < 30:
+                    result.confidence = max(1, result.confidence - 2)
+
+                self.llm._emit("sensitivity", cat=category,
+                     msg=f"Prompt sensitivity: {agreement}% keyword agreement (confidence adjusted to {result.confidence})")
+
+        return result
+
+    def _analyze_single(self, papers: List[Paper], category: str) -> TrendAnalysis:
         # Use all papers passed in (orchestrator already caps the batch size)
         batch = papers[:30]  # Safety cap at 30 to avoid token overflow
         paper_list = "\n".join(
@@ -175,3 +212,49 @@ class TrendAnalyzer:
             cross_pollination=[],
             ref_papers=batch[:3]
         )
+
+    def _analyze_variant(self, papers: List[Paper], category: str) -> Optional[TrendAnalysis]:
+        """Run a variant prompt with different framing for sensitivity comparison."""
+        batch = papers[:30]
+        paper_list = "\n".join(
+            f"- {p.title} ({p.submitted_date})"
+            for p in batch
+        )
+
+        # Different framing: focus on contradictions and debates rather than consensus
+        prompt = textwrap.dedent(f"""
+            You are a critical reviewer analyzing recent work in {category}.
+            Focus on DISAGREEMENTS, CONTRADICTIONS, and ALTERNATIVE approaches in these papers.
+
+            Papers:
+            {paper_list}
+
+            Return a JSON object with:
+            - "top_keywords": list of 5 keywords that appear in CONFLICTING contexts
+            - "research_gaps": list of 3 areas where papers DISAGREE or leave questions open
+            - "confidence": integer 1-10
+
+            Respond ONLY with valid JSON. No markdown.
+        """).strip()
+
+        response = self.llm.call(prompt, task_type="trend_analysis")
+        if not response:
+            return None
+
+        try:
+            cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
+            parsed = json.loads(cleaned)
+            return TrendAnalysis(
+                category=category,
+                paper_count=len(batch),
+                top_keywords=parsed.get("top_keywords", []),
+                emerging_methods=[],
+                research_gaps=parsed.get("research_gaps", []),
+                methodology_patterns=[],
+                saturation_level="growing",
+                cross_pollination=[],
+                ref_papers=[],
+                confidence=int(parsed.get("confidence", 5)),
+            )
+        except Exception:
+            return None

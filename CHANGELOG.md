@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.5.0 (2026-05-23)
+
+### Grounding verification for Deep Dive
+- Each Deep Dive section now compared against the inspiration paper abstract using semantic similarity (Gemini embeddings) or token overlap (Jaccard fallback)
+- Badge per section: `Grounded` (green, ≥65% similarity), `Partial` (yellow, 40-65%), `Caution` (red, <40%)
+- Hover badge to see exact similarity percentage
+- Opt-in via Settings → Pipeline behavior → "Verify Deep Dive grounding"
+- Disabled by default (adds ~5s and a few embedding API calls per Deep Dive)
+- Best-effort: grounding never fails the Deep Dive request — empty dict returned if source unavailable
+
+### API
+- `POST /api/deepdive` accepts new optional field `verify_grounding: bool`
+- Response includes optional `grounding` dict mapping section name to `{score, level}`
+
+---
+
+## v1.4.1 (2026-05-23)
+
+### Cleanup
+- Removed light theme (dark only)
+- Removed `requirements-dev.txt` (dev deps available via `pip install .[dev]` from `pyproject.toml`)
+
+---
+
 ## v1.4.0 (2026-05-23)
 
 ### Three Idea Generation Modes

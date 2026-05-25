@@ -95,11 +95,12 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
 /* IDEA CARDS */
 .ideas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
-.idea-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:20px;transition:all 0.2s ease;animation:fadeIn 0.5s ease;display:flex;flex-direction:column;gap:12px;position:relative;max-height:240px;overflow:hidden}
-.idea-card .expand-btn{position:absolute;bottom:0;left:0;right:0;padding:20px 0 10px;text-align:center;background:linear-gradient(transparent,var(--card) 50%);cursor:pointer;font-size:11px;color:var(--muted);letter-spacing:0.5px;border:none;font-family:inherit}
-.idea-card .expand-btn:hover{color:var(--active)}
-.idea-card.short{max-height:none;overflow:visible}
-.idea-card.short .expand-btn{display:none}
+.idea-card{background:var(--card);border:1px solid var(--border);border-radius:6px;transition:all 0.2s ease;animation:fadeIn 0.5s ease;display:flex;flex-direction:column;position:relative}
+.idea-card-body{padding:20px 20px 0;display:flex;flex-direction:column;gap:12px;max-height:200px;overflow:hidden}
+.idea-card.expanded .idea-card-body{max-height:none;overflow:visible}
+.idea-card-footer{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--border)}
+.idea-card-footer .idea-expand-btn{margin-left:auto}
+.idea-card.expanded .idea-expand-btn{display:none}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .idea-card:hover{border-color:#555;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
 .idea-card.bookmarked{border-left:3px solid rgba(255,255,255,0.6)}
@@ -117,8 +118,9 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .idea-method-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
 
 /* BOOKMARK BUTTON */
-.bookmark-btn{position:absolute;top:12px;right:12px;background:none;border:none;font-size:16px;cursor:pointer;color:#ffffff;opacity:0.5;transition:opacity 0.2s;padding:4px;line-height:1}
+.bookmark-btn{position:absolute;top:12px;right:12px;background:none;border:none;font-size:16px;cursor:pointer;color:#ffffff;opacity:0.5;transition:opacity 0.2s;padding:4px;line-height:1;z-index:1}
 .bookmark-btn:hover,.bookmark-btn.active{opacity:1}
+.idea-card-body{position:relative}
 
 /* CARD ACTION BUTTONS */
 .idea-actions{display:flex;gap:8px;margin-top:auto;flex-wrap:wrap;align-items:center}
@@ -213,7 +215,8 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .modal-close:hover{color:#ffffff}
 .modal-title{font-size:16px;font-weight:600;color:var(--active);margin-bottom:20px;padding-right:32px;line-height:1.4}
 .modal-section{margin-bottom:20px}
-.modal-section-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.modal-section-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grounding-badge{font-size:9px;padding:2px 8px;border-radius:3px;font-weight:500;letter-spacing:0.3px;text-transform:none}
 .modal-section p,.modal-section li{font-size:13px;color:var(--text);line-height:1.6}
 .modal-section ol,.modal-section ul{padding-left:20px}
 .modal-section li{margin-bottom:4px}
@@ -303,7 +306,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <div class="nav-tab" onclick="showTab('settings')">Settings</div>
   </div>
   <div class="header-right">
-    <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)" title="Release notes">v1.4</a>
+    <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)" title="Release notes">v__APP_VERSION__</a>
     <button class="theme-toggle" id="setupBtn" title="Open setup wizard" onclick="wizardOpen(0)">Setup</button>
     <span class="badge" id="statusBadge">Idle</span>
     <span class="badge" id="modelBadge" style="border:none;font-size:10px"></span>
@@ -778,6 +781,24 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
                 <span style="color:var(--muted);font-size:10px;margin-left:4px">Display how confident the AI is in each trend analysis (visible in console log)</span>
               </label>
             </div>
+            <div class="settings-field">
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+                <input type="checkbox" id="settGrounding" style="accent-color:#fff"> Verify Deep Dive grounding
+                <span style="color:var(--muted);font-size:10px;margin-left:4px">Compare each section against the source paper. Adds ~5s and a few embedding API calls per Deep Dive.</span>
+              </label>
+            </div>
+            <div class="settings-field">
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+                <input type="checkbox" id="settRefine" style="accent-color:#fff"> Self-distillation refinement
+                <span style="color:var(--muted);font-size:10px;margin-left:4px">Re-prompt LLM to sharpen ideas after generation. Adds 1 extra LLM call per batch.</span>
+              </label>
+            </div>
+            <div class="settings-field">
+              <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);cursor:pointer">
+                <input type="checkbox" id="settSensitivity" style="accent-color:#fff"> Prompt sensitivity check
+                <span style="color:var(--muted);font-size:10px;margin-left:4px">Run trend analysis with 2 prompt variants and compare. Adds 1 extra LLM call per category.</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -812,7 +833,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <!-- About -->
         <div style="padding-top:16px;border-top:1px solid var(--border)">
           <div style="font-size:11px;color:var(--muted);line-height:2">
-            ScholarScout v1.4.0 · <a href="https://github.com/neej4/ScholarScout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">GitHub</a> · <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Changelog</a> · MIT License
+            ScholarScout v__APP_VERSION__ · <a href="https://github.com/neej4/ScholarScout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">GitHub</a> · <a href="https://github.com/neej4/ScholarScout/blob/main/CHANGELOG.md" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Changelog</a> · MIT License
             <br>
             <a href="https://ko-fi.com/scholarscout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Support (Ko-fi)</a> · <a href="https://saweria.co/scholarscout" target="_blank" style="color:var(--muted);border-bottom:1px solid var(--border)">Support (Saweria)</a>
           </div>
@@ -1649,23 +1670,25 @@ function refreshShortlist() {
     const card = document.createElement('div');
     card.className = 'idea-card bookmarked';
     card.innerHTML = `
-      <div class="idea-field">${escapeHtml(idea.field || 'Uncategorized')}</div>
-      <div class="idea-title">${escapeHtml(title)}</div>
-      <div class="idea-meta">
-        <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
-        <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+      <div class="idea-card-body">
+        <div class="idea-field">${escapeHtml(idea.field || 'Uncategorized')}</div>
+        <div class="idea-title">${escapeHtml(title)}</div>
+        <div class="idea-meta">
+          <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
+          <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+        </div>
+        ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
       </div>
-      ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
-      <div class="idea-actions">
+      <div class="idea-card-footer">
         <button class="btn-sm" data-action="novelty">Check Novelty</button>
-      </div>
-      <button class="expand-btn" data-action="expand">Show more ▾</button>`;
+        <button class="btn-sm idea-expand-btn" data-action="expand">Show more ▾</button>
+      </div>`;
     
     grid.appendChild(card);
     
-    // Check if needs expand
     requestAnimationFrame(() => {
-      if (card.scrollHeight <= 240) card.classList.add('short');
+      const body = card.querySelector('.idea-card-body');
+      if (body && body.scrollHeight <= 200) card.classList.add('expanded');
     });
     
     // Wire expand
@@ -1699,14 +1722,15 @@ function openDeepDive(idea, triggerBtn) {
   const cacheKey = idea.idea_title || '';
   if (_deepDiveCache[cacheKey]) {
     const data = _deepDiveCache[cacheKey];
+    const gr = data.grounding || {};
     body.innerHTML = `
       <div class="modal-title">${escapeHtml(idea.idea_title || 'Deep Dive')}</div>
-      ${renderModalSection('Research Outline', data.outline, 'ol')}
-      ${renderModalSection('Methodology', data.methodology, 'p')}
-      ${renderModalSection('Recommended Datasets', data.datasets, 'ul')}
-      ${renderModalSection('Key References', data.references, 'ul')}
-      ${renderModalSection('Estimated Timeline', data.timeline, 'p')}
-      ${renderModalSection('Recommended Tools', data.tools, 'ul')}`;
+      ${renderModalSection('Research Outline', data.outline, 'ol', gr.outline)}
+      ${renderModalSection('Methodology', data.methodology, 'p', gr.methodology)}
+      ${renderModalSection('Recommended Datasets', data.datasets, 'ul', gr.datasets)}
+      ${renderModalSection('Key References', data.references, 'ul', gr.references)}
+      ${renderModalSection('Estimated Timeline', data.timeline, 'p', gr.timeline)}
+      ${renderModalSection('Recommended Tools', data.tools, 'ul', gr.tools)}`;
     modal.classList.add('visible');
     if (triggerBtn) triggerBtn.disabled = false;
     return;
@@ -1738,7 +1762,10 @@ function openDeepDive(idea, triggerBtn) {
   fetch('/api/deepdive', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(idea),
+    body: JSON.stringify({
+      ...idea,
+      verify_grounding: localStorage.getItem('scholarscout_verify_grounding') === '1',
+    }),
     signal: controller.signal
   })
   .then(r => {
@@ -1755,14 +1782,15 @@ function openDeepDive(idea, triggerBtn) {
     // Cache the result
     _deepDiveCache[cacheKey] = data;
     // Render content
+    const gr = data.grounding || {};
     body.innerHTML = `
       <div class="modal-title">${escapeHtml(idea.idea_title || 'Deep Dive')}</div>
-      ${renderModalSection('Research Outline', data.outline, 'ol')}
-      ${renderModalSection('Methodology', data.methodology, 'p')}
-      ${renderModalSection('Recommended Datasets', data.datasets, 'ul')}
-      ${renderModalSection('Key References', data.references, 'ul')}
-      ${renderModalSection('Estimated Timeline', data.timeline, 'p')}
-      ${renderModalSection('Recommended Tools', data.tools, 'ul')}`;
+      ${renderModalSection('Research Outline', data.outline, 'ol', gr.outline)}
+      ${renderModalSection('Methodology', data.methodology, 'p', gr.methodology)}
+      ${renderModalSection('Recommended Datasets', data.datasets, 'ul', gr.datasets)}
+      ${renderModalSection('Key References', data.references, 'ul', gr.references)}
+      ${renderModalSection('Estimated Timeline', data.timeline, 'p', gr.timeline)}
+      ${renderModalSection('Recommended Tools', data.tools, 'ul', gr.tools)}`;
     if (deepDiveBtn) deepDiveBtn.disabled = false;
   })
   .catch(err => {
@@ -1787,9 +1815,23 @@ function openDeepDive(idea, triggerBtn) {
     }
   });
 }
-function renderModalSection(title, content, type) {
+function _groundingBadge(gr) {
+  if (!gr || typeof gr.score !== 'number') return '';
+  const level = gr.level || 'low';
+  const colors = {
+    high:   {bg:'rgba(102,204,102,0.12)', border:'#66cc66', label:'Grounded'},
+    medium: {bg:'rgba(204,204,102,0.12)', border:'#cccc66', label:'Partial'},
+    low:    {bg:'rgba(255,107,107,0.12)', border:'#ff6b6b', label:'Caution'},
+  };
+  const c = colors[level] || colors.low;
+  const pct = Math.round(gr.score * 100);
+  return `<span class="grounding-badge" style="background:${c.bg};border:1px solid ${c.border};color:${c.border}" title="Similarity to source paper: ${pct}%">${c.label} ${pct}%</span>`;
+}
+
+function renderModalSection(title, content, type, grounding) {
   if (!content) return '';
-  let html = `<div class="modal-section"><div class="modal-section-title">${escapeHtml(title)}</div>`;
+  const badge = _groundingBadge(grounding);
+  let html = `<div class="modal-section"><div class="modal-section-title">${escapeHtml(title)}${badge}</div>`;
   if (type === 'p') {
     html += `<p>${escapeHtml(String(content))}</p>`;
   } else if (type === 'ol' || type === 'ul') {
@@ -2093,31 +2135,34 @@ function addIdeaCard(idea) {
   const bookmarkDisabled = !isLocalStorageAvailable();
   
   card.innerHTML = `
-    <button class="bookmark-btn${bm ? ' active' : ''}" data-action="bookmark" ${bookmarkDisabled ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''}>${bm ? '◆' : '◇'}</button>
-    <div class="idea-field">${escapeHtml(idea.field || 'Uncategorized')}</div>
-    <div class="idea-title">${escapeHtml(title)}</div>
-    <div class="idea-meta">
-      <span class="chip" data-tooltip="${escapeHtml(_difficultyTooltip(idea.difficulty))}">${escapeHtml(idea.difficulty || "Master's")}</span>
-      <span class="chip">${escapeHtml(idea.cost_estimate || 'Cloud GPU')}</span>
-      ${idea.quality_score ? `<span class="chip" data-tooltip="LLM self-rated quality: ${idea.quality_score}/10. Higher = more novel and feasible.">Q:${idea.quality_score}</span>` : ''}
-      ${currentLanguage === 'id' ? '<span class="chip">ID</span>' : ''}
+    <div class="idea-card-body">
+      <button class="bookmark-btn${bm ? ' active' : ''}" data-action="bookmark" ${bookmarkDisabled ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''}>${bm ? '◆' : '◇'}</button>
+      <div class="idea-field">${escapeHtml(idea.field || 'Uncategorized')}</div>
+      <div class="idea-title">${escapeHtml(title)}</div>
+      <div class="idea-meta">
+        <span class="chip" data-tooltip="${escapeHtml(_difficultyTooltip(idea.difficulty))}">${escapeHtml(idea.difficulty || "Master's")}</span>
+        <span class="chip">${escapeHtml(idea.cost_estimate || 'Cloud GPU')}</span>
+        ${idea.quality_score ? `<span class="chip" data-tooltip="LLM self-rated quality: ${idea.quality_score}/10. Higher = more novel and feasible.">Q:${idea.quality_score}</span>` : ''}
+        ${currentLanguage === 'id' ? '<span class="chip">ID</span>' : ''}
+      </div>
+      ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
+      <div class="idea-why">${escapeHtml(idea.why_hard || '')}</div>
+      ${idea.why_this_idea ? `<div class="idea-why-this"><span class="idea-method-label">Why this idea:</span> ${escapeHtml(idea.why_this_idea)}</div>` : ''}
+      ${idea.methodology_hint ? `<div class="idea-method"><span class="idea-method-label">Approach:</span> ${escapeHtml(idea.methodology_hint)}</div>` : ''}
+      ${idea.next_steps ? `<div class="idea-steps"><span class="idea-method-label">Start here:</span> ${escapeHtml(idea.next_steps)}</div>` : ''}
+      ${insp ? `<div class="idea-insp">REF: ${insp}</div>` : ''}
     </div>
-    ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
-    <div class="idea-why">${escapeHtml(idea.why_hard || '')}</div>
-    ${idea.why_this_idea ? `<div class="idea-why-this"><span class="idea-method-label">Why this idea:</span> ${escapeHtml(idea.why_this_idea)}</div>` : ''}
-    ${idea.methodology_hint ? `<div class="idea-method"><span class="idea-method-label">Approach:</span> ${escapeHtml(idea.methodology_hint)}</div>` : ''}
-    ${idea.next_steps ? `<div class="idea-steps"><span class="idea-method-label">Start here:</span> ${escapeHtml(idea.next_steps)}</div>` : ''}
-    ${insp ? `<div class="idea-insp">REF: ${insp}</div>` : ''}
-    <div class="idea-actions">
+    <div class="idea-card-footer">
       <button class="btn-sm" data-action="novelty" data-tooltip="Check if a similar paper already exists in Semantic Scholar / arXiv">Check Novelty</button>
-    </div>
-    <button class="expand-btn" data-action="expand">Show more ▾</button>`;
+      <button class="btn-sm idea-expand-btn" data-action="expand">Show more ▾</button>
+    </div>`;
   
   // Add to grid, then check if card needs expand button
   grid.prepend(card);
   requestAnimationFrame(() => {
-    if (card.scrollHeight <= 240) {
-      card.classList.add('short');
+    const body = card.querySelector('.idea-card-body');
+    if (body && body.scrollHeight <= 200) {
+      card.classList.add('expanded');
     }
   });
   const bookmarkBtn = card.querySelector('[data-action="bookmark"]');
@@ -2392,7 +2437,7 @@ function _doStartPipeline() {
   fetch('/api/run', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal })
+    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0' })
   }).catch(err => { addLog('[ERR] Failed: ' + err, 'err'); });
 }
 
@@ -2485,21 +2530,23 @@ function loadSessionDetail(index) {
       const card = document.createElement('div');
       card.className = 'idea-card';
       card.innerHTML = `
-        <button class="bookmark-btn" data-action="bookmark">${isBookmarked(title) ? '◆' : '◇'}</button>
-        <div class="idea-field">${escapeHtml(idea.field || '')}</div>
-        <div class="idea-title">${escapeHtml(title)}</div>
-        <div class="idea-meta">
-          <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
-          <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+        <div class="idea-card-body">
+          <button class="bookmark-btn" data-action="bookmark">${isBookmarked(title) ? '◆' : '◇'}</button>
+          <div class="idea-field">${escapeHtml(idea.field || '')}</div>
+          <div class="idea-title">${escapeHtml(title)}</div>
+          <div class="idea-meta">
+            <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
+            <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+          </div>
+          ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
         </div>
-        ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
-        <div class="idea-actions">
+        <div class="idea-card-footer">
           <button class="btn-sm" data-action="novelty">Check Novelty</button>
-        </div>
-        <button class="expand-btn" data-action="expand">Show more ▾</button>`;
+          <button class="btn-sm idea-expand-btn" data-action="expand">Show more ▾</button>
+        </div>`;
       ideasContainer.appendChild(card);
       
-      requestAnimationFrame(() => { if (card.scrollHeight <= 240) card.classList.add('short'); });
+      requestAnimationFrame(() => { const b = card.querySelector('.idea-card-body'); if (b && b.scrollHeight <= 200) card.classList.add('expanded'); });
       
       const expandBtn = card.querySelector('[data-action="expand"]');
       if (expandBtn) expandBtn.addEventListener('click', () => openIdeaDetail(idea));
@@ -2655,6 +2702,24 @@ function testConnection() {
 
 // ── Theme: dark only (light mode removed) ──
 
+// ── Settings toggles persistence ──
+(function initSettingsToggles() {
+  const toggles = [
+    {id: 'settGrounding', key: 'scholarscout_verify_grounding'},
+    {id: 'settConfidence', key: 'scholarscout_show_confidence'},
+    {id: 'settRefine', key: 'scholarscout_refine'},
+    {id: 'settSensitivity', key: 'scholarscout_sensitivity'},
+  ];
+  toggles.forEach(({id, key}) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.checked = localStorage.getItem(key) === '1';
+    el.addEventListener('change', function() {
+      localStorage.setItem(key, this.checked ? '1' : '0');
+    });
+  });
+})();
+
 // ── Keyboard Shortcuts ──
 document.addEventListener('keydown', function(e) {
   // Escape = close modal (already handled above)
@@ -2681,7 +2746,7 @@ function playNotification() {
 
 // ── Update Checker ──
 (function checkForUpdates() {
-  const CURRENT_VERSION = '1.3.0';
+  const CURRENT_VERSION = '__APP_VERSION__';
   const REPO = 'neej4/ScholarScout';
   
   fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {cache: 'no-store'})

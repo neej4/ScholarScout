@@ -1,13 +1,18 @@
 """
 Deep Dive Handler untuk ScholarScout.
 Menghasilkan analisis mendalam untuk sebuah ide riset: outline, metodologi, dataset, referensi, timeline, tools.
+
+v1.5: Adds grounding verification — compare each Deep Dive section against the
+inspiration paper's abstract using semantic similarity. Returns confidence
+scores (0.0-1.0) per section so the UI can show green/yellow/red badges.
 """
 
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Optional
 import json
 
 from src.core.llm import LLMClient
+from src.core.config import Config
 
 
 @dataclass
@@ -126,3 +131,95 @@ Respond ONLY with valid JSON. No markdown, no explanation."""
                 raise ValueError("Each reference must have 'title' and 'url' fields")
 
         return response_data
+
+    # ─── Grounding verification (v1.5) ────────────────────────────────────────
+
+    def verify_grounding(self, deep_dive_result: dict, source_text: str) -> Dict[str, Dict]:
+        """
+        Compare each Deep Dive section against the source paper's abstract
+        using semantic similarity (Gemini embeddings) or token overlap fallback.
+
+        Args:
+            deep_dive_result: Output from generate() — dict with outline, methodology, etc.
+            source_text: Reference text to ground against (typically inspiration paper abstract).
+
+        Returns:
+            Dict mapping section name to {"score": float, "level": "high"|"medium"|"low"}
+            Score is 0.0-1.0. Levels: high (≥0.65), medium (0.40-0.65), low (<0.40).
+            Empty dict if source_text is missing or all comparisons fail.
+        """
+        if not source_text or not source_text.strip():
+            return {}
+
+        # Lazy import to avoid circular dependency at module load time
+        from src.core.novelty_checker import NoveltyChecker
+
+        checker = NoveltyChecker()
+        use_semantic = (
+            Config.LLM_PROVIDER == "gemini"
+            and Config.LLM_API_KEY
+        )
+
+        # Sections to verify — flatten structured fields into comparable strings
+        sections = self._extract_section_texts(deep_dive_result)
+        if not sections:
+            return {}
+
+        # Embed source once (only used by semantic path)
+        source_vec: Optional[List[float]] = None
+        if use_semantic:
+            try:
+                source_vec = checker._embed(source_text[:2000])
+            except Exception:
+                use_semantic = False  # Fall back to Jaccard for all sections
+
+        results: Dict[str, Dict] = {}
+        for name, text in sections.items():
+            if not text or not text.strip():
+                continue
+
+            score = 0.0
+            try:
+                if use_semantic and source_vec:
+                    sect_vec = checker._embed(text[:2000])
+                    score = checker._cosine_similarity(source_vec, sect_vec)
+                else:
+                    score = checker._jaccard_similarity(source_text, text)
+            except Exception:
+                # Graceful: fall back to Jaccard for this section only
+                try:
+                    score = checker._jaccard_similarity(source_text, text)
+                except Exception:
+                    score = 0.0
+
+            results[name] = {
+                "score": round(max(0.0, min(1.0, score)), 4),
+                "level": self._score_to_level(score),
+            }
+
+        return results
+
+    def _extract_section_texts(self, dd: dict) -> Dict[str, str]:
+        """Convert Deep Dive sections into flat strings suitable for similarity comparison."""
+        outline = dd.get("outline", [])
+        datasets = dd.get("datasets", [])
+        references = dd.get("references", [])
+        tools = dd.get("tools", [])
+
+        return {
+            "outline":     " ".join(str(x) for x in outline) if isinstance(outline, list) else str(outline),
+            "methodology": str(dd.get("methodology", "")),
+            "datasets":    " ".join(str(x) for x in datasets) if isinstance(datasets, list) else str(datasets),
+            "references":  " ".join(r.get("title", "") for r in references if isinstance(r, dict)),
+            "timeline":    str(dd.get("timeline", "")),
+            "tools":       " ".join(str(x) for x in tools) if isinstance(tools, list) else str(tools),
+        }
+
+    @staticmethod
+    def _score_to_level(score: float) -> str:
+        """Map similarity score to badge level."""
+        if score >= 0.65:
+            return "high"
+        if score >= 0.40:
+            return "medium"
+        return "low"

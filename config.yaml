@@ -1,7 +1,11 @@
+# ScholarScout Configuration
+# Setup via dashboard Settings tab or onboarding wizard.
+# Docs: https://github.com/neej4/ScholarScout
+
+llm:
+  provider: gemini
+  api_key: ""
+  model: gemini-2.0-flash
+
 app:
   max_ideas: 10
-llm:
-  api_key: ''
-  base_url: http://localhost:20128/v1/chat/completions
-  model: gh/gpt-4
-  provider: custom

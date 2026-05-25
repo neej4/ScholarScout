@@ -16,7 +16,11 @@ def api_deepdive():
     Deep Dive analysis for a research idea.
 
     Request body: full idea object (idea_title required).
+        Optional: verify_grounding (bool) — if true, compare each section
+        against the inspiration paper abstract using semantic similarity.
     Returns: outline, methodology, datasets, references, timeline, tools.
+        If verify_grounding requested: also returns "grounding" dict mapping
+        section name to {score, level}.
     """
     body = request.get_json(silent=True)
     if not body:
@@ -25,11 +29,28 @@ def api_deepdive():
         return jsonify({"error": "Field 'idea_title' is required"}), 400
 
     language = body.get("language", "en")
+    want_grounding = bool(body.get("verify_grounding", False))
 
     try:
         llm_client = LLMClient()
         handler = DeepDiveHandler(llm_client)
         result = handler.generate(body, language)
+
+        # Optional: verify grounding against the inspiration paper abstract
+        if want_grounding:
+            # Source text priority: explicit source_text > idea abstract > inspiration_title
+            source_text = (
+                body.get("source_text")
+                or body.get("abstract", "")
+                or body.get("inspiration_title", "")
+            )
+            if source_text:
+                try:
+                    result["grounding"] = handler.verify_grounding(result, source_text)
+                except Exception:
+                    # Grounding is best-effort — never fail the whole request
+                    result["grounding"] = {}
+
         return jsonify(result), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 500

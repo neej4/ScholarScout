@@ -50,6 +50,8 @@ def api_run():
             "language":         "SCOUT_LANGUAGE",
             "approach":         "SCOUT_APPROACH",
             "goal":             "SCOUT_GOAL",
+            "refine":           "SCOUT_REFINE",
+            "sensitivity":      "SCOUT_SENSITIVITY",
         }
         for key, env_key in _env_map.items():
             val = body.get(key)

@@ -28,6 +28,8 @@ class Orchestrator:
         self.language = language or os.environ.get('SCOUT_LANGUAGE', 'en')
         self.approach = approach or os.environ.get('SCOUT_APPROACH', 'any')
         self.goal = os.environ.get('SCOUT_GOAL', 'any')
+        self.refine = os.environ.get('SCOUT_REFINE', '0') == '1'
+        self.sensitivity = os.environ.get('SCOUT_SENSITIVITY', '0') == '1'
         self.llm_client = LLMClient(emit_fn=self._emit)
         
         # Initialize multi-source fetchers
@@ -261,7 +263,7 @@ class Orchestrator:
                 # Sort by citations (high-impact papers first) then take top N
                 sorted_papers = sorted(papers_in_cat, key=lambda p: p.citations, reverse=True)
                 analysis_batch = sorted_papers[:papers_per_cat]
-                trend = self.analyzer.analyze(papers=analysis_batch, category=cat)
+                trend = self.analyzer.analyze(papers=analysis_batch, category=cat, sensitivity=self.sensitivity)
                 trends.append(trend)
                 kw_preview = trend.top_keywords[:3] if trend.top_keywords else ["(none)"]
                 self._emit("trend", cat=cat, keywords=kw_preview,
@@ -297,7 +299,8 @@ class Orchestrator:
                     research_context=self.research_context,
                     language=self.language,
                     approach=self.approach,
-                    goal=self.goal
+                    goal=self.goal,
+                    refine=self.refine,
                 )
             except Exception as e:
                 self._emit("gen_error", cat=trend.category, msg=f"Generation failed {trend.category}: {e}")
