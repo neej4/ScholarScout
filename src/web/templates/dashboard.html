@@ -8,8 +8,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:#181818;color:#d4d4d4;min-height:100vh;overflow:hidden}
-:root{--bg:#181818;--card:#222222;--border:#3b3b3b;--text:#d4d4d4;--muted:#8a8a8a;--hover:#333333;--active:#ffffff;--err:#ff6b6b}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#181818;color:#d4d4d4;min-height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+:root{--bg:#181818;--card:#222222;--border:#3b3b3b;--text:#d4d4d4;--muted:#8a8a8a;--hover:#333333;--active:#ffffff;--err:#ff6b6b;--radius:4px;--shadow:0 4px 12px rgba(0,0,0,0.3)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:var(--radius)}
+::-webkit-scrollbar-thumb:hover{background:#555}
 
 /* HEADER */
 .header{background:var(--bg);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between}
@@ -102,7 +107,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .idea-card-footer .idea-expand-btn{margin-left:auto}
 .idea-card.expanded .idea-expand-btn{display:none}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.idea-card:hover{border-color:#555;transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+.idea-card:hover{border-color:#555;transform:translateY(-2px);box-shadow:var(--shadow)}
 .idea-card.bookmarked{border-left:3px solid rgba(255,255,255,0.6)}
 .idea-field{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 .idea-title{font-size:14px;font-weight:600;color:var(--active);line-height:1.4;padding-right:28px}
@@ -304,6 +309,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <div class="nav-tab" onclick="showTab('recent')">Recent</div>
     <div class="nav-tab" onclick="showTab('shortlist')">Shortlist <span id="shortlistCount" style="font-size:10px;opacity:0.6"></span></div>
     <div class="nav-tab" onclick="showTab('settings')">Settings</div>
+    <a class="nav-tab" href="https://scholarscout.pages.dev" target="_blank" style="text-decoration:none;color:var(--muted)">Docs</a>
   </div>
   <div class="header-right">
     <a href="https://ko-fi.com/scholarscout" target="_blank" style="font-size:10px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:3px;padding:2px 8px;transition:0.2s" onmouseover="this.style.borderColor='#fff';this.style.color='#fff'" onmouseout="this.style.borderColor='';this.style.color=''">Donate</a>
@@ -467,7 +473,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
           <label class="wizard-label">Your goal <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
           <select id="wizardGoal">
             <option value="any">Any / Exploring</option>
-            <option value="THESIS">Thesis / Skripsi</option>
+            <option value="THESIS">Thesis</option>
             <option value="PUBLICATION">Publication</option>
             <option value="HACKATHON">Hackathon</option>
             <option value="SIDE_PROJECT">Side Project</option>
@@ -479,7 +485,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
         <div class="wizard-field">
           <label class="wizard-label">Your background <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
-          <input type="text" id="wizardContext" placeholder="e.g. S2 Informatika, punya GPU RTX 3090, fokus NLP Bahasa Indonesia">
+          <input type="text" id="wizardContext" placeholder="e.g. CS Master's student, have RTX 3090, focusing on NLP">
         </div>
       </div>
 
@@ -540,7 +546,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     
     <div class="profile-section">
       <div class="profile-label">Context <span style="font-weight:400;color:var(--muted)">(optional — describe your background, target platform, etc.)</span></div>
-      <textarea id="profileContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:4px;font-size:11px;font-family:inherit;resize:none" placeholder="e.g. S2 Informatika, punya GPU RTX 3090, mau bikin plugin TRAE IDE untuk code review..."></textarea>
+      <textarea id="profileContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:4px;font-size:11px;font-family:inherit;resize:none" placeholder="e.g. CS Master's student, have RTX 3090, building a code review plugin for TRAE IDE..."></textarea>
     </div>
 
     <div class="profile-section">
@@ -562,7 +568,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
 <!-- WARNING BANNER -->
 <div class="warning-banner" id="storageWarning">
-  ⚠ Bookmark tidak tersedia di mode ini (localStorage tidak dapat diakses)
+  ⚠ Bookmarks are not available in this mode (localStorage is not accessible)
 </div>
 
 <div class="main">
@@ -1799,10 +1805,10 @@ function openDeepDive(idea, triggerBtn) {
     let errorMsg;
     if (err.name === 'AbortError') {
       // Timeout
-      errorMsg = 'Waktu habis. Silakan coba lagi.';
+      errorMsg = 'Request timed out. Please try again.';
     } else {
       // HTTP 500 or network error
-      errorMsg = 'Gagal memuat Deep Dive. Silakan coba lagi.';
+      errorMsg = 'Failed to load Deep Dive. Please try again.';
     }
     
     // Show error in modal

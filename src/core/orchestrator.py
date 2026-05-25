@@ -113,12 +113,12 @@ class Orchestrator:
         self._emit("csv_done", path=Config.OUTPUT_CSV, msg=f"CSV written: {len(ideas)} ideas")
 
     def run_pipeline(self):
-        """Menjalankan seluruh pipeline eksekusi."""
+        """Run the full pipeline."""
         
-        # Kosongkan progress file lama
+        # Clear old progress file
         open(Config.PROGRESS_FILE, "w").close()
 
-        # ─── FASE 0: Validasi LLM ───────────────────────────────────────────────
+        # ─── PHASE 0: Validate LLM ───────────────────────────────────────────────
         self._emit("start", msg="ScholarScout v1.0 starting",
              total_cats=len(Config.CATEGORIES), 
              date_range=f"{Config.START_DATE.strftime('%Y-%m-%d')} -> {Config.TODAY_STR}",
@@ -163,7 +163,7 @@ class Orchestrator:
         cache = self.load_cache()
         cached_total = len(cache)
 
-        # ─── FASE 1: Fetching (Multi-Source, Parallel per category) ────────────
+        # ─── PHASE 1: Fetching (Multi-Source, Parallel per category) ────────────
         # Calculate how many papers we actually need based on desired ideas
         ideas_per_cat = Config.get_ideas_per_category()
         papers_per_cat = max(7, min(30, ideas_per_cat * 3))  # 3 papers per idea, capped 7-30
@@ -251,7 +251,7 @@ class Orchestrator:
             time.sleep(4)  # Delay between categories to respect arXiv rate limit
 
         self._emit("phase1_done", total=len(all_papers), cached=cached_total,
-             msg=f"Fase 1 done: {len(all_papers)} papers fetched")
+             msg=f"Phase 1 done: {len(all_papers)} papers fetched")
 
         if not all_papers:
             self._emit("fatal_error", msg="No papers fetched from any category. Check date range or network.")
@@ -259,7 +259,7 @@ class Orchestrator:
                  msg="Pipeline aborted: no papers")
             return
 
-        # ─── FASE 2: Analisis Tren ──────────────────────────────────────────────
+        # ─── PHASE 2: Trend Analysis ──────────────────────────────────────────────
         self._emit("phase", phase=2, msg="Analysing trends via LLM...")
         cat_papers = {}
         for p in all_papers:
@@ -286,7 +286,7 @@ class Orchestrator:
                 traceback.print_exc()
             time.sleep(4)
 
-        self._emit("phase2_done", msg=f"Fase 2 done: {len(trends)} trends analyzed")
+        self._emit("phase2_done", msg=f"Phase 2 done: {len(trends)} trends analyzed")
 
         if not trends:
             self._emit("fatal_error", msg="No trends could be analyzed. LLM may be failing silently.")
@@ -294,7 +294,7 @@ class Orchestrator:
                  msg="Pipeline aborted: no trends")
             return
 
-        # ─── FASE 3: Idea Generation ────────────────────────────────────────────
+        # ─── PHASE 3: Idea Generation ────────────────────────────────────────────
         self._emit("phase", phase=3, msg="Generating ideas via LLM...")
         ideas_per_cat = Config.get_ideas_per_category()
         
@@ -328,9 +328,9 @@ class Orchestrator:
                  total=len(all_ideas), msg=f"{trend.category}: +{len(ideas)} ideas (total: {len(all_ideas)})")
             time.sleep(6)
 
-        self._emit("phase3_done", total_ideas=len(all_ideas), msg=f"Fase 3 done: {len(all_ideas)} ideas")
+        self._emit("phase3_done", total_ideas=len(all_ideas), msg=f"Phase 3 done: {len(all_ideas)} ideas")
 
-        # ─── FASE 4: Menyimpan Hasil ────────────────────────────────────────────
+        # ─── PHASE 4: Save Results ────────────────────────────────────────────
         self._emit("phase", phase=4, msg="Writing output...")
         self.write_csv(all_ideas)
 

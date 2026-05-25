@@ -125,7 +125,7 @@ class LLMClient:
     def _call_gemini(self, prompt: str, retries: int, task_type: str) -> Optional[str]:
         """Call Google Gemini API (different format from OpenAI)."""
         if not self.api_key:
-            self._emit("llm_error", msg="Gemini API Key tidak ditemukan! Dapatkan di https://aistudio.google.com/app/apikey")
+            self._emit("llm_error", msg="Gemini API Key not found! Get one at https://aistudio.google.com/app/apikey")
             return None
 
         max_tokens = TOKEN_BUDGETS.get(task_type, TOKEN_BUDGETS["default"])
@@ -163,7 +163,7 @@ class LLMClient:
                     self._emit("llm_wait", msg=f"Gemini rate limit — waiting {wait}s (attempt {attempt+1}/{retries})")
                     time.sleep(wait)
                 elif e.code == 400 and "API_KEY" in body:
-                    self._emit("llm_error", msg="Gemini API Key invalid. Dapatkan di https://aistudio.google.com/app/apikey")
+                    self._emit("llm_error", msg="Gemini API Key invalid. Get a new one at https://aistudio.google.com/app/apikey")
                     return None
                 else:
                     self._emit("llm_error", msg=f"Gemini HTTP {e.code}: {body[:120]}")
@@ -184,11 +184,11 @@ class LLMClient:
         if not self.api_key and not no_key_needed:
             provider_info = PROVIDERS.get(self.provider, {})
             docs = provider_info.get("docs", "")
-            self._emit("llm_error", msg=f"API Key tidak ditemukan! Dapatkan di {docs}")
+            self._emit("llm_error", msg=f"API Key not found! Get one at {docs}")
             return None
 
         if not self.base_url:
-            self._emit("llm_error", msg="Base URL kosong. Isi Base URL di Settings atau wizard.")
+            self._emit("llm_error", msg="Base URL is empty. Set it in Settings or the setup wizard.")
             return None
 
         max_tokens = TOKEN_BUDGETS.get(task_type, TOKEN_BUDGETS["default"])
@@ -330,12 +330,12 @@ class LLMClient:
         no_key_needed = self.provider in ("ollama", "custom")
         if not self.api_key and not no_key_needed:
             provider_info = PROVIDERS.get(self.provider, {})
-            msg = f"API Key kosong. Dapatkan di {provider_info.get('docs', 'Settings tab')}"
+            msg = f"API Key is empty. Get one at {provider_info.get('docs', 'Settings tab')}"
             self._emit("fatal_error", msg=msg)
             return False, msg
 
         if self.provider != "gemini" and not self.base_url:
-            msg = "Base URL kosong. Isi Base URL di Settings (contoh: http://localhost:11434/v1)"
+            msg = "Base URL is empty. Set it in Settings (e.g. http://localhost:11434/v1)"
             self._emit("fatal_error", msg=msg)
             return False, msg
 
@@ -420,7 +420,7 @@ class LLMClient:
 
     def _call_openai_once(self, prompt: str, task_type: str, timeout: int) -> Optional[str]:
         if not self.base_url:
-            self._emit("llm_error", msg="Base URL kosong.")
+            self._emit("llm_error", msg="Base URL is empty.")
             return None
         max_tokens = TOKEN_BUDGETS.get(task_type, TOKEN_BUDGETS["default"])
         payload = json.dumps({

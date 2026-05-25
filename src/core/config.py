@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 
 class Config:
     """
-    Konfigurasi utama untuk ScholarScout.
-    Mengambil nilai dari config.yaml dan environment variables.
+    Main configuration for ScholarScout.
+    Reads values from config.yaml and environment variables.
     """
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     CONFIG_FILE = os.path.join(BASE_DIR, "config.yaml")
@@ -17,7 +17,7 @@ class Config:
                 _yaml_data = yaml.safe_load(f) or {}
             except: pass
 
-    # ─── WAKTU & TANGGAL ───────────────────────────────────────────────────────
+    # ─── DATE & TIME ───────────────────────────────────────────────────────
     TODAY = datetime.now(timezone.utc)
     TODAY_STR = TODAY.strftime("%Y-%m-%d")
     
@@ -26,7 +26,7 @@ class Config:
     START_DATE = datetime.fromisoformat(_s + "T00:00:00+00:00") if _s else TODAY - timedelta(days=10)
     END_DATE   = datetime.fromisoformat(_e + "T23:59:59+00:00") if _e else TODAY
     
-    # ─── PATH FILE ─────────────────────────────────────────────────────────────
+    # ─── FILE PATHS ─────────────────────────────────────────────────────────────
     DATA_DIR = os.path.join(BASE_DIR, "data")
     os.makedirs(DATA_DIR, exist_ok=True)
     
@@ -111,7 +111,7 @@ class Config:
     FEATURE_GROUNDING   = _features_conf.get("grounding", False)
     CACHE_EXPIRY_DAYS   = int(_features_conf.get("cache_expiry_days", 7))
     
-    # ─── KATEGORI ARXIV ────────────────────────────────────────────────────────
+    # ─── ARXIV CATEGORIES ────────────────────────────────────────────────────────
     _ui_cats = os.environ.get("SCOUT_CATEGORIES", "")
     if _ui_cats:
         CATEGORIES = [c.strip() for c in _ui_cats.split(",") if c.strip()]

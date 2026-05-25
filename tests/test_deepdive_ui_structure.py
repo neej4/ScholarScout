@@ -106,9 +106,9 @@ def test_open_deep_dive_function():
     assert "disabled = true" in content, "Button disabling not found"
     assert "disabled = false" in content, "Button re-enabling not found"
     
-    # Check for Indonesian error messages (Requirements 2.8, 2.11)
-    assert "Gagal memuat Deep Dive" in content, "Indonesian error message not found"
-    assert "Waktu habis" in content, "Indonesian timeout message not found"
+    # Check for error messages (Requirements 2.8, 2.11)
+    assert "Failed to load Deep Dive" in content, "Error message not found"
+    assert "timed out" in content or "Request timed out" in content, "Timeout message not found"
 
 
 def test_close_modal_function():
