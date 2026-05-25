@@ -252,11 +252,14 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
 /* PROFILE CARDS */
 .profile-section{margin-bottom:16px}
-.profile-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.profile-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}
 .profile-cards{display:flex;flex-wrap:wrap;gap:6px}
-.profile-card{padding:6px 12px;border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--muted);cursor:pointer;transition:all 0.15s}
-.profile-card:hover{border-color:var(--text);color:var(--text)}
-.profile-card.selected{background:#ffffff;color:var(--bg);border-color:#ffffff}
+.profile-card{padding:6px 12px;border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--muted);cursor:pointer;transition:all 0.15s ease}
+.profile-card div{transition:color 0.15s ease}
+.profile-card:hover{border-color:#555;color:var(--text);transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,0.2)}
+.profile-card:hover div{color:var(--text)}
+.profile-card.selected{background:#ffffff;color:#181818;border-color:#ffffff;transform:translateY(0);box-shadow:none}
+.profile-card.selected div{color:#181818 !important}
 
 /* WARNING BANNER */
 .warning-banner{background:rgba(255,107,107,0.1);border:1px solid var(--err);border-radius:4px;padding:12px 16px;margin:0 32px 16px;color:var(--err);font-size:12px;display:none}
@@ -332,7 +335,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <input type="date" id="dateFrom" title="Start date">
     <span class="ctrl-sep">to</span>
     <input type="date" id="dateTo" title="End date">
-    <select id="langSelect" title="Output language">
+    <select id="langSelect" title="Output language (ideas will be generated in this language)">
       <option value="en">English</option>
       <option value="id">Bahasa Indonesia</option>
     </select>
@@ -500,42 +503,49 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
 <!-- PROFILE CONFIG POPUP -->
 <div class="wizard-overlay" id="profileModal">
-  <div class="wizard-box" style="max-width:520px">
+  <div class="wizard-box" style="max-width:540px">
     <div class="wizard-progress"><div class="wizard-progress-bar" style="width:100%"></div></div>
     <div class="wizard-header" style="padding:20px 24px 0">
       <div style="font-size:14px;font-weight:600;color:#fff">Research Profile</div>
       <button class="wizard-skip" onclick="closePopup('profileModal')">&times;</button>
     </div>
     <div class="wizard-body" style="padding:20px 24px 0">
+
+    <!-- STEP 1: Mode selection (Academic / Product / Develop) -->
     <div class="profile-section">
-      <div class="profile-label">Approach</div>
-      <div class="profile-cards" id="approachCards">
-        <div class="profile-card selected" data-value="any">Any</div>
-        <div class="profile-card" data-value="computational">Computational / AI</div>
-        <div class="profile-card" data-value="experimental">Experimental / Lab</div>
-        <div class="profile-card" data-value="clinical">Clinical / Field</div>
-        <div class="profile-card" data-value="theoretical">Theoretical / Review</div>
+      <div class="profile-label">Mode</div>
+      <div class="profile-cards" id="modeCards" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="profile-card selected" data-mode="academic" style="text-align:center;padding:14px 10px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px">Academic</div>
+          <div style="font-size:10px;line-height:1.4">Thesis, publication, grant proposal</div>
+        </div>
+        <div class="profile-card" data-mode="product" style="text-align:center;padding:14px 10px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px">Product</div>
+          <div style="font-size:10px;line-height:1.4">Hackathon, side project, AI tool</div>
+        </div>
+        <div class="profile-card" data-mode="develop" style="text-align:center;padding:14px 10px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px">Develop</div>
+          <div style="font-size:10px;line-height:1.4">Feature, integration, optimization</div>
+        </div>
       </div>
     </div>
-    
-    <div class="profile-section">
+
+    <!-- STEP 2: Goal (changes based on mode) -->
+    <div class="profile-section" id="goalSection" style="transition:opacity 0.2s ease;opacity:1">
       <div class="profile-label">Goal</div>
-      <div style="margin-bottom:6px;font-size:10px;color:var(--muted)">Academic</div>
-      <div class="profile-cards" id="goalCards">
+      <div class="profile-cards" id="goalCards" style="transition:all 0.2s ease">
         <div class="profile-card selected" data-value="any">Any</div>
         <div class="profile-card" data-value="THESIS">Thesis</div>
         <div class="profile-card" data-value="PUBLICATION">Publication</div>
         <div class="profile-card" data-value="GRANT_PROPOSAL">Grant Proposal</div>
       </div>
-      <div style="margin:10px 0 6px;font-size:10px;color:var(--muted)">Product / Build</div>
-      <div class="profile-cards" id="goalCardsProduct">
+      <div class="profile-cards" id="goalCardsProduct" style="display:none;transition:all 0.2s ease">
         <div class="profile-card" data-value="HACKATHON">Hackathon</div>
         <div class="profile-card" data-value="SIDE_PROJECT">Side Project</div>
         <div class="profile-card" data-value="AI_TOOL">AI Tool</div>
         <div class="profile-card" data-value="INDUSTRY_RND">Industry R&D</div>
       </div>
-      <div style="margin:10px 0 6px;font-size:10px;color:var(--muted)">Develop / Improve Existing Project</div>
-      <div class="profile-cards" id="goalCardsDevelop">
+      <div class="profile-cards" id="goalCardsDevelop" style="display:none;transition:all 0.2s ease">
         <div class="profile-card" data-value="FEATURE">Feature</div>
         <div class="profile-card" data-value="INTEGRATION">Integration</div>
         <div class="profile-card" data-value="OPTIMIZATION">Optimization</div>
@@ -543,14 +553,28 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <div class="profile-card" data-value="PIVOT">Pivot</div>
       </div>
     </div>
-    
+
+    <!-- STEP 3: Approach -->
     <div class="profile-section">
-      <div class="profile-label">Context <span style="font-weight:400;color:var(--muted)">(optional — describe your background, target platform, etc.)</span></div>
-      <textarea id="profileContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:4px;font-size:11px;font-family:inherit;resize:none" placeholder="e.g. CS Master's student, have RTX 3090, building a code review plugin for TRAE IDE..."></textarea>
+      <div class="profile-label">Approach</div>
+      <div class="profile-cards" id="approachCards">
+        <div class="profile-card selected" data-value="any">Any</div>
+        <div class="profile-card" data-value="computational">Computational</div>
+        <div class="profile-card" data-value="experimental">Experimental</div>
+        <div class="profile-card" data-value="clinical">Clinical</div>
+        <div class="profile-card" data-value="theoretical">Theoretical</div>
+      </div>
     </div>
 
+    <!-- STEP 4: Context -->
     <div class="profile-section">
-      <div class="profile-label">Attachment <span style="font-weight:400;color:var(--muted)">(optional — extra context for idea generation)</span></div>
+      <div class="profile-label">Context <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+      <textarea id="profileContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:4px;font-size:11px;font-family:inherit;resize:none;transition:border-color 0.2s" placeholder="e.g. CS Master's student, have RTX 3090, building a code review plugin for TRAE IDE..."></textarea>
+    </div>
+
+    <!-- STEP 5: Attachment -->
+    <div class="profile-section">
+      <div class="profile-label">Attachment <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
       <div id="profileDropZone" class="drop-zone" onclick="document.getElementById('profileFileInput').click()">
         <div class="drop-zone-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg></div>
         <div class="drop-zone-text">Drop file here or click to browse</div>
@@ -1456,6 +1480,30 @@ document.querySelectorAll('.profile-cards').forEach(group => {
     group.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
   });
+});
+
+// Mode card switching — show relevant goals with fade effect
+document.getElementById('modeCards').addEventListener('click', function(e) {
+  const card = e.target.closest('.profile-card');
+  if (!card) return;
+  const mode = card.dataset.mode;
+  // Toggle mode cards
+  this.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  // Show/hide goal groups with transition
+  const goalSection = document.getElementById('goalSection');
+  goalSection.style.opacity = '0';
+  setTimeout(() => {
+    document.getElementById('goalCards').style.display = mode === 'academic' ? '' : 'none';
+    document.getElementById('goalCardsProduct').style.display = mode === 'product' ? '' : 'none';
+    document.getElementById('goalCardsDevelop').style.display = mode === 'develop' ? '' : 'none';
+    // Auto-select first card in visible group
+    const visibleGroup = mode === 'academic' ? 'goalCards' : mode === 'product' ? 'goalCardsProduct' : 'goalCardsDevelop';
+    document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card').forEach(c => c.classList.remove('selected'));
+    const firstCard = document.querySelector('#' + visibleGroup + ' .profile-card');
+    if (firstCard) firstCard.classList.add('selected');
+    goalSection.style.opacity = '1';
+  }, 150);
 });
 
 // Restore profile from session
