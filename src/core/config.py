@@ -111,6 +111,16 @@ class Config:
     FEATURE_GROUNDING   = _features_conf.get("grounding", False)
     CACHE_EXPIRY_DAYS   = int(_features_conf.get("cache_expiry_days", 7))
     
+    # ─── THRESHOLDS (externalized — tune via config.yaml "thresholds" section) ──
+    _thresholds_conf = _yaml_data.get("thresholds", {})
+    THRESHOLD_GROUNDING_HIGH       = float(_thresholds_conf.get("grounding_high", 0.65))
+    THRESHOLD_GROUNDING_MEDIUM     = float(_thresholds_conf.get("grounding_medium", 0.40))
+    THRESHOLD_NOVELTY_SEM_SIMILAR  = float(_thresholds_conf.get("novelty_semantic_similar", 0.82))
+    THRESHOLD_NOVELTY_SEM_EXISTS   = float(_thresholds_conf.get("novelty_semantic_exists", 0.92))
+    THRESHOLD_NOVELTY_JAC_SIMILAR  = float(_thresholds_conf.get("novelty_jaccard_similar", 0.40))
+    THRESHOLD_NOVELTY_JAC_EXISTS   = float(_thresholds_conf.get("novelty_jaccard_exists", 0.70))
+    THRESHOLD_CLUSTERER_MIN_JOIN   = float(_thresholds_conf.get("clusterer_min_join", 0.15))
+    
     # ─── ARXIV CATEGORIES ────────────────────────────────────────────────────────
     _ui_cats = os.environ.get("SCOUT_CATEGORIES", "")
     if _ui_cats:

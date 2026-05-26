@@ -67,11 +67,11 @@ class IdeaGenerator:
         return goal.upper() in DEVELOP_GOALS
 
     def _load_skill_constraints(self, goal: str) -> str:
-        """Load skill file from DEVELOP/, PRODUCT/, or ACADEMIC/ subfolder."""
+        """Load skill file from REVIEW/, DEVELOP/, PRODUCT/, or ACADEMIC/ subfolder."""
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-        # Try new structure: skills/DEVELOP/FEATURE/SKILL.md, skills/PRODUCT/HACKATHON/SKILL.md, etc.
-        for category_dir in ("DEVELOP", "PRODUCT", "ACADEMIC"):
+        # Try new structure: skills/REVIEW/SYNTHESIS/SKILL.md, skills/DEVELOP/FEATURE/SKILL.md, etc.
+        for category_dir in ("REVIEW", "DEVELOP", "PRODUCT", "ACADEMIC"):
             skill_path = os.path.join(base_dir, "skills", category_dir, goal, "SKILL.md")
             if os.path.exists(skill_path):
                 break

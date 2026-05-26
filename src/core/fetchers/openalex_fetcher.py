@@ -26,7 +26,7 @@ CATEGORY_TO_OPENALEX = {
     "cs.CR": "C38652104",        # Computer security
     "cs.NE": "C126838900",       # Neural networks
     "cs.SE": "C121332964",       # Software engineering
-    "cs.IR": "C17744445",        # Information retrieval
+    "cs.IR": "C136764020",        # Information retrieval
     "cs.HC": "C105795698",       # Human-computer interaction
     "cs.DB": "C77088390",        # Database
     "cs.DC": "C108583219",       # Distributed computing
@@ -125,6 +125,10 @@ class OpenAlexFetcher(BaseFetcher):
 
     # Categories that work better with keyword search (concept IDs unreliable)
     KEYWORD_SEARCH_CATEGORIES = {
+        # CS categories where concept IDs can be ambiguous
+        "cs.IR": "information retrieval search ranking recommendation",
+        "cs.HC": "human computer interaction user interface usability",
+        # Medicine
         "med.cardio": "cardiology heart cardiac",
         "med.neuro": "neurology brain neurological",
         "med.onco": "oncology cancer tumor",

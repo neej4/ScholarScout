@@ -145,10 +145,10 @@ class SemanticScholarFetcher(BaseFetcher):
         
         url = f"{self.BASE_URL}?{params}"
         
-        for attempt in range(3):
+        for attempt in range(2):
             try:
                 req = urllib.request.Request(url)
-                req.add_header("User-Agent", "ScholarScout")
+                req.add_header("User-Agent", "ScholarScout (mailto:scholarscout@users.noreply.github.com)")
                 if self.api_key:
                     req.add_header("x-api-key", self.api_key)
                 
@@ -174,29 +174,36 @@ class SemanticScholarFetcher(BaseFetcher):
                 
             except urllib.error.HTTPError as e:
                 if e.code == 429:
-                    # Progressive backoff: 15s, 30s, 60s
-                    wait = 15 * (attempt + 1)
-                    self._emit("fetch_retry", cat=category,
-                         msg=f"S2 rate limited (429) — waiting {wait}s (attempt {attempt+1}/3)")
-                    time.sleep(wait)
+                    if attempt == 0:
+                        # First 429: short wait
+                        self._emit("fetch_retry", cat=category,
+                             msg=f"S2 rate limited (429) — waiting 10s (attempt 1/2)")
+                        time.sleep(10)
+                    else:
+                        # Second 429: skip (other sources will cover)
+                        self._emit("fetch_retry", cat=category,
+                             msg=f"S2 still rate limited for {category} — skipping")
+                        return []
                 elif e.code == 504 or e.code == 503:
-                    # Server overloaded — wait and retry
-                    wait = 10 * (attempt + 1)
-                    self._emit("fetch_retry", cat=category,
-                         msg=f"S2 server busy ({e.code}) — waiting {wait}s")
-                    time.sleep(wait)
+                    # Server overloaded — short wait and retry once
+                    if attempt == 0:
+                        self._emit("fetch_retry", cat=category,
+                             msg=f"S2 server busy ({e.code}) — waiting 8s")
+                        time.sleep(8)
+                    else:
+                        return []
                 else:
                     self._emit("fetch_retry", cat=category,
                          msg=f"S2 HTTP {e.code} for {category}")
                     return []
             except Exception as e:
-                if attempt < 2:
+                if attempt < 1:
                     self._emit("fetch_retry", cat=category,
                          msg=f"S2 error for {category}: {str(e)[:40]} — retrying")
                     time.sleep(5)
                 else:
                     self._emit("fetch_retry", cat=category,
-                         msg=f"S2 failed for {category} after 3 attempts")
+                         msg=f"S2 failed for {category} after 2 attempts")
                     return []
         
         return []

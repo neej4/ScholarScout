@@ -24,7 +24,7 @@ python preview_server.py
 ### Improve Prompts
 - Edit `src/core/analyzer.py` (trend analysis prompt)
 - Edit `src/core/generator.py` (idea generation prompt)
-- Run `@prompt-auditor` agent to check quality
+- Review prompts for clarity, specificity, and token efficiency before submitting
 
 ### Add Categories
 - Add to `CAT_GROUPS` in `dashboard.html`

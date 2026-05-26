@@ -29,6 +29,8 @@ def api_sessions():
         {
             "timestamp":    s.get("timestamp", ""),
             "date":         s.get("date", ""),
+            "mode":         s.get("mode", "default"),
+            "topic":        s.get("topic", ""),
             "categories":   s.get("categories", []),
             "approach":     s.get("approach", "any"),
             "papers_total": s.get("papers_total", 0),

@@ -13,12 +13,12 @@ build/
 
 # Node
 node_modules/
-package-lock.json
 
 # Environment & Secrets
 .env
 *.key
 *.pem
+config.yaml
 
 # Data (generated at runtime)
 data/*.csv

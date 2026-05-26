@@ -8,10 +8,12 @@ class LLMChatPanel {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
     this.messages = [];
+    this.mode = 'default'; // tracks current pipeline mode: 'default' or 'review'
   }
 
   clear() {
     this.messages = [];
+    this.mode = 'default';
     if (this.container) this.container.innerHTML = '';
   }
 
@@ -21,6 +23,8 @@ class LLMChatPanel {
    */
   handleEvent(data) {
     const ev = data.event;
+    // Auto-detect review mode from cluster_form events
+    if (ev === 'cluster_form') this.mode = 'review';
     const bubble = this._eventToBubble(ev, data);
     if (bubble) {
       this._append(bubble.from, bubble.text);

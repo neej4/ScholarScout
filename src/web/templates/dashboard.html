@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ScholarScout Dashboard v1.0 (Grayscale Obsidian Style) -->
+<!-- ScholarScout Dashboard -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -341,6 +341,11 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
   .shortlist-header .btn{display:none}
   .shortlist-header .section-title{color:#222}
 }
+/* TOAST NOTIFICATION */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px 20px;font-size:12px;color:var(--text);z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.4);opacity:0;transition:all 0.3s ease;pointer-events:none;max-width:400px;text-align:center}
+.toast.visible{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.toast.toast-error{border-color:var(--err);color:var(--err)}
+.toast.toast-ok{border-color:#66cc66;color:#66cc66}
 </style>
 </head>
 <body>
@@ -546,7 +551,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 </div>
 
 <!-- PROFILE CONFIG POPUP -->
-<div class="wizard-overlay" id="profileModal">
+<div class="wizard-overlay" id="profileModal" style="display:none">
   <div class="wizard-box" style="max-width:540px">
     <div class="wizard-progress"><div class="wizard-progress-bar" style="width:100%"></div></div>
     <div class="wizard-header" style="padding:20px 24px 0">
@@ -619,7 +624,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
     <!-- STEP 4: Context -->
     <div class="profile-section">
-      <div class="profile-label">Context <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
+      <div class="profile-label" id="contextLabel">Context <span style="font-weight:400;color:var(--muted)">(optional)</span></div>
       <textarea id="profileContext" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:4px;font-size:11px;font-family:inherit;resize:none;transition:border-color 0.2s" placeholder="e.g. CS Master's student, have RTX 3090, building a code review plugin for TRAE IDE..."></textarea>
     </div>
 
@@ -747,7 +752,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
             </div>
           </div>
           <div style="margin-bottom:24px;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px">
-            <div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">What's New in v1.5.2</div>
+            <div style="font-size:11px;font-weight:600;color:#fff;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">What's New</div>
             <ul style="font-size:11px;color:var(--muted);line-height:2;padding-left:16px;list-style:disc">
               <li><span style="color:var(--text)">8 paper sources</span> — arXiv, OpenAlex, Semantic Scholar, PubMed, Crossref, DOAJ, Scopus, DBLP</li>
               <li><span style="color:var(--text)">Smart source routing</span> — auto-selects best sources per category (CS uses arXiv+DBLP, Medicine uses PubMed+Scopus)</li>
@@ -911,9 +916,9 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
           <div class="section-title" style="margin-bottom:4px">Storage</div>
           <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">Manage locally stored data. Nothing is sent to external servers.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn" onclick="if(confirm('Delete all cached papers? Next run will fetch fresh.')){fetch('/api/clear-cache',{method:'POST'}).then(()=>alert('Done'))}">Clear paper cache</button>
-            <button class="btn" onclick="if(confirm('Delete session history?')){fetch('/api/clear-sessions',{method:'POST'}).then(()=>alert('Done'))}">Clear sessions</button>
-            <button class="btn" onclick="if(confirm('Remove all bookmarks?')){localStorage.removeItem('scholarscout_bookmarks');refreshShortlist();alert('Done')}">Clear bookmarks</button>
+            <button class="btn" onclick="if(confirm('Delete all cached papers? Next run will fetch fresh.')){fetch('/api/clear-cache',{method:'POST'}).then(()=>showToast('Paper cache cleared','ok'))}">Clear paper cache</button>
+            <button class="btn" onclick="if(confirm('Delete session history?')){fetch('/api/clear-sessions',{method:'POST'}).then(()=>showToast('Sessions cleared','ok'))}">Clear sessions</button>
+            <button class="btn" onclick="if(confirm('Remove all bookmarks?')){localStorage.removeItem('scholarscout_bookmarks');refreshShortlist();showToast('Bookmarks cleared','ok')}">Clear bookmarks</button>
           </div>
         </div>
 
@@ -989,6 +994,22 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 <script src="/static/owl_chase.js"></script>
 <script src="/static/llm_chat.js"></script>
 <script>
+// ── Toast notification (replaces browser alert) ──
+function showToast(msg, type='info', duration=3500) {
+  let el = document.getElementById('appToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'appToast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'ok' ? ' toast-ok' : '');
+  requestAnimationFrame(() => el.classList.add('visible'));
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('visible'), duration);
+}
+
 const CAT_GROUPS = [
   {
     name: "Computer Science",
@@ -1582,10 +1603,25 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
     const visibleGroup = groupMap[mode] || 'goalCards';
     document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card, #goalCardsReview .profile-card').forEach(c => c.classList.remove('selected'));
     const firstCard = document.querySelector('#' + visibleGroup + ' .profile-card');
-    if (firstCard) firstCard.classList.add('selected');
+    if (firstCard) {
+      firstCard.classList.add('selected');
+      // CRITICAL: Immediately sync goalSelect so Run uses correct mode even if user
+      // closes profile without clicking Save
+      document.getElementById('goalSelect').value = firstCard.dataset.value || 'any';
+      sessionStorage.setItem('scholarscout_goal', firstCard.dataset.value || 'any');
+    }
+    // Update context label: required for review, optional for others
+    const ctxLabel = document.getElementById('contextLabel');
+    if (ctxLabel) {
+      ctxLabel.innerHTML = mode === 'review'
+        ? 'Topic <span style="font-weight:500;color:#ff6b6b">(required for Review)</span>'
+        : 'Context <span style="font-weight:400;color:var(--muted)">(optional)</span>';
+    }
     goalSection.style.opacity = '1';
   }, 150);
 });
+
+// Goal card click → also sync goalSelect immediately (handled in the unified listener below)
 
 // Restore profile from session
 (function restoreProfile() {
@@ -1617,6 +1653,13 @@ function saveProfile() {
   const goal       = goalEl     ? goalEl.dataset.value     : 'any';
   const ctx        = document.getElementById('profileContext').value.trim();
   
+  // Review mode requires context (topic for literature review)
+  if (goal === 'SYNTHESIS' && (!ctx || ctx.length < 5)) {
+    showToast('Review mode requires a topic in the Context field. Example: "federated learning for healthcare"', 'error', 4000);
+    document.getElementById('profileContext').focus();
+    return;
+  }
+  
   // Persist to session
   sessionStorage.setItem('scholarscout_approach', approach);
   sessionStorage.setItem('scholarscout_goal', goal);
@@ -1630,7 +1673,7 @@ function saveProfile() {
   closePopup('profileModal');
 }
 
-// Goal card selection — only one selected across all groups
+// Goal card selection — only one selected across all groups + sync goalSelect
 document.querySelectorAll('#goalCards, #goalCardsProduct, #goalCardsDevelop, #goalCardsReview').forEach(group => {
   group.addEventListener('click', function(e) {
     const card = e.target.closest('.profile-card');
@@ -1638,6 +1681,11 @@ document.querySelectorAll('#goalCards, #goalCardsProduct, #goalCardsDevelop, #go
     // Deselect all in ALL groups
     document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card, #goalCardsReview .profile-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
+    // Sync goalSelect IMMEDIATELY so Run uses correct goal even if user closes profile without Save
+    if (card.dataset.value) {
+      document.getElementById('goalSelect').value = card.dataset.value;
+      sessionStorage.setItem('scholarscout_goal', card.dataset.value);
+    }
   });
 });
 
@@ -2278,6 +2326,119 @@ function addLog(msg, type='info') {
   box.scrollTop = box.scrollHeight;
 }
 
+// ── Review Mode Results Renderer ──
+function _renderReviewResults(review, topic) {
+  const grid = document.getElementById('ideasGrid');
+  grid.innerHTML = '';
+  
+  // Header card
+  const header = document.createElement('div');
+  header.style.cssText = 'grid-column:1/-1;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:8px';
+  header.innerHTML = `
+    <div style="font-size:14px;font-weight:600;color:var(--active);margin-bottom:8px">Literature Review: ${escapeHtml(topic)}</div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.8">
+      ${review.clusters ? review.clusters.length + ' thematic clusters' : ''} · 
+      ${review.open_questions ? review.open_questions.length + ' open questions' : ''} · 
+      ${review.reading_list ? review.reading_list.length + ' recommended papers' : ''}
+    </div>
+  `;
+  grid.appendChild(header);
+  
+  // Cluster cards
+  if (review.clusters) {
+    review.clusters.forEach((cluster, i) => {
+      const card = document.createElement('div');
+      card.className = 'idea-card expanded';
+      card.style.cursor = 'pointer';
+      card.onclick = () => _openReviewCluster(cluster);
+      card.innerHTML = `
+        <div class="idea-card-body" style="max-height:none;overflow:visible">
+          <div class="idea-field">CLUSTER ${i+1} · ${cluster.paper_count || 0} papers</div>
+          <div class="idea-title" style="padding-right:0">${escapeHtml(cluster.name || 'Unnamed cluster')}</div>
+          <div style="font-size:11px;color:var(--text);line-height:1.6">
+            <div style="margin-bottom:6px"><span style="color:var(--muted);font-size:10px;text-transform:uppercase">Findings:</span><br>${escapeHtml((cluster.key_findings || '').slice(0, 200))}</div>
+            <div><span style="color:var(--muted);font-size:10px;text-transform:uppercase">Gaps:</span><br>${escapeHtml((cluster.gaps || '').slice(0, 150))}</div>
+          </div>
+          ${cluster.keywords && cluster.keywords.length ? '<div class="idea-meta">' + cluster.keywords.slice(0,4).map(k => '<span class="chip">' + escapeHtml(k) + '</span>').join('') + '</div>' : ''}
+        </div>
+        <div class="idea-card-footer">
+          <span style="font-size:10px;color:var(--muted)">Click to view full synthesis</span>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+  
+  // Cross-cutting analysis card
+  if (review.timeline || review.debates || (review.open_questions && review.open_questions.length)) {
+    const cross = document.createElement('div');
+    cross.style.cssText = 'grid-column:1/-1;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-top:8px';
+    let crossHtml = '<div style="font-size:12px;font-weight:600;color:var(--active);margin-bottom:12px">Cross-Cutting Analysis</div>';
+    if (review.timeline) {
+      crossHtml += `<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Timeline</div><div style="font-size:11px;color:var(--text);line-height:1.6">${escapeHtml(review.timeline)}</div></div>`;
+    }
+    if (review.debates) {
+      crossHtml += `<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Active Debates</div><div style="font-size:11px;color:var(--text);line-height:1.6">${escapeHtml(review.debates)}</div></div>`;
+    }
+    if (review.open_questions && review.open_questions.length) {
+      crossHtml += `<div style="margin-bottom:12px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Open Questions</div><ul style="font-size:11px;color:var(--text);line-height:1.8;padding-left:16px;list-style:disc">${review.open_questions.map(q => '<li>' + escapeHtml(q) + '</li>').join('')}</ul></div>`;
+    }
+    cross.innerHTML = crossHtml;
+    grid.appendChild(cross);
+  }
+  
+  // Reading list
+  if (review.reading_list && review.reading_list.length) {
+    const rl = document.createElement('div');
+    rl.style.cssText = 'grid-column:1/-1;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-top:8px';
+    rl.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:var(--active);margin-bottom:12px">Recommended Reading (${review.reading_list.length} papers)</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${review.reading_list.slice(0, 8).map(p => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--bg);border-radius:4px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.title || '')}</div>
+              <div style="font-size:9px;color:var(--muted);margin-top:2px">${escapeHtml(p.source || '')} · ${p.citations || 0} citations</div>
+            </div>
+            ${p.link ? `<a href="${escapeHtml(p.link)}" target="_blank" style="font-size:9px;color:var(--muted);border:1px solid var(--border);padding:2px 6px;border-radius:3px;text-decoration:none;margin-left:8px;white-space:nowrap">Open</a>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    grid.appendChild(rl);
+  }
+  
+  document.getElementById('sIdeas').textContent = (review.clusters || []).length + ' clusters';
+}
+
+function _openReviewCluster(cluster) {
+  const modal = document.getElementById('deepDiveModal');
+  const body = document.getElementById('deepDiveBody');
+  
+  let html = `<div class="modal-title">${escapeHtml(cluster.name || 'Cluster')}</div>`;
+  html += `<div style="font-size:11px;color:var(--muted);margin-bottom:16px">${cluster.paper_count || 0} papers in this cluster</div>`;
+  
+  if (cluster.methodology_summary) {
+    html += `<div class="modal-section"><div class="modal-section-title">Methodology Patterns</div><p>${escapeHtml(cluster.methodology_summary)}</p></div>`;
+  }
+  if (cluster.key_findings) {
+    html += `<div class="modal-section"><div class="modal-section-title">Key Findings</div><p>${escapeHtml(cluster.key_findings)}</p></div>`;
+  }
+  if (cluster.gaps) {
+    html += `<div class="modal-section"><div class="modal-section-title">Research Gaps</div><p>${escapeHtml(cluster.gaps)}</p></div>`;
+  }
+  if (cluster.papers && cluster.papers.length) {
+    html += `<div class="modal-section"><div class="modal-section-title">Papers in Cluster</div><ul style="font-size:11px;line-height:1.8">`;
+    cluster.papers.slice(0, 12).forEach(p => {
+      html += `<li><a href="${escapeHtml(p.link || '#')}" target="_blank" style="color:var(--text);border-bottom:1px solid var(--border)">${escapeHtml(p.title || 'Untitled')}</a> <span style="color:var(--muted)">(${escapeHtml(p.source || '')})</span></li>`;
+    });
+    html += `</ul></div>`;
+  }
+  
+  body.innerHTML = html;
+  modal.classList.add('visible');
+}
+
 function addIdeaCard(idea) {
   const grid = document.getElementById('ideasGrid');
   if (grid.querySelector('.empty')) grid.innerHTML = '';
@@ -2377,6 +2538,7 @@ function handleEvent(ev) {
       'cat_start':'info', 'cat_done':'ok', 'cat_skip':'warn', 'cat_fetch_done':'info',
       'cat_ideas':'ok', 'gen_start':'info',
       'paper_found':'info', 'trend':'ok',
+      'papers_exhausted':'warn', 'date_widen':'warn', 'cache_expiry':'info',
       'llm_error':'err', 'fatal_error':'err', 'cat_error':'err', 'trend_error':'err', 'gen_error':'err',
       'llm_wait':'warn', 'llm_warn':'warn', 'ping_warn':'warn',
       'done':'ok'
@@ -2435,6 +2597,18 @@ function handleEvent(ev) {
     const cur = parseInt(document.getElementById('sPapers').textContent) || 0;
     document.getElementById('sPapers').textContent = cur + (ev.count || 0);
   }
+  else if (e === 'papers_exhausted') {
+    // Show inline notification in Activity Center that all papers have been used
+    const acLog = document.getElementById('logBox');
+    if (acLog) {
+      const notice = document.createElement('div');
+      notice.className = 'log-line';
+      notice.style.cssText = 'color:#ffaa44;font-weight:500;padding:4px 0';
+      notice.textContent = '[NOTICE] ' + (ev.msg || 'All cached papers exhausted. Fetching fresh papers with wider date range...');
+      acLog.appendChild(notice);
+      acLog.scrollTop = acLog.scrollHeight;
+    }
+  }
   else if (e === 'trend') {
     const cur = parseInt(document.getElementById('sCats').textContent) || 0;
     document.getElementById('sCats').textContent = cur + 1;
@@ -2454,9 +2628,13 @@ function handleEvent(ev) {
     stopSpriteAnim();
     playNotification(); // Sound alert when pipeline finishes
     // Mark all phases as done
-    [0,1,2,3,4].forEach(n => {
-      const el = document.getElementById('ph'+n);
-      if (el && !el.classList.contains('error')) setPhase(n, 'done', document.getElementById('ph'+n+'msg').textContent);
+    document.querySelectorAll('#acPhases .ac-phase').forEach(el => {
+      if (!el.classList.contains('error')) {
+        el.classList.remove('active');
+        el.classList.add('done');
+        const icon = el.querySelector('.ac-phase-icon');
+        if (icon) icon.textContent = '✓';
+      }
     });
     updateProgress(100);
     if (ev.papers) document.getElementById('sPapers').textContent = ev.papers;
@@ -2467,13 +2645,20 @@ function handleEvent(ev) {
     if (ev.errors && ev.errors.length > 0) {
       addLog(`[WARN] ${ev.errors.length} non-fatal error(s) during run`, 'warn');
     }
+    // Load results from snapshot (handles both default and review mode)
+    fetch('/api/results').then(r => r.json()).then(data => {
+      if (data.mode === 'review' && data.review) {
+        _renderReviewResults(data.review, data.topic || '');
+      }
+      // Default mode ideas are already rendered live via 'idea' events
+    }).catch(() => {});
     // Populate transparency panel
     const tp = document.getElementById('transparencyPanel');
     if (tp) {
       const dateFrom = document.getElementById('dateFrom').value;
       const dateTo   = document.getElementById('dateTo').value;
       const cats     = Array.from(document.querySelectorAll('.cat-item input:checked')).map(el => el.value);
-      document.getElementById('tpSources').textContent   = 'Sources: arXiv · OpenAlex · Semantic Scholar';
+      document.getElementById('tpSources').textContent   = 'Sources: 8 academic databases (arXiv, OpenAlex, S2, PubMed, Crossref, DOAJ, Scopus, DBLP)';
       document.getElementById('tpDateRange').textContent = `Date range: ${dateFrom} → ${dateTo}`;
       document.getElementById('tpPapers').textContent    = `Papers fetched: ${ev.papers || 0}`;
       document.getElementById('tpCategories').textContent = `Categories: ${cats.slice(0,5).join(', ')}${cats.length > 5 ? ` +${cats.length-5} more` : ''}`;
@@ -2515,7 +2700,7 @@ function clearStorage() {
 function quickMode() {
   const selectedCats = Array.from(document.querySelectorAll('.cat-item input:checked')).map(el => el.value);
   if (selectedCats.length === 0) {
-    alert("Select at least one category");
+    showToast("Select at least one category", "error");
     return;
   }
   
@@ -2569,8 +2754,19 @@ function _doStartPipeline() {
   // Get checked categories
   const selectedCats = Array.from(document.querySelectorAll('.cat-item input:checked')).map(el => el.value);
   if (selectedCats.length === 0) {
-    alert("Please select at least one category");
+    showToast("Please select at least one category", "error");
     return;
+  }
+
+  // Review mode requires context (topic for literature review)
+  const goal = document.getElementById('goalSelect').value;
+  if (goal === 'SYNTHESIS') {
+    const ctx = document.getElementById('researchContext').value.trim();
+    if (!ctx || ctx.length < 5) {
+      showToast('Review mode requires a topic in the Context field', 'error', 4000);
+      openPopup('profileModal');
+      return;
+    }
   }
 
   ideas = []; 
@@ -2599,7 +2795,6 @@ function _doStartPipeline() {
   currentLanguage = language;
   const research_context = document.getElementById('researchContext').value.slice(0, 2000);
   const approach = document.getElementById('approachSelect').value;
-  const goal = document.getElementById('goalSelect').value;
   const mode = (goal === 'SYNTHESIS') ? 'review' : 'default';
 
   fetch('/api/run', {
@@ -2626,6 +2821,31 @@ let _owlGame = null;
 let _acSources = new Set();
 let _acGraph = {dots: [], categories: {}};
 let _chatPanel = null;
+let _paperQueue = [];
+let _paperDripInterval = null;
+
+// Drip-feed papers to game at steady pace (1 paper every 600ms)
+function _startPaperDrip() {
+  if (_paperDripInterval) return;
+  _paperDripInterval = setInterval(() => {
+    if (_paperQueue.length === 0) return;
+    const p = _paperQueue.shift();
+    if (_owlGame) _owlGame.onPaperFound(p.source, p.msg);
+    _addGraphDot(p.cat, p.source);
+    // Update paper counter
+    const el = document.getElementById('acPapers');
+    if (el) el.textContent = parseInt(el.textContent || '0') + 1;
+  }, 600);
+}
+function _stopPaperDrip() {
+  if (_paperDripInterval) { clearInterval(_paperDripInterval); _paperDripInterval = null; }
+  // Flush remaining queue instantly
+  while (_paperQueue.length > 0) {
+    const p = _paperQueue.shift();
+    if (_owlGame) _owlGame.onPaperFound(p.source, p.msg);
+    _addGraphDot(p.cat, p.source);
+  }
+}
 
 function acSwitchTab(tab) {
   document.querySelectorAll('.ac-tabs .ac-tab').forEach(t => t.classList.toggle('active', t.textContent.toLowerCase().includes(tab)));
@@ -2649,7 +2869,10 @@ function openActivityCenter() {
 // Called ONLY when a new pipeline starts (not on reopen)
 function _resetActivityCenter() {
   _acSources = new Set();
-  _acGraph = {dots: [], categories: {}};
+  _acGraph = {dots: [], categories: {}, _reviewMode: false};
+  _paperQueue = [];
+  _stopPaperDrip();
+  _startPaperDrip();
   if (_chatPanel) _chatPanel.clear();
   document.getElementById('acConsole').innerHTML = '';
   document.getElementById('acPapers').textContent = '0';
@@ -2729,26 +2952,94 @@ function _addGraphDot(cat, source) {
   const W = canvas.width, H = canvas.height;
   const color = SOURCE_COLORS[source] || '#888';
 
-  // Register category
+  // In review mode after clustering, assign new dots to smallest cluster
+  if (_acGraph._reviewMode) {
+    const cats = Object.keys(_acGraph.categories);
+    if (cats.length > 0) {
+      // Find smallest cluster
+      const smallest = cats.reduce((a, b) => (_acGraph.categories[a] || 0) <= (_acGraph.categories[b] || 0) ? a : b);
+      _acGraph.categories[smallest] = (_acGraph.categories[smallest] || 0) + 1;
+      const catCount = cats.length;
+      const ci = cats.indexOf(smallest);
+      const cx = (ci + 0.5) * (W / catCount);
+      const count = _acGraph.categories[smallest];
+      _acGraph.dots.push({
+        x: W + 10, y: Math.random() * H,
+        tx: cx + (Math.random() - 0.5) * 25,
+        ty: H - 16 - ((count - 1) % 12) * 5,
+        color: color, cat: smallest, glowing: false
+      });
+      return;
+    }
+  }
+
+  // Default mode: group by category
+  const isNewCat = !_acGraph.categories[cat];
   if (!_acGraph.categories[cat]) _acGraph.categories[cat] = 0;
   _acGraph.categories[cat]++;
 
-  // Calculate target position (grouped by category)
   const cats = Object.keys(_acGraph.categories);
-  const catIdx = cats.indexOf(cat);
   const catCount = cats.length || 1;
+  const catIdx = cats.indexOf(cat);
   const cx = (catIdx + 0.5) * (W / catCount);
   const count = _acGraph.categories[cat];
-  // Stack dots vertically within category column
-  const ty = H - 16 - (count % 12) * 5;
-  const tx = cx + (Math.random() - 0.5) * 30;
+  const ty = H - 16 - ((count - 1) % 12) * 5;
+  const tx = cx + (Math.random() - 0.5) * 25;
 
   _acGraph.dots.push({
-    x: W + 10, y: Math.random() * H,  // start offscreen
+    x: W + 10, y: Math.random() * H,
     tx: tx, ty: ty,
     color: color, cat: cat, glowing: false
   });
+
+  // When a new category appears, reposition ALL existing dots to new column layout
+  if (isNewCat && cats.length > 1) {
+    const counters = {};
+    for (const dot of _acGraph.dots) {
+      const ci = cats.indexOf(dot.cat);
+      if (ci < 0) continue;
+      counters[dot.cat] = (counters[dot.cat] || 0) + 1;
+      const newCx = (ci + 0.5) * (W / catCount);
+      dot.tx = newCx + (Math.random() - 0.5) * 25;
+      dot.ty = H - 16 - ((counters[dot.cat] - 1) % 12) * 5;
+    }
+  }
 }
+
+// Graph tooltip on hover
+(function initGraphTooltip() {
+  const canvas = document.getElementById('acGraphCanvas');
+  if (!canvas) return;
+  let tip = document.createElement('div');
+  tip.style.cssText = 'position:absolute;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:10px;color:var(--text);pointer-events:none;opacity:0;transition:opacity 0.15s;z-index:100;white-space:nowrap;box-shadow:0 4px 8px rgba(0,0,0,0.3)';
+  canvas.parentElement.style.position = 'relative';
+  canvas.parentElement.appendChild(tip);
+
+  canvas.addEventListener('mousemove', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const mx = (e.clientX - rect.left) * scaleX;
+
+    const cats = Object.keys(_acGraph.categories);
+    if (!cats.length) { tip.style.opacity = '0'; return; }
+
+    const catCount = cats.length;
+    const colWidth = canvas.width / catCount;
+    const colIdx = Math.floor(mx / colWidth);
+    if (colIdx < 0 || colIdx >= catCount) { tip.style.opacity = '0'; return; }
+
+    const catName = cats[colIdx];
+    const paperCount = _acGraph.categories[catName] || 0;
+    tip.textContent = `${catName} — ${paperCount} papers`;
+    tip.style.opacity = '1';
+    tip.style.left = (e.clientX - rect.left) + 'px';
+    tip.style.top = '-24px';
+  });
+
+  canvas.addEventListener('mouseleave', function() {
+    tip.style.opacity = '0';
+  });
+})();
 
 // Hook SSE events to Activity Center
 function acHandleEvent(data) {
@@ -2775,17 +3066,15 @@ function acHandleEvent(data) {
     con.scrollTop = con.scrollHeight;
   }
 
-  // Paper found → feed to game + live graph
+  // Paper found → queue for game (drip-feed one-by-one for gameplay enjoyment)
   if (ev === 'paper_found' || ev === 'cat_done' || ev === 'cat_skip') {
     const count = data.count || 1;
     const source = data.source || 'cache';
     const cat = data.cat || 'unknown';
     if (_owlGame && count > 0) {
-      for (let i = 0; i < Math.min(count, 15); i++) {
-        setTimeout(() => {
-          _owlGame.onPaperFound(source, data.msg || '');
-          _addGraphDot(cat, source);
-        }, i * 150);
+      // Queue papers — game drip system handles timing
+      for (let i = 0; i < Math.min(count, 20); i++) {
+        _paperQueue.push({source, cat, msg: data.msg || ''});
       }
       _acSources.add(cat);
       document.getElementById('acSources').textContent = _acSources.size;
@@ -2814,6 +3103,26 @@ function acHandleEvent(data) {
     document.getElementById('acPhaseLabel').textContent = data.msg || `Phase ${p}`;
     // Update mini bar too
     document.getElementById('miniBarPct').textContent = pct + '%';
+    
+    // Review mode: when phase 3 starts (synthesize), clustering is done.
+    // Assign any leftover _unassigned dots to clusters evenly.
+    if (p >= 3 && _acGraph._reviewMode) {
+      const cats = Object.keys(_acGraph.categories);
+      if (cats.length > 0) {
+        const canvas = document.getElementById('acGraphCanvas');
+        const W = canvas.width, catCount = cats.length, H = canvas.height;
+        for (const dot of _acGraph.dots) {
+          if (dot.cat === '_unassigned') {
+            const smallest = cats.reduce((a, b) => (_acGraph.categories[a] || 0) <= (_acGraph.categories[b] || 0) ? a : b);
+            dot.cat = smallest;
+            _acGraph.categories[smallest] = (_acGraph.categories[smallest] || 0) + 1;
+            const ci = cats.indexOf(smallest);
+            dot.tx = (ci + 0.5) * (W / catCount) + (Math.random() - 0.5) * 25;
+            dot.ty = H - 16 - ((_acGraph.categories[smallest] - 1) % 12) * 5;
+          }
+        }
+      }
+    }
   }
 
   // Phase 1 done
@@ -2823,31 +3132,52 @@ function acHandleEvent(data) {
 
   // Cluster formed (Review mode) → regroup graph dots by cluster
   if (ev === 'cluster_form' && data.cluster_name) {
-    // Add cluster as a new "category" in graph and redistribute dots
     const clusterName = data.cluster_name;
-    if (!_acGraph.categories[clusterName]) {
-      _acGraph.categories[clusterName] = 0;
-    }
-    // Move some dots to this cluster
     const count = data.count || 3;
     const canvas = document.getElementById('acGraphCanvas');
     const W = canvas.width, H = canvas.height;
+    
+    // On first cluster_form, clear old category-based grouping
+    if (!_acGraph._reviewMode) {
+      _acGraph._reviewMode = true;
+      _acGraph.categories = {};
+      // Mark all existing dots as unassigned
+      for (const dot of _acGraph.dots) {
+        dot.cat = '_unassigned';
+      }
+    }
+    
+    // Register this cluster
+    _acGraph.categories[clusterName] = 0;
+    
+    // Recalculate positions for ALL clusters
     const cats = Object.keys(_acGraph.categories);
-    const catIdx = cats.indexOf(clusterName);
     const catCount = cats.length || 1;
+    const catIdx = cats.indexOf(clusterName);
     const cx = (catIdx + 0.5) * (W / catCount);
-    // Reassign unassigned dots to this cluster
+    
+    // Assign unassigned dots to this cluster
     let assigned = 0;
     for (const dot of _acGraph.dots) {
       if (assigned >= count) break;
-      if (dot.cat === 'unknown' || !cats.includes(dot.cat)) {
+      if (dot.cat === '_unassigned') {
         dot.cat = clusterName;
-        dot.tx = cx + (Math.random() - 0.5) * 30;
+        dot.tx = cx + (Math.random() - 0.5) * 25;
         dot.ty = H - 16 - (assigned % 10) * 5;
         assigned++;
       }
     }
-    _acGraph.categories[clusterName] += assigned;
+    _acGraph.categories[clusterName] = assigned;
+    
+    // Reposition ALL existing cluster dots (in case column widths changed)
+    for (const dot of _acGraph.dots) {
+      if (dot.cat === '_unassigned') continue;
+      const ci = cats.indexOf(dot.cat);
+      if (ci >= 0) {
+        const newCx = (ci + 0.5) * (W / catCount);
+        dot.tx = newCx + (Math.random() - 0.5) * 25;
+      }
+    }
   }
 
   // Ideas generated → glow category in graph
@@ -2867,6 +3197,7 @@ function acHandleEvent(data) {
     document.getElementById('acIdeas').textContent = data.ideas || 0;
     document.getElementById('pipelineMiniBar').style.display = 'none';
     if (_owlGame) _owlGame.onPhaseChange('done');
+    _stopPaperDrip(); // Flush remaining papers to game
     // Auto-close after 2 seconds
     setTimeout(closeActivityCenter, 2000);
   }
@@ -2903,8 +3234,12 @@ function loadRecentIdeas() {
     sessions.forEach((session, idx) => {
       const dt = new Date(session.timestamp);
       const timeStr = dt.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + ' — ' + dt.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
-      const cats = (session.categories || []).slice(0, 4).join(', ') + (session.categories.length > 4 ? '...' : '');
+      const cats = (session.categories || []).slice(0, 4).join(', ') + ((session.categories || []).length > 4 ? '...' : '');
       const approach = session.approach || 'any';
+      const isReview = session.mode === 'review';
+      const countLabel = isReview
+        ? `${session.ideas_total || 0} clusters · ${session.papers_total} papers`
+        : `${session.ideas_total} ideas · ${session.papers_total} papers`;
       
       const item = document.createElement('div');
       item.className = 'session-item';
@@ -2912,11 +3247,11 @@ function loadRecentIdeas() {
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div>
             <div style="font-size:13px;color:#fff;font-weight:500">${escapeHtml(timeStr)}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px">${escapeHtml(cats)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">${isReview ? escapeHtml(session.topic || 'Literature Review') : escapeHtml(cats)}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:11px;color:var(--muted)">${session.ideas_total} ideas · ${session.papers_total} papers</div>
-            <span class="chip" style="margin-top:4px;display:inline-block">${escapeHtml(approach)}</span>
+            <div style="font-size:11px;color:var(--muted)">${countLabel}</div>
+            <span class="chip" style="margin-top:4px;display:inline-block">${escapeHtml(isReview ? 'review' : approach)}</span>
           </div>
         </div>`;
       item.addEventListener('click', () => loadSessionDetail(idx));
@@ -2929,16 +3264,10 @@ function loadRecentIdeas() {
 
 function loadSessionDetail(index) {
   const grid = document.getElementById('recentGrid');
-  grid.innerHTML = '<div class="empty"><span>▸</span>Loading ideas...</div>';
+  grid.innerHTML = '<div class="empty"><span>▸</span>Loading...</div>';
   
   fetch(`/api/sessions/${index}`).then(r => r.json()).then(session => {
-    const sessionIdeas = session.ideas || [];
-    if (!sessionIdeas.length) {
-      grid.innerHTML = '<div class="empty"><span>▦</span>No ideas in this session</div>';
-      return;
-    }
-    
-    // Back button + ideas
+    // Back button
     grid.innerHTML = '';
     const backBtn = document.createElement('button');
     backBtn.className = 'btn';
@@ -2946,43 +3275,103 @@ function loadSessionDetail(index) {
     backBtn.style.marginBottom = '16px';
     backBtn.addEventListener('click', loadRecentIdeas);
     grid.appendChild(backBtn);
-    
-    const ideasContainer = document.createElement('div');
-    ideasContainer.className = 'ideas-grid';
-    grid.appendChild(ideasContainer);
-    
-    sessionIdeas.forEach(idea => {
-      const title = idea.idea_title || 'Untitled';
-      const card = document.createElement('div');
-      card.className = 'idea-card';
-      card.innerHTML = `
-        <div class="idea-card-body">
-          <button class="bookmark-btn" data-action="bookmark">${isBookmarked(title) ? '◆' : '◇'}</button>
-          <div class="idea-field">${escapeHtml(idea.field || '')}</div>
-          <div class="idea-title">${escapeHtml(title)}</div>
-          <div class="idea-meta">
-            <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
-            <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
-          </div>
-          ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
-        </div>
-        <div class="idea-card-footer">
-          <button class="btn-sm" data-action="novelty">Check Novelty</button>
-          <button class="btn-sm idea-expand-btn" data-action="expand">Show more ▾</button>
-        </div>`;
-      ideasContainer.appendChild(card);
-      
-      requestAnimationFrame(() => { const b = card.querySelector('.idea-card-body'); if (b && b.scrollHeight <= 200) card.classList.add('expanded'); });
-      
-      const expandBtn = card.querySelector('[data-action="expand"]');
-      if (expandBtn) expandBtn.addEventListener('click', () => openIdeaDetail(idea));
-      const bmBtn = card.querySelector('[data-action="bookmark"]');
-      if (bmBtn) bmBtn.addEventListener('click', function() { toggleBookmark(title, this); });
-      const novBtn = card.querySelector('[data-action="novelty"]');
-      if (novBtn) novBtn.addEventListener('click', function() { checkNovelty(title, this); });
-    });
+
+    // Route to review or default renderer
+    if (session.mode === 'review' && session.clusters) {
+      _renderReviewSessionDetail(grid, session);
+    } else {
+      _renderDefaultSessionDetail(grid, session);
+    }
   }).catch(() => {
     grid.innerHTML = '<div class="empty"><span>▦</span>Failed to load session</div>';
+  });
+}
+
+function _renderReviewSessionDetail(grid, session) {
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:12px';
+  header.innerHTML = `
+    <div style="font-size:14px;font-weight:600;color:var(--active);margin-bottom:6px">Literature Review: ${escapeHtml(session.topic || '')}</div>
+    <div style="font-size:11px;color:var(--muted)">${session.clusters.length} clusters · ${session.papers_total || 0} papers · ${escapeHtml(session.date || '')}</div>
+  `;
+  grid.appendChild(header);
+
+  // Cluster cards
+  const container = document.createElement('div');
+  container.className = 'ideas-grid';
+  grid.appendChild(container);
+
+  session.clusters.forEach((cluster, i) => {
+    const card = document.createElement('div');
+    card.className = 'idea-card expanded';
+    card.innerHTML = `
+      <div class="idea-card-body" style="max-height:none;overflow:visible">
+        <div class="idea-field">CLUSTER ${i+1} · ${cluster.paper_count || 0} papers</div>
+        <div class="idea-title" style="padding-right:0">${escapeHtml(cluster.name || 'Unnamed')}</div>
+        ${cluster.key_findings ? `<div class="idea-abstract">${escapeHtml(cluster.key_findings)}</div>` : ''}
+        ${cluster.gaps ? `<div class="idea-why"><span class="idea-method-label">Gaps:</span> ${escapeHtml(cluster.gaps)}</div>` : ''}
+      </div>
+      <div class="idea-card-footer">
+        <span style="font-size:10px;color:var(--muted)">${cluster.paper_count || 0} papers in cluster</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function _renderDefaultSessionDetail(grid, session) {
+  const sessionIdeas = session.ideas || [];
+  if (!sessionIdeas.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.innerHTML = '<span>▦</span>No ideas in this session';
+    grid.appendChild(empty);
+    return;
+  }
+
+  const ideasContainer = document.createElement('div');
+  ideasContainer.className = 'ideas-grid';
+  grid.appendChild(ideasContainer);
+    
+  sessionIdeas.forEach(idea => {
+    const title = idea.idea_title || 'Untitled';
+    const ids = (idea.inspired_by || '').split(';').map(s => s.trim()).filter(Boolean);
+    const links = (idea.inspiration_link || '').split(';').map(s => s.trim()).filter(Boolean);
+    const insp = ids.map((id, i) => `<a href="${escapeHtml(links[i] || '#')}" target="_blank">${escapeHtml(id)}</a>`).join(', ');
+    const card = document.createElement('div');
+    card.className = 'idea-card';
+    card.setAttribute('data-title', title);
+    card.innerHTML = `
+      <div class="idea-card-body">
+        <button class="bookmark-btn${isBookmarked(title) ? ' active' : ''}" data-action="bookmark">${isBookmarked(title) ? '◆' : '◇'}</button>
+        <div class="idea-field">${escapeHtml(idea.field || '')}</div>
+        <div class="idea-title">${escapeHtml(title)}</div>
+        <div class="idea-meta">
+          <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
+          <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+          ${idea.quality_score ? `<span class="chip">Q:${idea.quality_score}</span>` : ''}
+        </div>
+        ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
+        ${idea.why_hard ? `<div class="idea-why">${escapeHtml(idea.why_hard)}</div>` : ''}
+        ${idea.methodology_hint ? `<div class="idea-method"><span class="idea-method-label">Approach:</span> ${escapeHtml(idea.methodology_hint)}</div>` : ''}
+        ${idea.next_steps ? `<div class="idea-steps"><span class="idea-method-label">Start here:</span> ${escapeHtml(idea.next_steps)}</div>` : ''}
+        ${insp ? `<div class="idea-insp">REF: ${insp}</div>` : ''}
+      </div>
+      <div class="idea-card-footer">
+        <button class="btn-sm" data-action="novelty">Check Novelty</button>
+        <button class="btn-sm idea-expand-btn" data-action="expand">Show more ▾</button>
+      </div>`;
+    ideasContainer.appendChild(card);
+    
+    requestAnimationFrame(() => { const b = card.querySelector('.idea-card-body'); if (b && b.scrollHeight <= 200) card.classList.add('expanded'); });
+    
+    const expandBtn = card.querySelector('[data-action="expand"]');
+    if (expandBtn) expandBtn.addEventListener('click', () => openIdeaDetail(idea));
+    const bmBtn = card.querySelector('[data-action="bookmark"]');
+    if (bmBtn) bmBtn.addEventListener('click', function() { toggleBookmark(title, this); });
+    const novBtn = card.querySelector('[data-action="novelty"]');
+    if (novBtn) novBtn.addEventListener('click', function() { checkNovelty(title, this); });
   });
 }
 

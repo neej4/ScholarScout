@@ -211,6 +211,7 @@ class Orchestrator:
         for cat in Config.CATEGORIES:
             self._emit("cat_start", cat=cat, phase=1, msg=f"Fetching {cat} (parallel)")
             cat_papers = []
+            _cat_exhausted = False  # Track if this category's cache is exhausted
 
             # Cache-aware: if we already have enough cached papers for this category,
             # use them instead of fetching (avoids rate limits on repeated runs)
@@ -229,21 +230,71 @@ class Orchestrator:
                         citations=v.get("citations", 0),
                     ))
             if len(cached_for_cat) >= papers_per_cat:
-                # Shuffle to avoid generating ideas from same papers every run
-                random.shuffle(cached_for_cat)
-                cat_papers = cached_for_cat[:papers_per_cat]
-                for p in cat_papers:
-                    seen_paper_titles.add(p.title.lower().strip())
-                all_papers.extend(cat_papers)
-                cat_counts[cat] = len(cat_papers)
-                self._emit("cat_done", cat=cat, count=len(cat_papers),
-                     phase=1, msg=f"{cat}: {len(cat_papers)} papers from cache (skipped fetch)")
-                continue
+                # ── Paper freshness: prioritize least-used papers ──
+                # Each paper tracks _used_count in cache. Sort by usage (ascending)
+                # so papers that haven't been used for idea generation get picked first.
+                for p in cached_for_cat:
+                    p._used_count = cache.get(p.id, {}).get("_used_count", 0)
+                cached_for_cat.sort(key=lambda p: p._used_count)
+                
+                # Check if ALL papers are exhausted (used 2+ times)
+                min_usage = cached_for_cat[0]._used_count if cached_for_cat else 0
+                all_exhausted = min_usage >= 2
+                
+                if all_exhausted:
+                    # Notify user that all papers have been used — will try wider date range
+                    _cat_exhausted = True
+                    self._emit("papers_exhausted", cat=cat,
+                         total_cached=len(cached_for_cat),
+                         min_usage=min_usage,
+                         msg=f"{cat}: All {len(cached_for_cat)} cached papers used {min_usage}+ times. Fetching fresh papers...")
+                    # Don't use cache — fall through to fetch with wider date range
+                    pass
+                else:
+                    # Pick least-used papers, shuffle within same usage tier for variety
+                    # Group by usage count, shuffle each group, then flatten
+                    usage_groups = {}
+                    for p in cached_for_cat:
+                        usage_groups.setdefault(p._used_count, []).append(p)
+                    cat_papers = []
+                    for usage_count in sorted(usage_groups.keys()):
+                        group = usage_groups[usage_count]
+                        random.shuffle(group)
+                        cat_papers.extend(group)
+                        if len(cat_papers) >= papers_per_cat:
+                            break
+                    cat_papers = cat_papers[:papers_per_cat]
+                    
+                    # Increment usage count for selected papers
+                    for p in cat_papers:
+                        if p.id in cache:
+                            cache[p.id]["_used_count"] = cache[p.id].get("_used_count", 0) + 1
+                    self.save_cache(cache)
+                    
+                    for p in cat_papers:
+                        seen_paper_titles.add(p.title.lower().strip())
+                    all_papers.extend(cat_papers)
+                    cat_counts[cat] = len(cat_papers)
+                    
+                    unused_count = sum(1 for p in cat_papers if getattr(p, '_used_count', 0) == 0)
+                    self._emit("cat_done", cat=cat, count=len(cat_papers),
+                         phase=1, fresh=unused_count,
+                         msg=f"{cat}: {len(cat_papers)} papers from cache ({unused_count} fresh, skipped fetch)")
+                    continue
             
             # Determine which sources to use for this category (source routing)
             cat_prefix = cat.split(".")[0] if "." in cat else cat
             source_names = self._source_routes.get(cat_prefix, self._default_sources)
             cat_fetchers = [(name, self.all_fetchers[name]) for name in source_names if name in self.all_fetchers]
+            
+            # If papers were exhausted, widen date range for fresh fetch
+            if _cat_exhausted:
+                wider_start = Config.START_DATE - timedelta(days=14)
+                for _, fetcher in cat_fetchers:
+                    fetcher.start_date = wider_start
+                self._emit("date_widen", cat=cat,
+                     new_start=wider_start.strftime("%Y-%m-%d"),
+                     msg=f"{cat}: Widening date range to {wider_start.strftime('%Y-%m-%d')} for fresh papers")
             
             # Fetch selected sources in parallel
             with ThreadPoolExecutor(max_workers=len(cat_fetchers)) as executor:
@@ -260,6 +311,8 @@ class Orchestrator:
                             cat_papers.append(p)
                             if p.id not in cache:
                                 cache[p.id] = p.to_dict()
+                            # Mark as used (first use)
+                            cache[p.id]["_used_count"] = cache[p.id].get("_used_count", 0) + 1
             
             all_papers.extend(cat_papers)
             cat_counts[cat] = len(cat_papers)
@@ -273,7 +326,7 @@ class Orchestrator:
                 errors.append(f"No papers: {cat}")
                 self._emit("cat_skip", cat=cat, phase=1, msg=f"{cat}: no papers found in date range")
             
-            time.sleep(4)  # Delay between categories to respect arXiv rate limit
+            time.sleep(6)  # Delay between categories to respect arXiv rate limit
 
         self._emit("phase1_done", total=len(all_papers), cached=cached_total,
              msg=f"Phase 1 done: {len(all_papers)} papers fetched")
@@ -477,7 +530,8 @@ class Orchestrator:
         # ─── PHASE 2: Cluster papers ─────────────────────────────────────────
         self._emit("phase", phase=2, msg="Clustering papers into themes...")
         clusterer = PaperClusterer(llm_client=self.llm_client)
-        n_clusters = min(6, max(3, len(all_papers) // 8))
+        # Cluster count = MAX_IDEAS (user wants N clusters, papers distributed freely)
+        n_clusters = min(Config.MAX_IDEAS, max(3, len(all_papers) // 3))
         raw_clusters = clusterer.cluster(all_papers, n_clusters=n_clusters)
 
         self._emit("phase2_done", msg=f"Phase 2 done: {len(raw_clusters)} clusters formed")
@@ -543,6 +597,29 @@ class Orchestrator:
         }
         with open(Config.SNAPSHOT_FILE, "w", encoding="utf-8") as f:
             json.dump(snapshot_data, f, indent=2, ensure_ascii=False)
+
+        # Save to session history (same as default pipeline)
+        history_file = os.path.join(Config.DATA_DIR, "session_history.json")
+        try:
+            with open(history_file, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+
+        history.insert(0, {
+            "timestamp": run_timestamp,
+            "date": Config.TODAY_STR,
+            "mode": "review",
+            "topic": topic,
+            "categories": list(set(p.category for p in all_papers)),
+            "approach": "review",
+            "papers_total": len(all_papers),
+            "ideas_total": len(review_clusters),
+            "clusters": [{"name": c.name, "paper_count": c.paper_count, "key_findings": c.key_findings, "gaps": c.gaps} for c in review_clusters],
+        })
+        history = history[:20]
+        with open(history_file, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=2, ensure_ascii=False)
 
         self._emit("done",
              papers=len(all_papers), ideas=len(review_clusters),

@@ -33,9 +33,9 @@ class LiteratureSynthesizer:
                 "papers": List[dict]
             }
         """
-        # Build paper list for prompt
+        # Build paper list for prompt (with injection delimiter)
         paper_list = "\n".join(
-            f"P{i+1}: {p.title} ({p.source}, {p.submitted_date})\n    Abstract: {p.abstract[:200]}"
+            f"P{i+1}: {p.title} ({p.source}, {p.submitted_date})\n    Abstract: <<PAPER_ABSTRACT>>{p.abstract[:200]}<<END_ABSTRACT>>"
             for i, p in enumerate(papers[:12])
         )
 
@@ -43,6 +43,7 @@ class LiteratureSynthesizer:
 
 {paper_list}
 
+<<INSTRUCTION_BOUNDARY>>
 Produce a JSON object with these exact keys:
 - "methodology_summary": string (2-3 sentences describing the common methodologies used across these papers)
 - "key_findings": string (2-3 sentences summarizing the main findings/contributions)

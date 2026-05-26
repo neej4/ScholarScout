@@ -1,5 +1,51 @@
 # Changelog
 
+## v1.5.3 (2026-05-26)
+
+### Review Mode (new)
+- 4th mode: Literature Synthesis — clusters papers, synthesizes per cluster, cross-cutting analysis
+- 6-phase pipeline: Validate → Fetch → Cluster → Synthesize → Cross-cutting → Save
+- Review sessions saved to history with proper cluster rendering in Recent tab
+- Context field required for Review mode
+
+### Activity Center
+- Owl Chase pixel art game (paper dots spawn one-by-one via drip-feed system)
+- Live graph with hover tooltip (category/cluster name + paper count)
+- LLM Chat tab (narrated conversation)
+- Adaptive phase list (5 or 6 phases based on mode)
+- Mini notification bar when closed
+
+### Paper Freshness
+- Papers track `_used_count` — least-used prioritized
+- Auto-widens date range when all papers exhausted
+
+### Thresholds externalized
+- All similarity thresholds in `config.yaml` → `thresholds:` section
+- `config.example.yaml` template for contributors
+
+### Security
+- `config.yaml` gitignored
+- Prompt injection delimiters on paper abstracts
+- 14 new unit tests (clusterer + synthesizer)
+
+### Rate limits
+- S2 retry reduced (skip faster)
+- OpenAlex cs.IR fixed (was returning law papers)
+- Inter-category delay 4s → 6s
+
+### UX
+- Custom toast notifications (no more browser alerts)
+- Profile popup hidden by default
+- Goal syncs immediately on card click
+- Recent tab handles review sessions properly
+
+### DevEx
+- GitHub issue/PR templates
+- `package-lock.json` committed
+- `CONTRIBUTING.md` cleaned up
+
+---
+
 ## v1.5.1 (2026-05-25)
 
 ### UX

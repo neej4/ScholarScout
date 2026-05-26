@@ -89,7 +89,7 @@ class PaperClusterer:
 
         for i, tokens in enumerate(paper_tokens):
             best_cluster = -1
-            best_sim = 0.15  # minimum similarity threshold to join a cluster
+            best_sim = Config.THRESHOLD_CLUSTERER_MIN_JOIN  # minimum similarity to join a cluster
 
             for ci, ct in enumerate(cluster_tokens):
                 if not ct or not tokens:
@@ -176,7 +176,9 @@ class PaperClusterer:
 
         prompt = f"""Given these paper titles from one research cluster, generate a SHORT name (2-5 words) that captures the common theme:
 
+<<PAPER_TITLES>>
 {chr(10).join('- ' + t for t in titles[:8])}
+<<END_PAPER_TITLES>>
 
 Reply with ONLY the cluster name, nothing else. Example: "Federated Learning for Healthcare" or "Transformer Efficiency Methods"."""
 

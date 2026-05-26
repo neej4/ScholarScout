@@ -145,7 +145,7 @@ Respond ONLY with valid JSON. No markdown, no explanation."""
 
         Returns:
             Dict mapping section name to {"score": float, "level": "high"|"medium"|"low"}
-            Score is 0.0-1.0. Levels: high (≥0.65), medium (0.40-0.65), low (<0.40).
+            Score is 0.0-1.0. Levels configured via config.yaml thresholds section.
             Empty dict if source_text is missing or all comparisons fail.
         """
         if not source_text or not source_text.strip():
@@ -217,9 +217,9 @@ Respond ONLY with valid JSON. No markdown, no explanation."""
 
     @staticmethod
     def _score_to_level(score: float) -> str:
-        """Map similarity score to badge level."""
-        if score >= 0.65:
+        """Map similarity score to badge level (thresholds from config.yaml)."""
+        if score >= Config.THRESHOLD_GROUNDING_HIGH:
             return "high"
-        if score >= 0.40:
+        if score >= Config.THRESHOLD_GROUNDING_MEDIUM:
             return "medium"
         return "low"

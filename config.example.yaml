@@ -1,0 +1,37 @@
+# ScholarScout Configuration
+# Copy this file to config.yaml and fill in your values.
+# config.yaml is gitignored — your API keys stay local.
+
+app:
+  max_ideas: 10
+
+llm:
+  # Provider: gemini | groq | openrouter | openai | ollama | custom
+  provider: gemini
+  api_key: ''
+  model: gemini-2.0-flash
+  # base_url: only needed for custom/ollama providers
+  # base_url: http://localhost:11434/v1/chat/completions
+
+features:
+  refine: false
+  sensitivity: false
+  grounding: false
+  cache_expiry_days: 7
+
+# Similarity thresholds (tune these to adjust novelty/grounding sensitivity)
+thresholds:
+  # Grounding verification (deep_dive.py) — badge levels
+  grounding_high: 0.65
+  grounding_medium: 0.40
+
+  # Novelty checker — semantic similarity (Gemini embeddings)
+  novelty_semantic_similar: 0.82
+  novelty_semantic_exists: 0.92
+
+  # Novelty checker — Jaccard fallback
+  novelty_jaccard_similar: 0.40
+  novelty_jaccard_exists: 0.70
+
+  # Clusterer — minimum similarity to join existing cluster
+  clusterer_min_join: 0.15

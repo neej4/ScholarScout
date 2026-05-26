@@ -61,8 +61,13 @@ app = create_app()
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    _version_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION")
+    try:
+        _app_ver = open(_version_file).read().strip()
+    except Exception:
+        _app_ver = "0.0.0"
     print("=" * 50)
-    print("  ScholarScout v1.5.2")
+    print(f"  ScholarScout v{_app_ver}")
     print("  http://localhost:5050")
     print("=" * 50)
 

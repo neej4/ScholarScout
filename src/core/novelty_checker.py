@@ -42,12 +42,12 @@ class NoveltyChecker:
     }
 
     # Thresholds for semantic similarity (cosine distance)
-    SEMANTIC_SIMILAR_THRESHOLD = 0.82   # cosine similarity ≥ this → "similar"
-    SEMANTIC_EXISTS_THRESHOLD  = 0.92   # cosine similarity ≥ this → "exists"
+    SEMANTIC_SIMILAR_THRESHOLD = Config.THRESHOLD_NOVELTY_SEM_SIMILAR
+    SEMANTIC_EXISTS_THRESHOLD  = Config.THRESHOLD_NOVELTY_SEM_EXISTS
 
     # Thresholds for Jaccard fallback
-    JACCARD_SIMILAR_THRESHOLD = 0.40
-    JACCARD_EXISTS_THRESHOLD  = 0.70
+    JACCARD_SIMILAR_THRESHOLD = Config.THRESHOLD_NOVELTY_JAC_SIMILAR
+    JACCARD_EXISTS_THRESHOLD  = Config.THRESHOLD_NOVELTY_JAC_EXISTS
 
     TIMEOUT = 10  # seconds per HTTP request
 
