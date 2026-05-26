@@ -229,6 +229,35 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .modal-spinner::before{content:'';display:block;width:32px;height:32px;border:2px solid var(--border);border-top-color:#ffffff;border-radius:50%;margin:0 auto 16px;animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ACTIVITY CENTER POPUP */
+.ac-popup{background:var(--card);border:1px solid var(--border);border-radius:10px;width:100%;max-width:880px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5);display:flex;flex-direction:column}
+.ac-header{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);gap:12px}
+.ac-title{font-size:12px;font-weight:600;color:var(--active)}
+.ac-hint{font-size:9px;color:var(--muted);flex:1}
+.ac-body{display:grid;grid-template-columns:1.2fr 1fr;gap:0}
+.ac-left{padding:16px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+.ac-left canvas#owlChaseCanvas{width:100%;height:180px;border:1px solid var(--border);border-radius:4px;background:#1a1a1a;cursor:pointer;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+.ac-status{display:flex;flex-direction:column;gap:4px}
+.ac-phase-text{font-size:10px;color:var(--active);display:flex;justify-content:space-between}
+.ac-phase-text span:last-child{color:var(--muted)}
+.ac-progress{height:3px;background:#333;border-radius:2px;overflow:hidden}
+.ac-progress-bar{height:100%;background:#fff;width:0%;transition:width 0.3s}
+.ac-stats{font-size:10px;color:var(--muted);display:flex;gap:8px}
+.ac-stats b{color:var(--active);font-weight:500}
+.ac-right{padding:16px;display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto}
+.ac-section-title{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+.ac-phases{display:flex;flex-direction:column;gap:2px}
+.ac-phase{display:flex;align-items:center;gap:6px;font-size:10px;padding:4px 6px;border-radius:3px}
+.ac-phase.done{color:var(--muted)}
+.ac-phase.active{background:var(--hover);color:var(--active)}
+.ac-phase.pending{color:#555}
+.ac-phase-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.ac-phase.done .ac-phase-dot{background:#66cc66}
+.ac-phase.active .ac-phase-dot{background:var(--active);animation:blink-dot 1.2s infinite}
+.ac-phase.pending .ac-phase-dot{background:#444}
+@keyframes blink-dot{0%,100%{opacity:1}50%{opacity:0.3}}
+.ac-console{background:#1a1a1a;border:1px solid var(--border);border-radius:4px;padding:8px;flex:1;min-height:80px;overflow-y:auto;font-size:9px;font-family:'Courier New',monospace;color:var(--muted);line-height:1.7}
+
 /* SHORTLIST EXPORT */
 .shortlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .shortlist-header .section-title{margin-bottom:0}
@@ -898,6 +927,34 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
   </div>
 </div>
 
+<!-- ACTIVITY CENTER POPUP -->
+<div class="modal-overlay" id="activityCenter">
+  <div class="ac-popup">
+    <div class="ac-header">
+      <div class="ac-title">Activity Center</div>
+      <div class="ac-hint">SPACE or click to jump — catch the papers!</div>
+      <button class="modal-close" onclick="closeActivityCenter()">&times;</button>
+    </div>
+    <div class="ac-body">
+      <div class="ac-left">
+        <canvas id="owlChaseCanvas" width="400" height="180"></canvas>
+        <canvas id="acGraphCanvas" width="400" height="80" style="border:1px solid var(--border);border-radius:4px;background:#1a1a1a;display:block;width:100%;height:80px;image-rendering:pixelated"></canvas>
+        <div class="ac-status">
+          <div class="ac-phase-text"><span id="acPhaseLabel">Starting...</span> <span id="acPct"></span></div>
+          <div class="ac-progress"><div class="ac-progress-bar" id="acProgBar"></div></div>
+          <div class="ac-stats"><b id="acPapers">0</b> papers &middot; <b id="acSources">0</b> sources &middot; <b id="acIdeas">0</b> ideas</div>
+        </div>
+      </div>
+      <div class="ac-right">
+        <div class="ac-section-title">Pipeline</div>
+        <div class="ac-phases" id="acPhases"></div>
+        <div class="ac-section-title" style="margin-top:8px">Console</div>
+        <div class="ac-console" id="acConsole"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- DEEP DIVE MODAL -->
 <div class="modal-overlay" id="deepDiveModal">
   <div class="modal-content" id="deepDiveContent">
@@ -909,6 +966,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 </div>
 
 <script src="/static/bookmarks.js"></script>
+<script src="/static/owl_chase.js"></script>
 <script>
 const CAT_GROUPS = [
   {
@@ -2282,6 +2340,8 @@ function _difficultyTooltip(level) {
 function handleEvent(ev) {
   const e = ev.event;
   if (e === 'ping') return;
+  // Feed to Activity Center
+  acHandleEvent(ev);
 
   // ── Universal: Log EVERY event to console (kecuali ping) ──
   if (ev.msg && e !== 'idea') {
@@ -2501,6 +2561,7 @@ function _doStartPipeline() {
   document.getElementById('statusBadge').className = 'badge running';
   startTime = Date.now();
   startSpriteAnim();
+  openActivityCenter();
 
   if (es) es.close();
   es = new EventSource('/api/stream');
@@ -2527,14 +2588,204 @@ function stopPipeline() {
     stopSpriteAnim();
     addLog('[SYS] Interrupted', 'warn');
     if (es) es.close();
+    closeActivityCenter();
   });
 }
+
+// ── Activity Center ──────────────────────────────────────────────────────────
+let _owlGame = null;
+let _acSources = new Set();
+let _acGraph = {dots: [], categories: {}};
+
+function openActivityCenter() {
+  const ac = document.getElementById('activityCenter');
+  ac.classList.add('visible');
+  // Init game
+  if (!_owlGame) _owlGame = new OwlChase('owlChaseCanvas');
+  _owlGame.start();
+  _acSources = new Set();
+  _acGraph = {dots: [], categories: {}};
+  document.getElementById('acConsole').innerHTML = '';
+  document.getElementById('acPapers').textContent = '0';
+  document.getElementById('acSources').textContent = '0';
+  document.getElementById('acIdeas').textContent = '0';
+  document.getElementById('acProgBar').style.width = '0%';
+  document.getElementById('acPct').textContent = '';
+  document.getElementById('acPhaseLabel').textContent = 'Starting...';
+  // Build phase list
+  const phases = ['Validate LLM', 'Fetch papers', 'Analyze trends', 'Generate ideas', 'Save results'];
+  const phaseEl = document.getElementById('acPhases');
+  phaseEl.innerHTML = phases.map((p,i) => `<div class="ac-phase pending" id="acP${i}"><div class="ac-phase-dot"></div> ${p}</div>`).join('');
+  // Start graph render loop
+  _drawGraph();
+}
+
+function closeActivityCenter() {
+  const ac = document.getElementById('activityCenter');
+  ac.classList.remove('visible');
+  if (_owlGame) _owlGame.stop();
+}
+
+// Live graph: dots grouped by category
+function _drawGraph() {
+  if (!document.getElementById('activityCenter').classList.contains('visible')) return;
+  const canvas = document.getElementById('acGraphCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Assign x positions per category
+  const cats = Object.keys(_acGraph.categories);
+  const catCount = cats.length || 1;
+
+  // Draw category labels at bottom
+  ctx.fillStyle = '#333';
+  ctx.font = '8px monospace';
+  cats.forEach((cat, i) => {
+    const cx = (i + 0.5) * (W / catCount);
+    ctx.fillText(cat.split('.').pop(), cx - 10, H - 3);
+    // Vertical separator
+    if (i > 0) {
+      ctx.fillStyle = '#252525';
+      ctx.fillRect(Math.round(i * (W / catCount)), 0, 1, H - 12);
+      ctx.fillStyle = '#333';
+    }
+  });
+
+  // Draw dots
+  for (const dot of _acGraph.dots) {
+    // Animate toward target position
+    dot.x += (dot.tx - dot.x) * 0.08;
+    dot.y += (dot.ty - dot.y) * 0.08;
+    ctx.fillStyle = dot.color;
+    ctx.fillRect(Math.round(dot.x) - 2, Math.round(dot.y) - 2, 4, 4);
+    // Glow if generating
+    if (dot.glowing) {
+      ctx.fillStyle = dot.color;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(Math.round(dot.x) - 4, Math.round(dot.y) - 4, 8, 8);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  requestAnimationFrame(_drawGraph);
+}
+
+function _addGraphDot(cat, source) {
+  const canvas = document.getElementById('acGraphCanvas');
+  const W = canvas.width, H = canvas.height;
+  const color = SOURCE_COLORS[source] || '#888';
+
+  // Register category
+  if (!_acGraph.categories[cat]) _acGraph.categories[cat] = 0;
+  _acGraph.categories[cat]++;
+
+  // Calculate target position (grouped by category)
+  const cats = Object.keys(_acGraph.categories);
+  const catIdx = cats.indexOf(cat);
+  const catCount = cats.length || 1;
+  const cx = (catIdx + 0.5) * (W / catCount);
+  const count = _acGraph.categories[cat];
+  // Stack dots vertically within category column
+  const ty = H - 16 - (count % 12) * 5;
+  const tx = cx + (Math.random() - 0.5) * 30;
+
+  _acGraph.dots.push({
+    x: W + 10, y: Math.random() * H,  // start offscreen
+    tx: tx, ty: ty,
+    color: color, cat: cat, glowing: false
+  });
+}
+
+// Hook SSE events to Activity Center
+function acHandleEvent(data) {
+  if (!document.getElementById('activityCenter').classList.contains('visible')) return;
+  const ev = data.event;
+
+  // Console log
+  if (data.msg) {
+    const con = document.getElementById('acConsole');
+    con.innerHTML += data.msg + '<br>';
+    con.scrollTop = con.scrollHeight;
+  }
+
+  // Paper found → feed to game + live graph
+  if (ev === 'paper_found' || ev === 'cat_done' || ev === 'cat_skip') {
+    const count = data.count || 1;
+    const source = data.source || 'cache';
+    const cat = data.cat || 'unknown';
+    if (_owlGame && count > 0) {
+      for (let i = 0; i < Math.min(count, 15); i++) {
+        setTimeout(() => {
+          _owlGame.onPaperFound(source, data.msg || '');
+          _addGraphDot(cat, source);
+        }, i * 150);
+      }
+      _acSources.add(cat);
+      document.getElementById('acSources').textContent = _acSources.size;
+    }
+    if (data.count) {
+      const cur = parseInt(document.getElementById('acPapers').textContent) || 0;
+      document.getElementById('acPapers').textContent = cur + count;
+    }
+  }
+
+  // Phase changes
+  if (ev === 'phase') {
+    const p = data.phase;
+    // Update phase list
+    for (let i = 0; i < 5; i++) {
+      const el = document.getElementById('acP' + i);
+      if (!el) continue;
+      if (i < p) el.className = 'ac-phase done';
+      else if (i === p) el.className = 'ac-phase active';
+      else el.className = 'ac-phase pending';
+    }
+    // Progress
+    const pct = Math.round((p / 4) * 100);
+    document.getElementById('acProgBar').style.width = pct + '%';
+    document.getElementById('acPct').textContent = pct + '%';
+    document.getElementById('acPhaseLabel').textContent = data.msg || `Phase ${p}`;
+  }
+
+  // Phase 1 done
+  if (ev === 'phase1_done') {
+    document.getElementById('acPapers').textContent = data.total || 0;
+  }
+
+  // Ideas generated → glow category in graph
+  if (ev === 'cat_ideas') {
+    document.getElementById('acIdeas').textContent = data.total || 0;
+    // Glow dots in that category
+    const cat = data.cat || '';
+    _acGraph.dots.forEach(d => { if (d.cat === cat) d.glowing = true; });
+    setTimeout(() => { _acGraph.dots.forEach(d => { if (d.cat === cat) d.glowing = false; }); }, 2000);
+  }
+
+  // Pipeline done
+  if (ev === 'done') {
+    document.getElementById('acPhaseLabel').textContent = 'Done!';
+    document.getElementById('acProgBar').style.width = '100%';
+    document.getElementById('acPct').textContent = '100%';
+    document.getElementById('acIdeas').textContent = data.ideas || 0;
+    if (_owlGame) _owlGame.onPhaseChange('done');
+    // Auto-close after 2 seconds
+    setTimeout(closeActivityCenter, 2000);
+  }
+}
+
+// Close on overlay click
+document.getElementById('activityCenter').addEventListener('click', function(e) {
+  if (e.target === this) closeActivityCenter();
+});
 
 // ── Modal keyboard / backdrop close ──
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     closeModal();
     closePopup('profileModal');
+    closeActivityCenter();
   }
 });
 document.getElementById('deepDiveModal').addEventListener('click', function(e) {

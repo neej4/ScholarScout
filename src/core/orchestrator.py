@@ -2,6 +2,7 @@ import json
 import csv
 import os
 import time
+import random
 import traceback
 from datetime import datetime, timezone, timedelta
 from typing import List, Callable, Optional, Dict
@@ -228,8 +229,8 @@ class Orchestrator:
                         citations=v.get("citations", 0),
                     ))
             if len(cached_for_cat) >= papers_per_cat:
-                # Sort by recency, take what we need
-                cached_for_cat.sort(key=lambda p: p.submitted_date, reverse=True)
+                # Shuffle to avoid generating ideas from same papers every run
+                random.shuffle(cached_for_cat)
                 cat_papers = cached_for_cat[:papers_per_cat]
                 for p in cat_papers:
                     seen_paper_titles.add(p.title.lower().strip())
