@@ -84,3 +84,49 @@ class ProjectIdea:
             "inspiration_link": self.inspiration_link,
             "generated_date": self.generated_date
         }
+
+
+@dataclass
+class ReviewCluster:
+    """A thematic cluster of papers in Review Mode."""
+    name: str
+    paper_count: int
+    methodology_summary: str
+    key_findings: str
+    gaps: str
+    keywords: List[str] = field(default_factory=list)
+    papers: List[dict] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "paper_count": self.paper_count,
+            "methodology_summary": self.methodology_summary,
+            "key_findings": self.key_findings,
+            "gaps": self.gaps,
+            "keywords": self.keywords,
+            "papers": self.papers,
+        }
+
+
+@dataclass
+class ReviewOutput:
+    """Complete output of Review Mode pipeline."""
+    topic: str
+    paper_count: int
+    clusters: List[ReviewCluster]
+    timeline: str
+    debates: str
+    open_questions: List[str]
+    reading_list: List[dict]
+
+    def to_dict(self) -> dict:
+        return {
+            "topic": self.topic,
+            "paper_count": self.paper_count,
+            "clusters": [c.to_dict() for c in self.clusters],
+            "timeline": self.timeline,
+            "debates": self.debates,
+            "open_questions": self.open_questions,
+            "reading_list": self.reading_list,
+        }

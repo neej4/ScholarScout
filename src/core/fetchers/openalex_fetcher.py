@@ -235,7 +235,7 @@ class OpenAlexFetcher(BaseFetcher):
         for attempt in range(3):
             try:
                 req = urllib.request.Request(url)
-                req.add_header("User-Agent", "ScholarScout/1.0 (mailto:scholarscout@users.noreply.github.com)")
+                req.add_header("User-Agent", "ScholarScout (mailto:scholarscout@users.noreply.github.com)")
                 
                 with urllib.request.urlopen(req, timeout=20) as resp:
                     data = json.loads(resp.read().decode())

@@ -257,6 +257,20 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .ac-phase.pending .ac-phase-dot{background:#444}
 @keyframes blink-dot{0%,100%{opacity:1}50%{opacity:0.3}}
 .ac-console{background:#1a1a1a;border:1px solid var(--border);border-radius:4px;padding:8px;flex:1;min-height:80px;overflow-y:auto;font-size:9px;font-family:'Courier New',monospace;color:var(--muted);line-height:1.7}
+.ac-tabs{display:flex;gap:2px;margin-bottom:8px}
+.ac-tab{font-size:9px;padding:4px 10px;border-radius:3px;color:var(--muted);cursor:pointer;transition:0.15s;text-transform:uppercase;letter-spacing:0.5px;font-weight:500}
+.ac-tab:hover{color:var(--text);background:var(--hover)}
+.ac-tab.active{color:var(--active);background:var(--hover)}
+.ac-tab-content{display:none;flex-direction:column;gap:8px;flex:1;overflow-y:auto}
+.ac-tab-content.active{display:flex}
+.ac-chat{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px 0}
+.chat-bubble{padding:6px 10px;border-radius:6px;font-size:10px;line-height:1.5;max-width:90%;animation:fadeIn 0.2s ease}
+.chat-scout{background:var(--hover);align-self:flex-start;border-bottom-left-radius:2px}
+.chat-llm{background:rgba(102,153,255,0.08);border:1px solid rgba(102,153,255,0.15);align-self:flex-end;border-bottom-right-radius:2px}
+.chat-name{display:block;font-size:8px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px}
+.chat-scout .chat-name{color:#d4a847}
+.chat-llm .chat-name{color:#6699ff}
+.chat-text{color:var(--text)}
 
 /* SHORTLIST EXPORT */
 .shortlist-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
@@ -392,6 +406,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <option value="OPTIMIZATION">Optimization</option>
     <option value="EXTENSION">Extension</option>
     <option value="PIVOT">Pivot</option>
+    <option value="SYNTHESIS">Synthesis</option>
   </select>
   <textarea id="researchContext" style="display:none"></textarea>
 </div>
@@ -543,7 +558,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <!-- STEP 1: Mode selection (Academic / Product / Develop) -->
     <div class="profile-section">
       <div class="profile-label">Mode</div>
-      <div class="profile-cards" id="modeCards" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="profile-cards" id="modeCards" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
         <div class="profile-card selected" data-mode="academic" style="text-align:center;padding:14px 10px">
           <div style="font-size:12px;font-weight:600;margin-bottom:4px">Academic</div>
           <div style="font-size:10px;line-height:1.4">Thesis, publication, grant proposal</div>
@@ -555,6 +570,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <div class="profile-card" data-mode="develop" style="text-align:center;padding:14px 10px">
           <div style="font-size:12px;font-weight:600;margin-bottom:4px">Develop</div>
           <div style="font-size:10px;line-height:1.4">Feature, integration, optimization</div>
+        </div>
+        <div class="profile-card" data-mode="review" style="text-align:center;padding:14px 10px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px">Review</div>
+          <div style="font-size:10px;line-height:1.4">Literature synthesis, reading list</div>
         </div>
       </div>
     </div>
@@ -580,6 +599,9 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <div class="profile-card" data-value="OPTIMIZATION">Optimization</div>
         <div class="profile-card" data-value="EXTENSION">Extension</div>
         <div class="profile-card" data-value="PIVOT">Pivot</div>
+      </div>
+      <div class="profile-cards" id="goalCardsReview" style="display:none;transition:all 0.2s ease">
+        <div class="profile-card" data-value="SYNTHESIS">Literature Synthesis</div>
       </div>
     </div>
 
@@ -625,26 +647,8 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 </div>
 
 <div class="main">
-  <!-- LEFT: Progress -->
+  <!-- LEFT: Categories only (pipeline status moved to Activity Center) -->
   <div class="left">
-    <div>
-      <div class="sprite-anim static" id="spriteAnim">
-        <img src="/static/sprite-1.png" class="visible" alt="">
-        <img src="/static/sprite-2.png" alt="">
-        <img src="/static/sprite-3.png" alt="">
-        <img src="/static/sprite-4.png" alt="">
-      </div>
-      <div class="section-title">Pipeline Status</div>
-      <div class="progress-container"><div class="progress-bar" id="progBar"></div></div>
-      <div class="phases">
-        <div class="phase" id="ph0"><div class="phase-icon" id="phi0">[ ]</div><div class="phase-text"><div>System Pre-Check</div><div class="phase-msg" id="ph0msg">Pending</div></div></div>
-        <div class="phase" id="ph1"><div class="phase-icon" id="phi1">[ ]</div><div class="phase-text"><div>Scraping Literature</div><div class="phase-msg" id="ph1msg">Pending</div></div></div>
-        <div class="phase" id="ph2"><div class="phase-icon" id="phi2">[ ]</div><div class="phase-text"><div>Trend Analysis</div><div class="phase-msg" id="ph2msg">Pending</div></div></div>
-        <div class="phase" id="ph3"><div class="phase-icon" id="phi3">[ ]</div><div class="phase-text"><div>Idea Generation</div><div class="phase-msg" id="ph3msg">Pending</div></div></div>
-        <div class="phase" id="ph4"><div class="phase-icon" id="phi4">[ ]</div><div class="phase-text"><div>Export Results</div><div class="phase-msg" id="ph4msg">Pending</div></div></div>
-      </div>
-    </div>
-
     <div>
       <div class="section-title">Sources to Scan</div>
       <div class="cats-container" id="catsContainer">
@@ -946,13 +950,29 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         </div>
       </div>
       <div class="ac-right">
-        <div class="ac-section-title">Pipeline</div>
-        <div class="ac-phases" id="acPhases"></div>
-        <div class="ac-section-title" style="margin-top:8px">Console</div>
-        <div class="ac-console" id="acConsole"></div>
+        <div class="ac-tabs">
+          <span class="ac-tab active" onclick="acSwitchTab('pipeline')">Pipeline</span>
+          <span class="ac-tab" onclick="acSwitchTab('chat')">LLM Chat</span>
+        </div>
+        <div class="ac-tab-content active" id="acTabPipeline">
+          <div class="ac-section-title">Phases</div>
+          <div class="ac-phases" id="acPhases"></div>
+          <div class="ac-section-title" style="margin-top:8px">Console</div>
+          <div class="ac-console" id="acConsole"></div>
+        </div>
+        <div class="ac-tab-content" id="acTabChat">
+          <div class="ac-chat" id="acChatPanel"></div>
+        </div>
       </div>
     </div>
   </div>
+</div>
+
+<!-- PIPELINE MINI BAR (shows when Activity Center closed but pipeline running) -->
+<div id="pipelineMiniBar" style="display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 16px;font-size:11px;color:var(--text);z-index:999;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:none;align-items:center;gap:10px" onclick="openActivityCenter()">
+  <span style="color:var(--muted)">Pipeline running...</span>
+  <span id="miniBarPct" style="color:var(--active);font-weight:500"></span>
+  <span style="color:var(--muted);font-size:9px;border:1px solid var(--border);padding:2px 6px;border-radius:3px">Open</span>
 </div>
 
 <!-- DEEP DIVE MODAL -->
@@ -967,6 +987,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
 <script src="/static/bookmarks.js"></script>
 <script src="/static/owl_chase.js"></script>
+<script src="/static/llm_chat.js"></script>
 <script>
 const CAT_GROUPS = [
   {
@@ -1555,9 +1576,11 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
     document.getElementById('goalCards').style.display = mode === 'academic' ? '' : 'none';
     document.getElementById('goalCardsProduct').style.display = mode === 'product' ? '' : 'none';
     document.getElementById('goalCardsDevelop').style.display = mode === 'develop' ? '' : 'none';
+    document.getElementById('goalCardsReview').style.display = mode === 'review' ? '' : 'none';
     // Auto-select first card in visible group
-    const visibleGroup = mode === 'academic' ? 'goalCards' : mode === 'product' ? 'goalCardsProduct' : 'goalCardsDevelop';
-    document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card').forEach(c => c.classList.remove('selected'));
+    const groupMap = {academic:'goalCards', product:'goalCardsProduct', develop:'goalCardsDevelop', review:'goalCardsReview'};
+    const visibleGroup = groupMap[mode] || 'goalCards';
+    document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card, #goalCardsReview .profile-card').forEach(c => c.classList.remove('selected'));
     const firstCard = document.querySelector('#' + visibleGroup + ' .profile-card');
     if (firstCard) firstCard.classList.add('selected');
     goalSection.style.opacity = '1';
@@ -1574,7 +1597,7 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
     c.classList.toggle('selected', c.dataset.value === approach);
   });
   // Goal can be in any group
-  document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card').forEach(c => {
+  document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card, #goalCardsReview .profile-card').forEach(c => {
     c.classList.toggle('selected', c.dataset.value === goal);
   });
   document.getElementById('profileContext').value = ctx;
@@ -1585,10 +1608,11 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
 
 function saveProfile() {
   const approachEl = document.querySelector('#approachCards .profile-card.selected');
-  // Goal can be in any of the three groups
+  // Goal can be in any of the four groups
   const goalEl     = document.querySelector('#goalCards .profile-card.selected') ||
                      document.querySelector('#goalCardsProduct .profile-card.selected') ||
-                     document.querySelector('#goalCardsDevelop .profile-card.selected');
+                     document.querySelector('#goalCardsDevelop .profile-card.selected') ||
+                     document.querySelector('#goalCardsReview .profile-card.selected');
   const approach   = approachEl ? approachEl.dataset.value : 'any';
   const goal       = goalEl     ? goalEl.dataset.value     : 'any';
   const ctx        = document.getElementById('profileContext').value.trim();
@@ -1607,12 +1631,12 @@ function saveProfile() {
 }
 
 // Goal card selection — only one selected across all groups
-document.querySelectorAll('#goalCards, #goalCardsProduct, #goalCardsDevelop').forEach(group => {
+document.querySelectorAll('#goalCards, #goalCardsProduct, #goalCardsDevelop, #goalCardsReview').forEach(group => {
   group.addEventListener('click', function(e) {
     const card = e.target.closest('.profile-card');
     if (!card) return;
     // Deselect all in ALL groups
-    document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('#goalCards .profile-card, #goalCardsProduct .profile-card, #goalCardsDevelop .profile-card, #goalCardsReview .profile-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
   });
 });
@@ -2241,7 +2265,8 @@ function setPhase(n, status, msg) {
 }
 
 function updateProgress(pct) {
-  document.getElementById('progBar').style.width = pct + '%';
+  const bar = document.getElementById('progBar');
+  if (bar) bar.style.width = pct + '%';
 }
 
 function addLog(msg, type='info') {
@@ -2376,7 +2401,8 @@ function handleEvent(ev) {
     });
     document.getElementById('statusBadge').textContent = 'ERROR';
     document.getElementById('statusBadge').className = 'badge error';
-    document.getElementById('progBar').style.background = 'var(--err)';
+    const progBar = document.getElementById('progBar');
+    if (progBar) progBar.style.background = 'var(--err)';
     stopSpriteAnim();
     // Show user-friendly error in ideas grid
     const grid = document.getElementById('ideasGrid');
@@ -2561,6 +2587,8 @@ function _doStartPipeline() {
   document.getElementById('statusBadge').className = 'badge running';
   startTime = Date.now();
   startSpriteAnim();
+  // Reset Activity Center state for new run
+  _resetActivityCenter();
   openActivityCenter();
 
   if (es) es.close();
@@ -2572,11 +2600,12 @@ function _doStartPipeline() {
   const research_context = document.getElementById('researchContext').value.slice(0, 2000);
   const approach = document.getElementById('approachSelect').value;
   const goal = document.getElementById('goalSelect').value;
+  const mode = (goal === 'SYNTHESIS') ? 'review' : 'default';
 
   fetch('/api/run', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0' })
+    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, mode: mode, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0' })
   }).catch(err => { addLog('[ERR] Failed: ' + err, 'err'); });
 }
 
@@ -2596,15 +2625,32 @@ function stopPipeline() {
 let _owlGame = null;
 let _acSources = new Set();
 let _acGraph = {dots: [], categories: {}};
+let _chatPanel = null;
+
+function acSwitchTab(tab) {
+  document.querySelectorAll('.ac-tabs .ac-tab').forEach(t => t.classList.toggle('active', t.textContent.toLowerCase().includes(tab)));
+  document.getElementById('acTabPipeline').classList.toggle('active', tab === 'pipeline');
+  document.getElementById('acTabChat').classList.toggle('active', tab === 'chat');
+}
 
 function openActivityCenter() {
   const ac = document.getElementById('activityCenter');
   ac.classList.add('visible');
-  // Init game
+  document.getElementById('pipelineMiniBar').style.display = 'none';
+  // Init game (only start if running)
   if (!_owlGame) _owlGame = new OwlChase('owlChaseCanvas');
-  _owlGame.start();
+  if (running) _owlGame.start();
+  // Init chat panel (don't clear — preserve history on reopen)
+  if (!_chatPanel) _chatPanel = new LLMChatPanel('acChatPanel');
+  // Resume graph render loop
+  _drawGraph();
+}
+
+// Called ONLY when a new pipeline starts (not on reopen)
+function _resetActivityCenter() {
   _acSources = new Set();
   _acGraph = {dots: [], categories: {}};
+  if (_chatPanel) _chatPanel.clear();
   document.getElementById('acConsole').innerHTML = '';
   document.getElementById('acPapers').textContent = '0';
   document.getElementById('acSources').textContent = '0';
@@ -2612,18 +2658,24 @@ function openActivityCenter() {
   document.getElementById('acProgBar').style.width = '0%';
   document.getElementById('acPct').textContent = '';
   document.getElementById('acPhaseLabel').textContent = 'Starting...';
-  // Build phase list
-  const phases = ['Validate LLM', 'Fetch papers', 'Analyze trends', 'Generate ideas', 'Save results'];
+  // Build phase list based on mode
+  const goal = document.getElementById('goalSelect').value;
+  const isReview = (goal === 'SYNTHESIS');
+  const phases = isReview
+    ? ['Validate LLM', 'Fetch papers', 'Cluster papers', 'Synthesize clusters', 'Cross-cutting analysis', 'Save results']
+    : ['Validate LLM', 'Fetch papers', 'Analyze trends', 'Generate ideas', 'Save results'];
   const phaseEl = document.getElementById('acPhases');
   phaseEl.innerHTML = phases.map((p,i) => `<div class="ac-phase pending" id="acP${i}"><div class="ac-phase-dot"></div> ${p}</div>`).join('');
-  // Start graph render loop
-  _drawGraph();
 }
 
 function closeActivityCenter() {
   const ac = document.getElementById('activityCenter');
   ac.classList.remove('visible');
   if (_owlGame) _owlGame.stop();
+  // Show mini bar if pipeline still running
+  if (running) {
+    document.getElementById('pipelineMiniBar').style.display = 'flex';
+  }
 }
 
 // Live graph: dots grouped by category
@@ -2700,8 +2752,21 @@ function _addGraphDot(cat, source) {
 
 // Hook SSE events to Activity Center
 function acHandleEvent(data) {
-  if (!document.getElementById('activityCenter').classList.contains('visible')) return;
   const ev = data.event;
+
+  // Always feed chat panel (even when AC closed, so history persists)
+  if (_chatPanel) _chatPanel.handleEvent(data);
+
+  // Only update visual elements if AC is visible
+  if (!document.getElementById('activityCenter').classList.contains('visible')) {
+    // Update mini bar progress even when closed
+    if (ev === 'phase' && data.phase !== undefined) {
+      const totalPhases = document.querySelectorAll('#acPhases .ac-phase').length - 1;
+      const pct = Math.round((data.phase / Math.max(totalPhases, 1)) * 100);
+      document.getElementById('miniBarPct').textContent = pct + '%';
+    }
+    return;
+  }
 
   // Console log
   if (data.msg) {
@@ -2734,24 +2799,55 @@ function acHandleEvent(data) {
   // Phase changes
   if (ev === 'phase') {
     const p = data.phase;
-    // Update phase list
-    for (let i = 0; i < 5; i++) {
-      const el = document.getElementById('acP' + i);
-      if (!el) continue;
+    // Update phase list (dynamic count)
+    const phaseEls = document.querySelectorAll('#acPhases .ac-phase');
+    phaseEls.forEach((el, i) => {
       if (i < p) el.className = 'ac-phase done';
       else if (i === p) el.className = 'ac-phase active';
       else el.className = 'ac-phase pending';
-    }
-    // Progress
-    const pct = Math.round((p / 4) * 100);
+    });
+    // Progress (dynamic based on total phases)
+    const totalPhases = document.querySelectorAll('#acPhases .ac-phase').length - 1;
+    const pct = Math.round((p / Math.max(totalPhases, 1)) * 100);
     document.getElementById('acProgBar').style.width = pct + '%';
     document.getElementById('acPct').textContent = pct + '%';
     document.getElementById('acPhaseLabel').textContent = data.msg || `Phase ${p}`;
+    // Update mini bar too
+    document.getElementById('miniBarPct').textContent = pct + '%';
   }
 
   // Phase 1 done
   if (ev === 'phase1_done') {
     document.getElementById('acPapers').textContent = data.total || 0;
+  }
+
+  // Cluster formed (Review mode) → regroup graph dots by cluster
+  if (ev === 'cluster_form' && data.cluster_name) {
+    // Add cluster as a new "category" in graph and redistribute dots
+    const clusterName = data.cluster_name;
+    if (!_acGraph.categories[clusterName]) {
+      _acGraph.categories[clusterName] = 0;
+    }
+    // Move some dots to this cluster
+    const count = data.count || 3;
+    const canvas = document.getElementById('acGraphCanvas');
+    const W = canvas.width, H = canvas.height;
+    const cats = Object.keys(_acGraph.categories);
+    const catIdx = cats.indexOf(clusterName);
+    const catCount = cats.length || 1;
+    const cx = (catIdx + 0.5) * (W / catCount);
+    // Reassign unassigned dots to this cluster
+    let assigned = 0;
+    for (const dot of _acGraph.dots) {
+      if (assigned >= count) break;
+      if (dot.cat === 'unknown' || !cats.includes(dot.cat)) {
+        dot.cat = clusterName;
+        dot.tx = cx + (Math.random() - 0.5) * 30;
+        dot.ty = H - 16 - (assigned % 10) * 5;
+        assigned++;
+      }
+    }
+    _acGraph.categories[clusterName] += assigned;
   }
 
   // Ideas generated → glow category in graph
@@ -2769,6 +2865,7 @@ function acHandleEvent(data) {
     document.getElementById('acProgBar').style.width = '100%';
     document.getElementById('acPct').textContent = '100%';
     document.getElementById('acIdeas').textContent = data.ideas || 0;
+    document.getElementById('pipelineMiniBar').style.display = 'none';
     if (_owlGame) _owlGame.onPhaseChange('done');
     // Auto-close after 2 seconds
     setTimeout(closeActivityCenter, 2000);

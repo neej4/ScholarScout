@@ -126,7 +126,7 @@ class PubMedFetcher(BaseFetcher):
         for attempt in range(3):
             try:
                 req = urllib.request.Request(url)
-                req.add_header("User-Agent", "ScholarScout/1.5")
+                req.add_header("User-Agent", "ScholarScout")
                 with urllib.request.urlopen(req, timeout=15) as resp:
                     data = json.loads(resp.read().decode())
                     return data.get("esearchresult", {}).get("idlist", [])
@@ -148,7 +148,7 @@ class PubMedFetcher(BaseFetcher):
         for attempt in range(3):
             try:
                 req = urllib.request.Request(url)
-                req.add_header("User-Agent", "ScholarScout/1.5")
+                req.add_header("User-Agent", "ScholarScout")
                 with urllib.request.urlopen(req, timeout=20) as resp:
                     xml_content = resp.read().decode("utf-8", errors="ignore")
                     return self._parse_xml(xml_content, category)

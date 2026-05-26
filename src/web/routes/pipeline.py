@@ -64,6 +64,11 @@ def api_run():
             elif env_key:
                 env[env_key] = str(val)
 
+        # Pipeline mode (default or review)
+        mode = body.get("mode", "default")
+        if mode:
+            env["SCOUT_MODE"] = mode
+
         # Append uploaded file context to SCOUT_CONTEXT (if any)
         from src.web.routes.upload import get_uploaded_context
         uploaded = get_uploaded_context()

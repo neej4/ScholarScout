@@ -74,7 +74,7 @@ class DBLPFetcher(BaseFetcher):
         for attempt in range(3):
             try:
                 req = urllib.request.Request(url)
-                req.add_header("User-Agent", "ScholarScout/1.5")
+                req.add_header("User-Agent", "ScholarScout")
 
                 with urllib.request.urlopen(req, timeout=15) as resp:
                     data = json.loads(resp.read().decode())

@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Callable, Optional, Dict
 
 from src.core.config import Config
-from src.core.models import Paper, ProjectIdea
+from src.core.models import Paper, ProjectIdea, ReviewCluster, ReviewOutput
 from src.core.fetchers.arxiv_fetcher import ArxivFetcher
 from src.core.fetchers.openalex_fetcher import OpenAlexFetcher
 from src.core.fetchers.semanticscholar_fetcher import SemanticScholarFetcher
@@ -139,7 +139,7 @@ class Orchestrator:
         open(Config.PROGRESS_FILE, "w").close()
 
         # ─── PHASE 0: Validate LLM ───────────────────────────────────────────────
-        self._emit("start", msg="ScholarScout v1.0 starting",
+        self._emit("start", msg="ScholarScout starting",
              total_cats=len(Config.CATEGORIES), 
              date_range=f"{Config.START_DATE.strftime('%Y-%m-%d')} -> {Config.TODAY_STR}",
              model=Config.OPENROUTER_MODEL)
@@ -408,3 +408,143 @@ class Orchestrator:
              difficulty_breakdown=diff_counts,
              errors=errors,
              msg=f"Pipeline complete: {len(all_papers)} papers, {len(all_ideas)} ideas")
+
+    def run_review_pipeline(self, topic: str = ''):
+        """
+        Run the Review Mode pipeline: fetch → cluster → synthesize → cross-cutting map.
+        Output is a ReviewOutput (literature map), not ideas.
+        """
+        from src.core.clusterer import PaperClusterer
+        from src.core.synthesizer import LiteratureSynthesizer
+
+        open(Config.PROGRESS_FILE, "w").close()
+        topic = topic or self.research_context or 'general'
+
+        # ─── PHASE 0: Validate LLM ───────────────────────────────────────────
+        self._emit("start", msg=f"Review Mode: '{topic}'", model=Config.LLM_MODEL)
+        try:
+            ping_ok, ping_err = self.llm_client.ping()
+        except Exception as e:
+            ping_ok, ping_err = False, str(e)
+
+        if not ping_ok:
+            self._emit("fatal_error", msg=f"LLM unreachable. {ping_err}")
+            self._emit("done", papers=0, ideas=0, errors=["LLM ping failed"], msg="Review aborted")
+            return
+
+        self._emit("phase", phase=0, msg="LLM validated OK")
+
+        # ─── PHASE 1: Fetch papers by topic ──────────────────────────────────
+        self._emit("phase", phase=1, msg=f"Fetching papers for topic: {topic}")
+        all_papers: List[Paper] = []
+        seen_titles = set()
+        errors = []
+
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        # For review mode, fetch from ALL sources using topic as keyword
+        def _fetch_topic(name, fetcher):
+            try:
+                # Use first category or 'cs.AI' as fallback for API compatibility
+                cat = Config.CATEGORIES[0] if Config.CATEGORIES else 'cs.AI'
+                return (name, fetcher.fetch_papers(category=cat, max_results=15))
+            except Exception:
+                return (name, [])
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {
+                executor.submit(_fetch_topic, name, fetcher): name
+                for name, fetcher in list(self.all_fetchers.items())[:5]
+            }
+            for future in as_completed(futures):
+                source_name, papers = future.result()
+                for p in papers:
+                    key = p.title.lower().strip()
+                    if key not in seen_titles:
+                        seen_titles.add(key)
+                        all_papers.append(p)
+                        self._emit("paper_found", source=p.source, cat=p.category,
+                             msg=f"[{source_name}] {p.title[:50]}...")
+
+        self._emit("phase1_done", total=len(all_papers),
+             msg=f"Phase 1 done: {len(all_papers)} papers fetched")
+
+        if len(all_papers) < 5:
+            self._emit("fatal_error", msg="Not enough papers for review (need at least 5)")
+            self._emit("done", papers=len(all_papers), ideas=0, errors=errors, msg="Review aborted")
+            return
+
+        # ─── PHASE 2: Cluster papers ─────────────────────────────────────────
+        self._emit("phase", phase=2, msg="Clustering papers into themes...")
+        clusterer = PaperClusterer(llm_client=self.llm_client)
+        n_clusters = min(6, max(3, len(all_papers) // 8))
+        raw_clusters = clusterer.cluster(all_papers, n_clusters=n_clusters)
+
+        self._emit("phase2_done", msg=f"Phase 2 done: {len(raw_clusters)} clusters formed")
+        for c in raw_clusters:
+            self._emit("cluster_form", cluster_name=c["name"], count=len(c["papers"]),
+                 msg=f"Cluster: {c['name']} ({len(c['papers'])} papers)")
+
+        # ─── PHASE 3: Synthesize per cluster ──────────────────────────────────
+        self._emit("phase", phase=3, msg="Synthesizing literature per cluster...")
+        synthesizer = LiteratureSynthesizer(self.llm_client)
+        cluster_summaries = []
+
+        for c in raw_clusters:
+            self._emit("gen_start", cat=c["name"], msg=f"Synthesizing: {c['name']}...")
+            summary = synthesizer.synthesize_cluster(c["name"], c["papers"])
+            cluster_summaries.append(summary)
+            self._emit("cat_ideas", cat=c["name"], total=len(cluster_summaries),
+                 msg=f"Synthesized: {c['name']}")
+            time.sleep(3)
+
+        # ─── PHASE 4: Cross-cutting analysis ──────────────────────────────────
+        self._emit("phase", phase=4, msg="Building cross-cutting analysis...")
+        cross_cutting = synthesizer.cross_cutting_analysis(cluster_summaries, all_papers)
+
+        # ─── PHASE 5: Save results ───────────────────────────────────────────
+        self._emit("phase", phase=5, msg="Saving review output...")
+
+        # Build ReviewOutput
+        review_clusters = [
+            ReviewCluster(
+                name=s["name"],
+                paper_count=s["paper_count"],
+                methodology_summary=s["methodology_summary"],
+                key_findings=s["key_findings"],
+                gaps=s["gaps"],
+                keywords=raw_clusters[i].get("keywords", []) if i < len(raw_clusters) else [],
+                papers=s["papers"],
+            )
+            for i, s in enumerate(cluster_summaries)
+        ]
+
+        review_output = ReviewOutput(
+            topic=topic,
+            paper_count=len(all_papers),
+            clusters=review_clusters,
+            timeline=cross_cutting.get("timeline", ""),
+            debates=cross_cutting.get("debates", ""),
+            open_questions=cross_cutting.get("open_questions", []),
+            reading_list=cross_cutting.get("reading_list", []),
+        )
+
+        # Save snapshot
+        run_timestamp = datetime.now(timezone.utc).isoformat()
+        snapshot_data = {
+            "run_date": Config.TODAY_STR,
+            "run_timestamp": run_timestamp,
+            "mode": "review",
+            "topic": topic,
+            "model": Config.LLM_MODEL,
+            "papers_total": len(all_papers),
+            "clusters_total": len(review_clusters),
+            "review": review_output.to_dict(),
+        }
+        with open(Config.SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+            json.dump(snapshot_data, f, indent=2, ensure_ascii=False)
+
+        self._emit("done",
+             papers=len(all_papers), ideas=len(review_clusters),
+             mode="review",
+             msg=f"Review complete: {len(all_papers)} papers, {len(review_clusters)} clusters")
