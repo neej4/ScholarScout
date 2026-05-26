@@ -22,6 +22,12 @@
   <a href="https://youtu.be/gz_UAxNOenw">
     <img src="https://img.shields.io/badge/▶_Watch_Demo-YouTube-red?style=for-the-badge&logo=youtube" alt="Watch Demo on YouTube">
   </a>
+  <a href="https://scholarscout.pages.dev">
+    <img src="https://img.shields.io/badge/Web-scholarscout.pages.dev-blue?style=for-the-badge&logo=cloudflare" alt="Website">
+  </a>
+  <a href="https://ko-fi.com/scholarscout">
+    <img src="https://img.shields.io/badge/Donate-Ko--fi-ff5e5b?style=for-the-badge&logo=ko-fi" alt="Donate on Ko-fi">
+  </a>
 </p>
 
 <p align="center">
