@@ -19,6 +19,12 @@
 </p>
 
 <p align="center">
+  <a href="https://youtu.be/gz_UAxNOenw">
+    <img src="https://img.shields.io/badge/▶_Watch_Demo-YouTube-red?style=for-the-badge&logo=youtube" alt="Watch Demo on YouTube">
+  </a>
+</p>
+
+<p align="center">
   <img src="docs/screenshot-ideas.png" alt="Idea Cards" width="700">
 </p>
 
