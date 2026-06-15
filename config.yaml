@@ -1,7 +1,0 @@
-app:
-  max_ideas: 10
-llm:
-  api_key: ''
-  base_url: http://localhost:20128/v1/chat/completions
-  model: gh/gpt-4.1
-  provider: custom
