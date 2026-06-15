@@ -1,5 +1,6 @@
 import os
 import yaml
+import math
 from datetime import datetime, timedelta, timezone
 
 class Config:
@@ -23,7 +24,7 @@ class Config:
     
     _s = os.environ.get("SCOUT_START_DATE", "")
     _e = os.environ.get("SCOUT_END_DATE", "")
-    START_DATE = datetime.fromisoformat(_s + "T00:00:00+00:00") if _s else TODAY - timedelta(days=10)
+    START_DATE = datetime.fromisoformat(_s + "T00:00:00+00:00") if _s else TODAY - timedelta(days=21)
     END_DATE   = datetime.fromisoformat(_e + "T23:59:59+00:00") if _e else TODAY
     
     # ─── FILE PATHS ─────────────────────────────────────────────────────────────
@@ -99,6 +100,11 @@ class Config:
     OPENROUTER_KEY = LLM_API_KEY
     OPENROUTER_MODEL = LLM_MODEL
     OPENROUTER_URL = LLM_BASE_URL
+
+    # Optional integration credentials (env first, then config.yaml)
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "") or _yaml_data.get("github_token", "")
+    KAGGLE_USERNAME = os.environ.get("KAGGLE_USERNAME", "") or _yaml_data.get("kaggle_username", "")
+    KAGGLE_KEY = os.environ.get("KAGGLE_KEY", "") or _yaml_data.get("kaggle_key", "")
     
     # ─── PIPELINE SETTINGS ─────────────────────────────────────────────────────
     MAX_IDEAS     = int(os.environ.get("SCOUT_MAX_IDEAS", _app_conf.get("max_ideas", 50)))
@@ -133,7 +139,9 @@ class Config:
     
     @classmethod
     def get_ideas_per_category(cls) -> int:
-        return max(1, round(cls.MAX_IDEAS / len(cls.CATEGORIES)) + 1)
+        if not cls.CATEGORIES:
+            return max(1, cls.MAX_IDEAS)
+        return max(1, math.ceil(cls.MAX_IDEAS / len(cls.CATEGORIES)))
 
     @classmethod
     def reload(cls):
@@ -150,6 +158,9 @@ class Config:
         cls.LLM_API_KEY = _llm.get("api_key", cls.LLM_API_KEY)
         cls.LLM_MODEL = _llm.get("model", cls.LLM_MODEL) or cls._provider_defaults.get(cls.LLM_PROVIDER, "")
         cls.LLM_BASE_URL = _llm.get("base_url", "") or cls._provider_urls.get(cls.LLM_PROVIDER, "")
+        cls.GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "") or cls._yaml_data.get("github_token", "")
+        cls.KAGGLE_USERNAME = os.environ.get("KAGGLE_USERNAME", "") or cls._yaml_data.get("kaggle_username", "")
+        cls.KAGGLE_KEY = os.environ.get("KAGGLE_KEY", "") or cls._yaml_data.get("kaggle_key", "")
         
         if cls.LLM_PROVIDER != "gemini" and cls.LLM_BASE_URL and "chat/completions" not in cls.LLM_BASE_URL:
             cls.LLM_BASE_URL = cls.LLM_BASE_URL.rstrip("/") + "/chat/completions"

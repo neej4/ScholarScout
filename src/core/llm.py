@@ -66,10 +66,11 @@ PROVIDERS = {
 
 # ─── Token budget presets per task type ──────────────────────────────────────────
 TOKEN_BUDGETS = {
-    "ping": 10,
+    "ping": 64,
     "trend_analysis": 600,
-    "idea_generation": 3000,
-    "deep_dive": 2000,
+    "idea_generation": 4096,
+    "deep_dive": 3000,
+    "chat": 800,
     "default": 1500,
 }
 
@@ -99,6 +100,31 @@ class LLMClient:
             except Exception:
                 pass
 
+    def _extract_choice_text(self, choice: dict) -> str:
+        """Extract useful text from one OpenAI-compatible choice object.
+
+        Some reasoning models may leave message.content empty while placing text in
+        message.reasoning_content. For health checks, either indicates the endpoint is
+        alive and speaking the expected protocol.
+        """
+        if not isinstance(choice, dict):
+            return ""
+
+        content = choice.get("delta", {}).get("content", "")
+        if content:
+            return content
+
+        message = choice.get("message", {})
+        content = message.get("content", "")
+        if content:
+            return content
+
+        reasoning = message.get("reasoning_content", "")
+        if reasoning:
+            return reasoning
+
+        return ""
+
     def get_token_stats(self) -> dict:
         """Return token usage statistics."""
         return {
@@ -121,6 +147,123 @@ class LLMClient:
             return self._call_gemini(prompt, retries, task_type)
         else:
             return self._call_openai_compatible(prompt, retries, task_type)
+
+    def call_chat(self, messages: list, retries: int = 2, task_type: str = "chat") -> Optional[str]:
+        """Multi-turn chat call. Accepts a list of {role, content} messages.
+
+        Args:
+            messages: List of dicts with 'role' (system/user/assistant) and 'content'.
+            retries: Number of retries on failure.
+            task_type: Token budget key.
+
+        Returns:
+            Assistant response text, or None on failure.
+        """
+        if self.provider == "gemini":
+            return self._call_gemini_chat(messages, retries, task_type)
+        else:
+            return self._call_openai_chat(messages, retries, task_type)
+
+    def _call_gemini_chat(self, messages: list, retries: int, task_type: str) -> Optional[str]:
+        """Multi-turn Gemini call (converts messages to Gemini contents format)."""
+        if not self.api_key:
+            return None
+
+        max_tokens = TOKEN_BUDGETS.get(task_type, TOKEN_BUDGETS["default"])
+        url = self.base_url.format(model=self.model) + f"?key={self.api_key}"
+
+        # Convert OpenAI-style messages to Gemini contents format
+        contents = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            # Gemini uses "user" and "model" (not "assistant")
+            gemini_role = "model" if role == "assistant" else "user"
+            # Skip system messages — prepend to first user message
+            if role == "system":
+                continue
+            contents.append({"role": gemini_role, "parts": [{"text": msg["content"]}]})
+
+        # Prepend system message to first user content if present
+        system_msgs = [m["content"] for m in messages if m.get("role") == "system"]
+        if system_msgs and contents:
+            contents[0]["parts"][0]["text"] = system_msgs[0] + "\n\n" + contents[0]["parts"][0]["text"]
+
+        payload = json.dumps({
+            "contents": contents,
+            "generationConfig": {"temperature": 0.8, "maxOutputTokens": max_tokens}
+        }).encode("utf-8")
+
+        for attempt in range(retries + 1):
+            try:
+                req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        self.total_calls += 1
+                        return parts[0].get("text", "")
+                return None
+            except Exception:
+                if attempt < retries:
+                    time.sleep(3 * (attempt + 1))
+        return None
+
+    def _call_openai_chat(self, messages: list, retries: int, task_type: str) -> Optional[str]:
+        """Multi-turn OpenAI-compatible call."""
+        no_key_needed = self.provider in ("ollama", "custom")
+        if not self.api_key and not no_key_needed:
+            return None
+        if not self.base_url:
+            return None
+
+        max_tokens = TOKEN_BUDGETS.get(task_type, TOKEN_BUDGETS["default"])
+
+        payload = json.dumps({
+            "model": self.model,
+            "messages": messages,
+            "temperature": 0.8,
+            "max_tokens": max_tokens,
+            "stream": False,
+        }).encode("utf-8")
+
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        if self.provider == "openrouter":
+            headers["HTTP-Referer"] = "https://scholarscout.app"
+            headers["X-Title"] = "ScholarScout"
+
+        for attempt in range(retries + 1):
+            try:
+                req = urllib.request.Request(self.base_url, data=payload, headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    raw = resp.read().decode("utf-8", errors="ignore")
+
+                # Parse response — handle both JSON and SSE formats
+                # First try direct JSON parse
+                try:
+                    response_data = json.loads(raw.strip())
+                    if "choices" in response_data:
+                        content = self._extract_choice_text(response_data["choices"][0])
+                        if content:
+                            self.total_calls += 1
+                            return content.strip()
+                except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+                    pass
+
+                # Fallback: use _parse_response for SSE/hybrid formats
+                text = self._parse_response(raw)
+                if text:
+                    self.total_calls += 1
+                    return text
+
+                return None
+            except Exception:
+                if attempt < retries:
+                    time.sleep(3 * (attempt + 1))
+        return None
 
     def _call_gemini(self, prompt: str, retries: int, task_type: str) -> Optional[str]:
         """Call Google Gemini API (different format from OpenAI)."""
@@ -276,11 +419,7 @@ class LLMClient:
             try:
                 obj = json.loads(chunk)
                 choice = obj.get("choices", [{}])[0]
-                # streaming delta
-                content = choice.get("delta", {}).get("content", "")
-                # or non-streaming message (some providers mix formats)
-                if not content:
-                    content = choice.get("message", {}).get("content", "")
+                content = self._extract_choice_text(choice)
                 if content:
                     parts.append(content)
             except (json.JSONDecodeError, IndexError, KeyError):
@@ -312,9 +451,9 @@ class LLMClient:
             try:
                 data = json.loads(json_part)
                 # Standard OpenAI-compatible response
-                content = data["choices"][0]["message"]["content"].strip()
-                return content
-            except (json.JSONDecodeError, KeyError, IndexError):
+                content = self._extract_choice_text(data["choices"][0])
+                return content.strip() if content else ""
+            except (json.JSONDecodeError, KeyError, IndexError, TypeError):
                 pass
 
         # Last resort: try full SSE parse on the whole thing
@@ -382,9 +521,39 @@ class LLMClient:
         finally:
             self.emit_fn = _orig_emit
 
-        msg = last_error or f"LLM unreachable. Provider: {self.provider}, Model: {self.model}"
+        msg = self._format_ping_error(last_error)
         self._emit("fatal_error", msg=msg)
         return False, msg
+
+    def _format_ping_error(self, last_error: str) -> str:
+        """Translate low-level ping failures into actionable setup hints."""
+        if last_error:
+            base = last_error
+        else:
+            base = f"LLM unreachable. Provider: {self.provider}, Model: {self.model}"
+
+        lower = base.lower()
+        hint = ""
+        is_local = self.provider in ("ollama", "custom") or (
+            self.base_url and ("localhost" in self.base_url or "127.0.0.1" in self.base_url)
+        )
+
+        if "api key" in lower:
+            return base
+        if "base url is empty" in lower:
+            return base
+        if is_local and ("connection refused" in lower or "failed to establish" in lower or "timed out" in lower):
+            hint = " Local endpoint may not be running, or the /v1 path/model name may be wrong."
+        elif "404" in lower:
+            hint = " Endpoint path may be wrong for this provider."
+        elif "401" in lower or "403" in lower:
+            hint = " API key may be invalid or missing access to this model."
+        elif "model" in lower and ("not found" in lower or "does not exist" in lower):
+            hint = " Check the exact model identifier in Settings."
+        elif "unreachable" in lower:
+            hint = " Check provider status, base URL, and model settings."
+
+        return (base + hint).strip()
 
     def _call_with_timeout(self, prompt: str, task_type: str, timeout: int) -> Optional[str]:
         """

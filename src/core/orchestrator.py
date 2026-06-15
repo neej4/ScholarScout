@@ -3,6 +3,7 @@ import csv
 import os
 import time
 import random
+import math
 import traceback
 from datetime import datetime, timezone, timedelta
 from typing import List, Callable, Optional, Dict
@@ -36,6 +37,9 @@ class Orchestrator:
         self.goal = os.environ.get('SCOUT_GOAL', 'any')
         self.refine = os.environ.get('SCOUT_REFINE', '0') == '1'
         self.sensitivity = os.environ.get('SCOUT_SENSITIVITY', '0') == '1'
+        self.force_refresh = os.environ.get('SCOUT_FORCE_REFRESH', '0') == '1'
+        self.user_profile = os.environ.get('SCOUT_USER_PROFILE', '')
+        self.feedback_summary = os.environ.get('SCOUT_FEEDBACK_SUMMARY', '')
         self.llm_client = LLMClient(emit_fn=self._emit)
         
         # Initialize multi-source fetchers (all available)
@@ -123,6 +127,10 @@ class Orchestrator:
             "idea_title", "field", "difficulty", "cost_estimate", "cost_note",
             "why_hard", "resources_needed", "abstract", "inspired_by",
             "inspiration_title", "inspiration_link", "generated_date",
+            "grounding_score", "risk_flags", "source_papers", "evidence_claims",
+            "critique_summary", "refinement_summary", "novelty_claim",
+            "feasibility_warning", "fit_to_user_summary", "misalignment_flags",
+            "user_fit_score", "refined",
         ]
         with open(Config.OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fields, quoting=csv.QUOTE_ALL, extrasaction="ignore")
@@ -185,11 +193,11 @@ class Orchestrator:
 
         # ─── PHASE 1: Fetching (Multi-Source, Parallel per category) ────────────
         # Calculate how many papers we actually need based on desired ideas
-        ideas_per_cat = Config.get_ideas_per_category()
-        papers_per_cat = max(7, min(30, ideas_per_cat * 3))  # 3 papers per idea, capped 7-30
+        base_ideas_per_cat = Config.get_ideas_per_category()
+        papers_per_cat = max(7, min(30, base_ideas_per_cat * 3))  # 3 papers per idea, capped 7-30
         
         self._emit("phase", phase=1, 
-             msg=f"Fetching ~{papers_per_cat} papers/category for {ideas_per_cat} ideas/category...",
+             msg=f"Fetching ~{papers_per_cat} papers/category for ~{base_ideas_per_cat} ideas/category...",
              date_from=Config.START_DATE.strftime("%Y-%m-%d"), 
              date_to=Config.END_DATE.strftime("%Y-%m-%d"),
              cached=cached_total)
@@ -229,7 +237,7 @@ class Orchestrator:
                         source=v.get("source", "cache"),
                         citations=v.get("citations", 0),
                     ))
-            if len(cached_for_cat) >= papers_per_cat:
+            if len(cached_for_cat) >= papers_per_cat and not self.force_refresh:
                 # ── Paper freshness: prioritize least-used papers ──
                 # Each paper tracks _used_count in cache. Sort by usage (ascending)
                 # so papers that haven't been used for idea generation get picked first.
@@ -374,22 +382,26 @@ class Orchestrator:
 
         # ─── PHASE 3: Idea Generation ────────────────────────────────────────────
         self._emit("phase", phase=3, msg="Generating ideas via LLM...")
-        ideas_per_cat = Config.get_ideas_per_category()
         
-        for trend in trends:
+        for idx, trend in enumerate(trends):
             if len(all_ideas) >= Config.MAX_IDEAS: 
                 break
+            remaining_slots = Config.MAX_IDEAS - len(all_ideas)
+            categories_left = max(1, len(trends) - idx)
+            ideas_for_cat = max(1, math.ceil(remaining_slots / categories_left))
             
             self._emit("gen_start", cat=trend.category, 
-                 msg=f"Generating {ideas_per_cat} ideas for {trend.category}...")
+                 msg=f"Generating {ideas_for_cat} ideas for {trend.category}...")
             try:
                 ideas = self.generator.generate(
-                    trend, seen_titles, n=ideas_per_cat,
+                    trend, seen_titles, n=ideas_for_cat,
                     research_context=self.research_context,
                     language=self.language,
                     approach=self.approach,
                     goal=self.goal,
                     refine=self.refine,
+                    user_profile=self.user_profile,
+                    feedback_summary=self.feedback_summary,
                 )
             except Exception as e:
                 self._emit("gen_error", cat=trend.category, msg=f"Generation failed {trend.category}: {e}")
@@ -419,6 +431,8 @@ class Orchestrator:
             "run_timestamp": run_timestamp,
             "model": Config.LLM_MODEL,
             "approach": self.approach,
+            "user_profile": self.user_profile,
+            "feedback_summary": self.feedback_summary,
             "categories": list(cat_counts.keys()),
             "papers_total": len(all_papers), 
             "ideas_total": len(all_ideas),
@@ -441,6 +455,7 @@ class Orchestrator:
             "date": Config.TODAY_STR,
             "categories": list(cat_counts.keys()),
             "approach": self.approach,
+            "user_profile": self.user_profile,
             "papers_total": len(all_papers),
             "ideas_total": len(all_ideas),
             "ideas": [idea.to_dict() for idea in all_ideas],

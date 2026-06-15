@@ -49,3 +49,16 @@ htmlcov/
 TASK_*.md
 test_*.html
 debug_test.py
+dashboard_restore_snapshot.html
+
+# Local app state / experiments
+*.local
+*.cache
+*.log
+
+# Runtime snapshots and scratch exports
+data/snapshot_*.json
+data/scholarscout_ideas_*.csv
+data/pipeline_progress.jsonl
+data/session_history.json
+data/papers_cache.json

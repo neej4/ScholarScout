@@ -4,9 +4,74 @@ import json
 import os
 from typing import List, Set, Optional
 
+from src.core.evidence import build_evidence_pack
 from src.core.models import TrendAnalysis, ProjectIdea
 from src.core.llm import LLMClient
 from src.core.config import Config
+from src.core.personalization import build_personalization_brief
+
+
+def _repair_truncated_json(text: str) -> Optional[list]:
+    """Attempt to recover ideas from truncated JSON output.
+
+    When LLM runs out of tokens mid-response, the JSON is incomplete.
+    Strategy: find all complete JSON objects within the array, ignore the last broken one.
+    """
+    # Try to find the array start
+    start = text.find('[')
+    if start < 0:
+        # Maybe it's a single object
+        start = text.find('{')
+        if start < 0:
+            return None
+        # Try to close it
+        text = text[start:]
+        # Find last complete }
+        last_brace = text.rfind('}')
+        if last_brace > 0:
+            try:
+                obj = json.loads(text[:last_brace + 1])
+                return [obj] if isinstance(obj, dict) else None
+            except Exception:
+                return None
+        return None
+
+    text = text[start:]
+
+    # Strategy: try progressively shorter substrings until we get valid JSON
+    # Find all } positions and try closing the array there
+    objects = []
+    depth = 0
+    obj_start = -1
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == '{' and depth == 0:
+            obj_start = i
+            depth = 1
+        elif ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0 and obj_start >= 0:
+                # Found a complete object
+                try:
+                    obj = json.loads(text[obj_start:i + 1])
+                    if isinstance(obj, dict) and obj.get("idea_title"):
+                        objects.append(obj)
+                except Exception:
+                    pass
+                obj_start = -1
+        elif ch == '"':
+            # Skip string content (handle escaped quotes)
+            i += 1
+            while i < len(text) and text[i] != '"':
+                if text[i] == '\\':
+                    i += 1  # skip escaped char
+                i += 1
+        i += 1
+
+    return objects if objects else None
 
 
 # Goals that trigger PRODUCT mode (output = buildable product, not research paper)
@@ -60,11 +125,33 @@ class IdeaGenerator:
     def __init__(self, llm_client: LLMClient):
         self.llm = llm_client
 
+    @staticmethod
+    def _coerce_int(value, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _evidence_kwargs(self, raw_idea: dict, available_papers: list, fallback_papers: list) -> dict:
+        pack = build_evidence_pack(raw_idea, available_papers, fallback_papers=fallback_papers)
+        return {
+            "source_papers": pack["source_papers"],
+            "evidence_claims": pack["evidence_claims"],
+            "grounding_score": pack["grounding_score"],
+            "risk_flags": pack["risk_flags"],
+        }
+
     def _is_product_mode(self, goal: str) -> bool:
         return goal.upper() in PRODUCT_GOALS
 
     def _is_develop_mode(self, goal: str) -> bool:
         return goal.upper() in DEVELOP_GOALS
+
+    def _personalization_block(self, user_profile: str = "", feedback_summary: str = "") -> str:
+        brief = build_personalization_brief(user_profile, feedback_summary).strip()
+        if not brief:
+            return ""
+        return f"\n{brief}\nUse this profile to prefer fit-to-user over generic impressiveness.\n"
 
     def _load_skill_constraints(self, goal: str) -> str:
         """Load skill file from REVIEW/, DEVELOP/, PRODUCT/, or ACADEMIC/ subfolder."""
@@ -94,7 +181,8 @@ class IdeaGenerator:
     def generate(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
                  research_context: str = '', language: str = 'en',
                  approach: str = 'any', goal: str = 'any',
-                 refine: bool = False) -> List[ProjectIdea]:
+                 refine: bool = False, user_profile: str = '',
+                 feedback_summary: str = '') -> List[ProjectIdea]:
         """Route to academic, product, or develop generator based on goal.
         
         If n > CHUNK_SIZE, splits into multiple LLM calls to avoid truncated JSON.
@@ -114,7 +202,8 @@ class IdeaGenerator:
             batch_size = min(remaining, self.CHUNK_SIZE)
             try:
                 batch = gen_fn(trend, existing_titles, batch_size,
-                               research_context, language, approach, goal)
+                               research_context, language, approach, goal,
+                               user_profile, feedback_summary)
                 ideas.extend(batch)
             except Exception as e:
                 self.llm._emit("llm_error", msg=f"Batch generation failed: {e}")
@@ -126,7 +215,7 @@ class IdeaGenerator:
 
         # Optional self-distillation refinement step
         if refine and ideas:
-            ideas = self._refine_ideas(ideas, language)
+            ideas = self._refine_ideas_with_critique(ideas, language, user_profile, feedback_summary)
 
         return ideas
 
@@ -203,8 +292,123 @@ Respond ONLY with valid JSON array. No markdown, no explanation.
 
     # ─── DEVELOP MODE ───────────────────────────────────────────────────────────
 
+    def _refine_ideas_with_critique(self, ideas: List[ProjectIdea], language: str = 'en',
+                                    user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
+        """
+        Stronger refinement pass that critiques each draft idea before rewriting it.
+        Keeps the same idea count while surfacing what improved for the user.
+        """
+        if not ideas:
+            return ideas
+
+        ideas_json = json.dumps([i.to_dict() for i in ideas], ensure_ascii=False, indent=1)
+        lang_hint = "Respond in Bahasa Indonesia." if language == "id" else ""
+        personalization = self._personalization_block(user_profile, feedback_summary)
+
+        prompt = textwrap.dedent(f"""
+You are a strict research advisor doing an internal critique-and-rewrite pass on draft ideas.
+Your job is to KEEP the same ideas, but make each one stronger, more specific, and more honest.
+{personalization}
+
+For each idea below:
+1. Identify the main weakness in 1 short sentence as "critique_summary"
+2. Sharpen the title and abstract so they are less generic
+3. Improve feasibility by narrowing the scope when needed
+4. Make next_steps concrete first actions
+5. Add a clearer novelty positioning sentence as "novelty_claim"
+6. Add "feasibility_warning" when there is still a real execution risk
+7. Add "refinement_summary" explaining why the revised version is stronger
+8. Add "fit_to_user_summary" describing how well this idea matches the user's profile
+9. Add "misalignment_flags" as a short array for any remaining mismatch with the user
+10. Add "user_fit_score" from 1-10
+11. Preserve evidence-related fields and do NOT invent papers, datasets, or claims beyond the provided idea data
+
+Return the SAME number of ideas in the SAME JSON array format.
+Keep all original fields, and also include:
+- "critique_summary"
+- "refinement_summary"
+- "novelty_claim"
+- "feasibility_warning"
+- "fit_to_user_summary"
+- "misalignment_flags"
+- "user_fit_score"
+- "refined": true
+
+You may update "quality_score" if the rewritten idea becomes meaningfully stronger or more realistic.
+{lang_hint}
+
+=== IDEAS TO REFINE ===
+{ideas_json}
+=== END ===
+
+Respond ONLY with valid JSON array. No markdown, no explanation.
+""").strip()
+
+        response = self.llm.call(prompt, task_type="idea_generation")
+        if not response:
+            return ideas
+
+        try:
+            cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
+            refined_raw = json.loads(cleaned)
+            if isinstance(refined_raw, dict):
+                refined_raw = [refined_raw]
+        except Exception:
+            return ideas
+
+        for i, idea in enumerate(ideas):
+            if i >= len(refined_raw):
+                break
+            refined = refined_raw[i]
+            if refined.get("idea_title"):
+                idea.idea_title = refined["idea_title"]
+            if refined.get("abstract"):
+                idea.abstract = refined["abstract"]
+            if refined.get("why_hard"):
+                idea.why_hard = refined["why_hard"]
+            if refined.get("methodology_hint"):
+                idea.methodology_hint = refined["methodology_hint"]
+            if refined.get("next_steps"):
+                next_steps = refined["next_steps"]
+                idea.next_steps = " | ".join(next_steps[:3]) if isinstance(next_steps, list) else str(next_steps)
+            if refined.get("why_this_idea"):
+                idea.why_this_idea = refined["why_this_idea"]
+            if refined.get("resources_needed"):
+                idea.resources_needed = refined["resources_needed"]
+            if refined.get("prerequisites"):
+                prereqs = refined["prerequisites"]
+                idea.prerequisites = " | ".join(prereqs[:5]) if isinstance(prereqs, list) else str(prereqs)
+            if refined.get("critique_summary"):
+                idea.critique_summary = str(refined["critique_summary"]).strip()
+            if refined.get("refinement_summary"):
+                idea.refinement_summary = str(refined["refinement_summary"]).strip()
+            if refined.get("novelty_claim"):
+                idea.novelty_claim = str(refined["novelty_claim"]).strip()
+            if refined.get("feasibility_warning"):
+                idea.feasibility_warning = str(refined["feasibility_warning"]).strip()
+            if refined.get("fit_to_user_summary"):
+                idea.fit_to_user_summary = str(refined["fit_to_user_summary"]).strip()
+            if refined.get("misalignment_flags"):
+                misalignment = refined["misalignment_flags"]
+                if isinstance(misalignment, list):
+                    idea.misalignment_flags = [str(flag).strip() for flag in misalignment if str(flag).strip()]
+                else:
+                    idea.misalignment_flags = [str(misalignment).strip()] if str(misalignment).strip() else []
+            idea.user_fit_score = self._coerce_int(refined.get("user_fit_score"), idea.user_fit_score)
+            idea.quality_score = self._coerce_int(refined.get("quality_score"), idea.quality_score)
+            idea.refined = bool(refined.get("refined", True))
+
+            if not idea.critique_summary:
+                idea.critique_summary = "The earlier draft was still too broad and needed sharper focus."
+            if not idea.refinement_summary:
+                idea.refinement_summary = "This version tightens the scope and clarifies the execution path."
+
+        self.llm._emit("refine_done", msg=f"Refined {len(ideas)} ideas via critique-and-rewrite loop")
+        return ideas
+
     def _generate_develop(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
-                          research_context: str, language: str, approach: str, goal: str) -> List[ProjectIdea]:
+                          research_context: str, language: str, approach: str, goal: str,
+                          user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate feature/improvement ideas for an EXISTING project, grounded in papers."""
         category = trend.category
         available_papers = trend.ref_papers[:15]
@@ -216,6 +420,7 @@ Respond ONLY with valid JSON array. No markdown, no explanation.
 
         goal_section = self._load_skill_constraints(goal)
         avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
+        personalization = self._personalization_block(user_profile, feedback_summary)
 
         if not research_context:
             research_context = "A software project (no further details provided)"
@@ -242,7 +447,7 @@ Trending techniques in this area: {', '.join(trend.top_keywords)}
 
 Already suggested (DO NOT duplicate):
 {avoid_str}
-{language_section}{goal_section}
+{language_section}{goal_section}{personalization}
 Generate exactly {n} development ideas as a JSON array. Each idea is a concrete improvement to the user's project, inspired by a technique from the papers above.
 
 Each object MUST have:
@@ -253,6 +458,7 @@ Each object MUST have:
 - "tech_stack": Array of 2-4 technologies/libraries needed (prefer what the project already uses)
 - "effort_estimate": "hours" | "days" | "weeks" (realistic for a solo developer)
 - "inspired_by_ids": Array of paper IDs (e.g., ["P1", "P3"]) — which paper technique enables this
+- "evidence_claims": Array of 2-4 objects: {{"claim": "specific claim this idea relies on", "paper_ids": ["P1"]}}. Use ONLY available P-numbers.
 - "risk": 1 sentence — what could go wrong or be harder than expected
 - "difficulty": "Hackathon" | "Side Project" | "Industry"
 - "quality_score": Integer 1-10 (relevance to the project + feasibility + impact)
@@ -283,8 +489,12 @@ Respond ONLY with valid JSON array. No markdown.
             if isinstance(ideas_raw, dict):
                 ideas_raw = [ideas_raw]
         except Exception as e:
-            self.llm._emit("llm_error", msg=f"Develop idea parse failed {category}: {e}")
-            return results
+            # Try to recover partial ideas from truncated JSON
+            ideas_raw = _repair_truncated_json(cleaned)
+            if not ideas_raw:
+                self.llm._emit("llm_error", msg=f"Develop idea parse failed {category}: {e}")
+                return results
+            self.llm._emit("llm_warn", msg=f"Recovered {len(ideas_raw)} ideas from truncated response ({category})")
 
         for idea in ideas_raw:
             title = idea.get("idea_title", "").strip()
@@ -349,6 +559,10 @@ Respond ONLY with valid JSON array. No markdown.
                 inspiration_title="; ".join(p.title[:80] for p in insp),
                 inspiration_link="; ".join(p.link for p in insp),
                 generated_date=Config.TODAY_STR,
+                fit_to_user_summary=idea.get("fit_to_user_summary", ""),
+                misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
+                user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
+                **self._evidence_kwargs(idea, available_papers, insp),
             )
             results.append(obj)
             existing_titles.add(title)
@@ -359,7 +573,8 @@ Respond ONLY with valid JSON array. No markdown.
     # ─── PRODUCT MODE ─────────────────────────────────────────────────────────
 
     def _generate_product(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
-                          research_context: str, language: str, approach: str, goal: str) -> List[ProjectIdea]:
+                          research_context: str, language: str, approach: str, goal: str,
+                          user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate buildable product ideas grounded in recent papers."""
         category = trend.category
         available_papers = trend.ref_papers[:15]
@@ -375,6 +590,7 @@ Respond ONLY with valid JSON array. No markdown.
         context_section = ""
         if research_context:
             context_section = f"\nBuilder context: {research_context}\nTailor ideas to match this person's skills, available tools, and interests.\n"
+        personalization = self._personalization_block(user_profile, feedback_summary)
 
         language_section = ""
         if language == "id":
@@ -395,7 +611,7 @@ Research gaps (= unmet needs):
 
 Already generated (DO NOT duplicate):
 {avoid_str}
-{context_section}{language_section}{goal_section}
+{context_section}{language_section}{goal_section}{personalization}
 Generate exactly {n} PRODUCT ideas as a JSON array. Each idea is a buildable tool/app/service inspired by the papers above.
 
 Each object MUST have:
@@ -409,6 +625,7 @@ Each object MUST have:
 - "moat": 1-2 sentences. Why is this hard to copy? What's the unfair advantage?
 - "next_steps": Array of 3 concrete first actions to start building
 - "inspired_by_ids": Array of paper IDs (e.g., ["P1", "P3"])
+- "evidence_claims": Array of 2-4 objects: {{"claim": "specific claim this product relies on", "paper_ids": ["P1"]}}. Use ONLY available P-numbers.
 - "difficulty": "Hackathon" | "Side Project" | "Industry"
 - "quality_score": Integer 1-10. Is this viable, specific, and differentiated?
 
@@ -437,8 +654,11 @@ Respond ONLY with valid JSON array. No markdown.
             if isinstance(ideas_raw, dict):
                 ideas_raw = [ideas_raw]
         except Exception as e:
-            self.llm._emit("llm_error", msg=f"Product idea parse failed {category}: {e}")
-            return results
+            ideas_raw = _repair_truncated_json(cleaned)
+            if not ideas_raw:
+                self.llm._emit("llm_error", msg=f"Product idea parse failed {category}: {e}")
+                return results
+            self.llm._emit("llm_warn", msg=f"Recovered {len(ideas_raw)} ideas from truncated response ({category})")
 
         for idea in ideas_raw:
             title = idea.get("idea_title", "").strip()
@@ -509,6 +729,10 @@ Respond ONLY with valid JSON array. No markdown.
                 inspiration_title="; ".join(p.title[:80] for p in insp),
                 inspiration_link="; ".join(p.link for p in insp),
                 generated_date=Config.TODAY_STR,
+                fit_to_user_summary=idea.get("fit_to_user_summary", ""),
+                misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
+                user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
+                **self._evidence_kwargs(idea, available_papers, insp),
             )
             results.append(obj)
             existing_titles.add(title)
@@ -519,7 +743,8 @@ Respond ONLY with valid JSON array. No markdown.
     # ─── ACADEMIC MODE (original) ─────────────────────────────────────────────
 
     def _generate_academic(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
-                           research_context: str, language: str, approach: str, goal: str) -> List[ProjectIdea]:
+                           research_context: str, language: str, approach: str, goal: str,
+                           user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate research project ideas (original behavior)."""
         category = trend.category
         ref_papers = trend.ref_papers
@@ -554,6 +779,7 @@ Respond ONLY with valid JSON array. No markdown.
         context_section = ""
         if research_context:
             context_section = f"\nStudent context: {research_context}\nTailor ideas to match this student's background, available resources, and interests.\n"
+        personalization = self._personalization_block(user_profile, feedback_summary)
 
         language_section = ""
         if language == "id":
@@ -585,7 +811,7 @@ Identified research gaps:
 
 Already generated (DO NOT duplicate):
 {avoid_str}
-{context_section}{language_section}{approach_section}{goal_section}
+{context_section}{language_section}{approach_section}{goal_section}{personalization}
 Generate exactly {n} research project ideas as a JSON array. Each object MUST have:
 
 - "idea_title": Specific, descriptive (8-18 words). NOT generic.
@@ -599,6 +825,7 @@ Generate exactly {n} research project ideas as a JSON array. Each object MUST ha
 - "resources_needed": comma-separated list.
 - "prerequisites": Array of 3-5 skills/knowledge needed.
 - "inspired_by_ids": Array of paper IDs from above.
+- "evidence_claims": Array of 2-4 objects: {{"claim": "specific scientific or feasibility claim", "paper_ids": ["P1"]}}. Each paper_id MUST be from P1 to P{paper_count}.
 - "why_this_idea": 1-2 sentences explaining which research gap this fills and why NOW.
 - "quality_score": Integer 1-10.
 
@@ -628,8 +855,11 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
             if isinstance(ideas_raw, dict):
                 ideas_raw = [ideas_raw]
         except Exception as e:
-            self.llm._emit("llm_error", msg=f"Idea parse failed {category}: {e}")
-            return self._academic_fallback(trend, existing_titles)
+            ideas_raw = _repair_truncated_json(cleaned)
+            if not ideas_raw:
+                self.llm._emit("llm_error", msg=f"Idea parse failed {category}: {e}")
+                return self._academic_fallback(trend, existing_titles)
+            self.llm._emit("llm_warn", msg=f"Recovered {len(ideas_raw)} ideas from truncated response ({category})")
 
         for idea in ideas_raw:
             title = idea.get("idea_title", "").strip()
@@ -717,6 +947,10 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                 inspiration_title="; ".join(p.title[:80] for p in insp),
                 inspiration_link="; ".join(p.link for p in insp),
                 generated_date=Config.TODAY_STR,
+                fit_to_user_summary=idea.get("fit_to_user_summary", ""),
+                misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
+                user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
+                **self._evidence_kwargs(idea, available_papers, insp),
             )
             results.append(obj)
             existing_titles.add(title)
@@ -754,6 +988,15 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                 inspiration_title="; ".join(p.title[:80] for p in insp),
                 inspiration_link="; ".join(p.link for p in insp),
                 generated_date=Config.TODAY_STR,
+                **self._evidence_kwargs(
+                    {
+                        "idea_title": title,
+                        "abstract": f"Systematic comparison of recent {kw} approaches on standard benchmarks with limited labeled data.",
+                        "why_this_idea": f"No comprehensive benchmark exists for recent {kw} methods under limited supervision.",
+                    },
+                    ref_papers,
+                    insp,
+                ),
             )
             results.append(obj)
             existing_titles.add(title)

@@ -62,6 +62,18 @@ class ProjectIdea:
     inspiration_title: str
     inspiration_link: str
     generated_date: str
+    source_papers: List[dict] = field(default_factory=list)
+    evidence_claims: List[dict] = field(default_factory=list)
+    grounding_score: int = 0
+    risk_flags: List[str] = field(default_factory=list)
+    critique_summary: str = ""
+    refinement_summary: str = ""
+    novelty_claim: str = ""
+    feasibility_warning: str = ""
+    refined: bool = False
+    fit_to_user_summary: str = ""
+    misalignment_flags: List[str] = field(default_factory=list)
+    user_fit_score: int = 0
     
     def to_dict(self) -> dict:
         return {
@@ -82,7 +94,19 @@ class ProjectIdea:
             "inspired_by": self.inspired_by,
             "inspiration_title": self.inspiration_title,
             "inspiration_link": self.inspiration_link,
-            "generated_date": self.generated_date
+            "generated_date": self.generated_date,
+            "source_papers": self.source_papers,
+            "evidence_claims": self.evidence_claims,
+            "grounding_score": self.grounding_score,
+            "risk_flags": self.risk_flags,
+            "critique_summary": self.critique_summary,
+            "refinement_summary": self.refinement_summary,
+            "novelty_claim": self.novelty_claim,
+            "feasibility_warning": self.feasibility_warning,
+            "refined": self.refined,
+            "fit_to_user_summary": self.fit_to_user_summary,
+            "misalignment_flags": self.misalignment_flags,
+            "user_fit_score": self.user_fit_score,
         }
 
 

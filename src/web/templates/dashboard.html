@@ -121,6 +121,16 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .idea-method,.idea-steps{font-size:11px;color:var(--text);line-height:1.5;padding:8px 10px;background:rgba(255,255,255,0.02);border-radius:4px;border:1px solid var(--border)}
 .idea-why-this{font-size:11px;color:var(--muted);line-height:1.5;font-style:italic;padding:4px 0}
 .idea-method-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+.idea-refine-note{font-size:11px;color:var(--text);line-height:1.5;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px dashed var(--border);border-radius:4px}
+.modal-refinement-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.refinement-chip{color:#d8e8ff;border-color:rgba(216,232,255,0.28);background:rgba(216,232,255,0.08)}
+.personality-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.personality-grid textarea{min-height:84px;resize:vertical}
+.feedback-modal-card{background:var(--card);border:1px solid var(--border);border-radius:10px;width:min(520px,calc(100vw - 32px));padding:20px;box-shadow:0 24px 64px rgba(0,0,0,0.45)}
+.feedback-reason-grid{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.feedback-reason-btn{padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:var(--bg);color:var(--muted);font-size:11px;cursor:pointer;transition:0.18s}
+.feedback-reason-btn.active,.feedback-reason-btn:hover{color:var(--text);border-color:#8aa5c2;background:rgba(138,165,194,0.12)}
+.feedback-note{width:100%;min-height:76px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-size:12px;font-family:inherit;resize:vertical}
 
 /* BOOKMARK BUTTON */
 .bookmark-btn{position:absolute;top:12px;right:12px;background:none;border:none;font-size:16px;cursor:pointer;color:#ffffff;opacity:0.5;transition:opacity 0.2s;padding:4px;line-height:1;z-index:1}
@@ -215,7 +225,20 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 /* DEEP DIVE MODAL — unified with wizard style */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px}
 .modal-overlay.visible{display:flex}
-.modal-content{max-width:700px;width:100%;margin:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;max-height:80vh;overflow-y:auto;padding:32px;position:relative;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
+.modal-shell{display:flex;align-items:flex-start;gap:14px;width:100%;max-width:920px}
+.modal-content{flex:1;max-width:700px;width:100%;margin:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;max-height:80vh;overflow-y:auto;padding:32px;position:relative;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
+.modal-rail{width:152px;display:flex;flex-direction:column;gap:10px;position:sticky;top:0}
+.modal-rail.hidden{display:none}
+.modal-rail-card{background:rgba(24,24,24,0.92);border:1px solid var(--border);border-radius:10px;padding:10px;box-shadow:0 16px 32px rgba(0,0,0,0.35);backdrop-filter:blur(8px)}
+.modal-rail-label{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px}
+.modal-rail-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;transition:all 0.2s}
+.modal-rail-btn:hover{background:var(--hover);color:#fff;border-color:#555}
+.modal-rail-btn.primary{background:#fff;color:#181818;border-color:#fff}
+.modal-rail-btn.primary:hover{opacity:0.92}
+.modal-rail-btn.active{border-color:#fff;color:#fff}
+.modal-rail-btn:disabled{opacity:0.45;cursor:not-allowed}
+.modal-rail-feedback{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-rail-feedback .modal-rail-btn{padding:8px 0}
 .modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:4px}
 .modal-close:hover{color:#ffffff}
 .modal-title{font-size:16px;font-weight:600;color:var(--active);margin-bottom:20px;padding-right:32px;line-height:1.4}
@@ -322,7 +345,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
   .ideas-grid{grid-template-columns:1fr}
   .stats{grid-template-columns:repeat(2,1fr)}
   .filter-bar{flex-direction:column}
-  .modal-content{margin:12px;padding:20px;max-height:90vh}
+  .modal-shell{flex-direction:column}
+  .modal-content{margin:12px;padding:20px;max-height:90vh;max-width:none}
+  .modal-rail{position:static;width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .modal-rail-card{grid-column:1/-1}
 }
 
 /* PRINT STYLES */
@@ -879,6 +905,49 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
           </div>
         </div>
 
+        <div>
+          <div class="section-title" style="margin-bottom:4px">Personality steering</div>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">Tell ScholarScout what kind of ideas fit you best. This profile and your vote reasons will steer generation and self-improvement.</p>
+          <div class="settings-form personality-grid">
+            <div class="settings-field">
+              <label class="settings-label">Work style</label>
+              <select id="settWorkStyle">
+                <option value="practical">Practical</option>
+                <option value="balanced">Balanced</option>
+                <option value="novelty_first">Novelty-first</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Scope preference</label>
+              <select id="settScopePreference">
+                <option value="narrow">Narrow and finishable</option>
+                <option value="balanced">Balanced</option>
+                <option value="ambitious">Ambitious</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Risk tolerance</label>
+              <select id="settRiskTolerance">
+                <option value="low">Low risk</option>
+                <option value="medium">Medium</option>
+                <option value="high">High risk</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Output tone</label>
+              <select id="settOutputTone">
+                <option value="concise">Concise</option>
+                <option value="academic">Academic</option>
+                <option value="persuasive">Persuasive</option>
+              </select>
+            </div>
+            <div class="settings-field" style="grid-column:1/-1">
+              <label class="settings-label">Extra constraints</label>
+              <textarea id="settPersonalityConstraints" placeholder="Example: I prefer thesis-friendly NLP ideas, 3-6 months scope, limited GPU, and practical evaluation."></textarea>
+            </div>
+          </div>
+        </div>
+
         <!-- Data Sources -->
         <div>
           <div class="section-title" style="margin-bottom:4px">Data sources</div>
@@ -982,10 +1051,47 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
 <!-- DEEP DIVE MODAL -->
 <div class="modal-overlay" id="deepDiveModal">
-  <div class="modal-content" id="deepDiveContent">
-    <button class="modal-close" onclick="closeModal()">&times;</button>
-    <div id="deepDiveBody">
-      <div class="modal-spinner">Loading deep dive analysis...</div>
+  <div class="modal-shell">
+    <div class="modal-content" id="deepDiveContent">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div id="deepDiveBody">
+        <div class="modal-spinner">Loading deep dive analysis...</div>
+      </div>
+    </div>
+    <div class="modal-rail hidden" id="modalActionRail">
+      <div class="modal-rail-card">
+        <div class="modal-rail-label">Idea Actions</div>
+        <button class="modal-rail-btn primary" id="modalDeepDiveBtn">Deep Dive</button>
+        <button class="modal-rail-btn" id="modalExportBtn" style="margin-top:8px">Export PDF</button>
+        <button class="modal-rail-btn" id="modalCopyBtn" style="margin-top:8px">Copy</button>
+        <button class="modal-rail-btn" id="modalBookmarkBtn" style="margin-top:8px">Bookmark</button>
+        <button class="modal-rail-btn" id="modalRegenBtn" style="margin-top:8px">Regenerate</button>
+      </div>
+      <div class="modal-rail-card">
+        <div class="modal-rail-label">Feedback</div>
+        <div class="modal-rail-feedback">
+          <button class="modal-rail-btn" id="modalThumbUp" title="This idea is useful">▲</button>
+          <button class="modal-rail-btn" id="modalThumbDown" title="This idea is not useful">▼</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wizard-overlay" id="feedbackReasonModal" style="display:none">
+  <div class="feedback-modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div>
+        <div id="feedbackModalTitle" style="font-size:16px;font-weight:600;color:#fff;line-height:1.3">Why this vote?</div>
+        <div id="feedbackModalSub" style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5"></div>
+      </div>
+      <button class="wizard-skip" onclick="closeFeedbackReasonModal()">Close</button>
+    </div>
+    <div id="feedbackReasonGrid" class="feedback-reason-grid"></div>
+    <textarea id="feedbackReasonNote" class="feedback-note" placeholder="Optional note: what felt right or wrong about this idea?"></textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+      <button class="btn" onclick="closeFeedbackReasonModal()">Cancel</button>
+      <button class="btn btn-run" onclick="submitFeedbackReason()">Save feedback</button>
     </div>
   </div>
 </div>
@@ -1009,6 +1115,13 @@ function showToast(msg, type='info', duration=3500) {
   clearTimeout(el._timer);
   el._timer = setTimeout(() => el.classList.remove('visible'), duration);
 }
+
+const FEEDBACK_REASON_PRESETS = {
+  up: ['practical', 'clear scope', 'matches my background', 'feasible', 'novel enough', 'good next steps'],
+  down: ['too generic', 'too broad', 'too expensive', 'too theoretical', 'not my field', 'not feasible now']
+};
+
+let _pendingFeedbackVote = null;
 
 const CAT_GROUPS = [
   {
@@ -1562,6 +1675,102 @@ function closePopup(id) {
   if (el) el.style.display = 'none';
 }
 
+function getPersonalityProfile() {
+  return {
+    work_style: localStorage.getItem('scholarscout_personality_work_style') || 'balanced',
+    scope_preference: localStorage.getItem('scholarscout_personality_scope') || 'balanced',
+    risk_tolerance: localStorage.getItem('scholarscout_personality_risk') || 'medium',
+    output_tone: localStorage.getItem('scholarscout_personality_tone') || 'academic',
+    constraints: localStorage.getItem('scholarscout_personality_constraints') || ''
+  };
+}
+
+function _loadPersonalitySettingsUI() {
+  const profile = getPersonalityProfile();
+  const mapping = {
+    settWorkStyle: profile.work_style,
+    settScopePreference: profile.scope_preference,
+    settRiskTolerance: profile.risk_tolerance,
+    settOutputTone: profile.output_tone,
+    settPersonalityConstraints: profile.constraints
+  };
+  Object.entries(mapping).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+}
+
+function _persistPersonalitySettings() {
+  const fields = [
+    ['settWorkStyle', 'scholarscout_personality_work_style'],
+    ['settScopePreference', 'scholarscout_personality_scope'],
+    ['settRiskTolerance', 'scholarscout_personality_risk'],
+    ['settOutputTone', 'scholarscout_personality_tone'],
+    ['settPersonalityConstraints', 'scholarscout_personality_constraints']
+  ];
+  fields.forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) localStorage.setItem(key, (el.value || '').trim());
+  });
+}
+
+function getFeedbackMemory() {
+  try {
+    return JSON.parse(localStorage.getItem('scholarscout_feedback') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function openFeedbackReasonModal(idea, vote) {
+  _pendingFeedbackVote = {idea, vote, reasons: []};
+  const modal = document.getElementById('feedbackReasonModal');
+  const title = document.getElementById('feedbackModalTitle');
+  const sub = document.getElementById('feedbackModalSub');
+  const grid = document.getElementById('feedbackReasonGrid');
+  const note = document.getElementById('feedbackReasonNote');
+  title.textContent = vote === 'up' ? 'Why did this idea work for you?' : 'Why did this idea miss for you?';
+  sub.textContent = (idea.idea_title || 'This idea') + ' will use this feedback to steer future generations.';
+  grid.innerHTML = '';
+  note.value = '';
+  (FEEDBACK_REASON_PRESETS[vote] || []).forEach(reason => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'feedback-reason-btn';
+    btn.textContent = reason;
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('active');
+      const set = new Set(_pendingFeedbackVote.reasons);
+      if (set.has(reason)) set.delete(reason);
+      else set.add(reason);
+      _pendingFeedbackVote.reasons = Array.from(set);
+    });
+    grid.appendChild(btn);
+  });
+  modal.style.display = 'flex';
+}
+
+function closeFeedbackReasonModal() {
+  const modal = document.getElementById('feedbackReasonModal');
+  if (modal) modal.style.display = 'none';
+  _pendingFeedbackVote = null;
+}
+
+function submitFeedbackReason() {
+  if (!_pendingFeedbackVote || !_pendingFeedbackVote.idea) return;
+  const note = (document.getElementById('feedbackReasonNote').value || '').trim();
+  const feedback = getFeedbackMemory();
+  feedback[_pendingFeedbackVote.idea.idea_title] = {
+    vote: _pendingFeedbackVote.vote,
+    reasons: _pendingFeedbackVote.reasons,
+    note: note,
+    ts: new Date().toISOString()
+  };
+  localStorage.setItem('scholarscout_feedback', JSON.stringify(feedback));
+  closeFeedbackReasonModal();
+  showToast('Feedback saved for idea steering', 'ok');
+}
+
 // ── Profile Popup ──
 document.getElementById('configBtn').addEventListener('click', function() {
   openPopup('profileModal');
@@ -1940,6 +2149,12 @@ function openDeepDive(idea, triggerBtn) {
       ${renderModalSection('Estimated Timeline', data.timeline, 'p', gr.timeline)}
       ${renderModalSection('Recommended Tools', data.tools, 'ul', gr.tools)}`;
     modal.classList.add('visible');
+    _bindModalIdeaActions(idea);
+    const ddBtn = document.getElementById('modalDeepDiveBtn');
+    if (ddBtn) {
+      ddBtn.disabled = true;
+      ddBtn.textContent = 'Deep Dive Open';
+    }
     if (triggerBtn) triggerBtn.disabled = false;
     return;
   }
@@ -1962,6 +2177,7 @@ function openDeepDive(idea, triggerBtn) {
   // Show modal with spinner
   body.innerHTML = '<div class="modal-spinner">Loading deep dive analysis...</div>';
   modal.classList.add('visible');
+  _bindModalIdeaActions(idea);
   
   // Create AbortController for 3-minute timeout (LLM can be slow)
   const controller = new AbortController();
@@ -1999,6 +2215,12 @@ function openDeepDive(idea, triggerBtn) {
       ${renderModalSection('Key References', data.references, 'ul', gr.references)}
       ${renderModalSection('Estimated Timeline', data.timeline, 'p', gr.timeline)}
       ${renderModalSection('Recommended Tools', data.tools, 'ul', gr.tools)}`;
+    _bindModalIdeaActions(idea);
+    const ddBtn = document.getElementById('modalDeepDiveBtn');
+    if (ddBtn) {
+      ddBtn.disabled = true;
+      ddBtn.textContent = 'Deep Dive Open';
+    }
     if (deepDiveBtn) deepDiveBtn.disabled = false;
   })
   .catch(err => {
@@ -2016,6 +2238,7 @@ function openDeepDive(idea, triggerBtn) {
     
     // Show error in modal
     body.innerHTML = `<div class="modal-title">Error</div><p style="color:var(--err);font-size:13px">${escapeHtml(errorMsg)}</p>`;
+    _bindModalIdeaActions(idea);
     
     // Re-enable the button
     if (deepDiveBtn) {
@@ -2063,8 +2286,237 @@ function closeModalOnOverlay(event) {
   if (event.target.id === 'deepDiveModal') closeModal();
 }
 
+function _setModalRailVisible(visible) {
+  const rail = document.getElementById('modalActionRail');
+  if (rail) rail.classList.toggle('hidden', !visible);
+}
+
+function _syncModalBookmarkButton(idea) {
+  const btn = document.getElementById('modalBookmarkBtn');
+  if (!btn || !idea || !idea.idea_title) return;
+  const active = isBookmarked(idea.idea_title);
+  btn.textContent = active ? 'Bookmarked' : 'Bookmark';
+  btn.classList.toggle('active', active);
+}
+
+function _renderRefinementChip(idea) {
+  if (!idea || !idea.refined) return '';
+  const summary = idea.refinement_summary || 'This idea passed a stricter critique-and-rewrite pass.';
+  return `<span class="chip refinement-chip" data-tooltip="${escapeHtml(summary)}">Refined</span>`;
+}
+
+function _renderRefinementSections(idea) {
+  if (!idea) return '';
+  const cards = [];
+  if (idea.critique_summary) {
+    cards.push(`<div class="modal-section"><div class="modal-section-title">Internal Critique</div><p>${escapeHtml(idea.critique_summary)}</p></div>`);
+  }
+  if (idea.refinement_summary) {
+    cards.push(`<div class="modal-section"><div class="modal-section-title">Why This Version Is Stronger</div><p>${escapeHtml(idea.refinement_summary)}</p></div>`);
+  }
+  if (idea.novelty_claim) {
+    cards.push(`<div class="modal-section"><div class="modal-section-title">Sharper Novelty Claim</div><p>${escapeHtml(idea.novelty_claim)}</p></div>`);
+  }
+  if (idea.feasibility_warning) {
+    cards.push(`<div class="modal-section"><div class="modal-section-title">Feasibility Warning</div><p>${escapeHtml(idea.feasibility_warning)}</p></div>`);
+  }
+  if (!cards.length) return '';
+  return `<div class="modal-refinement-grid">${cards.join('')}</div>`;
+}
+
+function _renderUserFitSections(idea) {
+  if (!idea) return '';
+  const blocks = [];
+  if (idea.fit_to_user_summary) {
+    blocks.push(`<div class="modal-section"><div class="modal-section-title">Fit To You</div><p>${escapeHtml(idea.fit_to_user_summary)}</p></div>`);
+  }
+  if (idea.misalignment_flags && idea.misalignment_flags.length) {
+    blocks.push(`<div class="modal-section"><div class="modal-section-title">Still Misaligned</div><ul>${idea.misalignment_flags.map(flag => `<li>${escapeHtml(flag)}</li>`).join('')}</ul></div>`);
+  }
+  if (!blocks.length) return '';
+  return `<div class="modal-refinement-grid">${blocks.join('')}</div>`;
+}
+
+function _bindModalIdeaActions(idea) {
+  const ddBtn = document.getElementById('modalDeepDiveBtn');
+  const exportBtn = document.getElementById('modalExportBtn');
+  const copyBtn = document.getElementById('modalCopyBtn');
+  const bookmarkBtn = document.getElementById('modalBookmarkBtn');
+  const regenBtn = document.getElementById('modalRegenBtn');
+  const thumbUp = document.getElementById('modalThumbUp');
+  const thumbDown = document.getElementById('modalThumbDown');
+
+  _setModalRailVisible(true);
+  _syncModalBookmarkButton(idea);
+
+  if (ddBtn) {
+    ddBtn.disabled = false;
+    ddBtn.textContent = 'Deep Dive';
+    ddBtn.onclick = function() {
+      this.disabled = true;
+      this.textContent = 'Loading...';
+      openDeepDive(idea, this);
+    };
+  }
+
+  if (exportBtn) {
+    exportBtn.onclick = function() {
+      const printWin = window.open('', '_blank');
+      printWin.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(idea.idea_title || 'Research Idea')}</title>
+        <style>body{font-family:Inter,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#222;line-height:1.6}
+        h1{font-size:18px;margin-bottom:16px}h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#666;margin:20px 0 8px}
+        p,li{font-size:13px}ol,ul{padding-left:20px}li{margin-bottom:4px}
+        .meta{display:flex;gap:8px;margin-bottom:16px}.chip{font-size:10px;padding:2px 8px;border:1px solid #ccc;border-radius:2px}
+        .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#999}</style></head><body>`);
+      printWin.document.write(`<h1>${escapeHtml(idea.idea_title || 'Untitled')}</h1>`);
+      printWin.document.write(`<div class="meta"><span class="chip">${escapeHtml(idea.field || '')}</span><span class="chip">${escapeHtml(idea.difficulty || '')}</span><span class="chip">${escapeHtml(idea.cost_estimate || '')}</span></div>`);
+      if (idea.abstract) printWin.document.write(`<h2>Abstract</h2><p>${escapeHtml(idea.abstract)}</p>`);
+      if (idea.why_hard) printWin.document.write(`<h2>Why It's Hard</h2><p>${escapeHtml(idea.why_hard)}</p>`);
+      if (idea.methodology_hint) printWin.document.write(`<h2>Methodology</h2><p>${escapeHtml(idea.methodology_hint)}</p>`);
+      if (idea.next_steps) { const steps = idea.next_steps.split('|').map(s=>s.trim()).filter(Boolean); if(steps.length) printWin.document.write(`<h2>Next Steps</h2><ol>${steps.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ol>`); }
+      if (idea.key_papers) { const papers = idea.key_papers.split('|').map(s=>s.trim()).filter(Boolean); if(papers.length) printWin.document.write(`<h2>Key Papers</h2><ul>${papers.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ul>`); }
+      if (idea.resources_needed) printWin.document.write(`<h2>Resources Needed</h2><p>${escapeHtml(idea.resources_needed)}</p>`);
+      if (idea.critique_summary) printWin.document.write(`<h2>Internal Critique</h2><p>${escapeHtml(idea.critique_summary)}</p>`);
+      if (idea.refinement_summary) printWin.document.write(`<h2>Why This Version Is Stronger</h2><p>${escapeHtml(idea.refinement_summary)}</p>`);
+      if (idea.novelty_claim) printWin.document.write(`<h2>Sharper Novelty Claim</h2><p>${escapeHtml(idea.novelty_claim)}</p>`);
+      if (idea.feasibility_warning) printWin.document.write(`<h2>Feasibility Warning</h2><p>${escapeHtml(idea.feasibility_warning)}</p>`);
+      if (idea.fit_to_user_summary) printWin.document.write(`<h2>Fit To User</h2><p>${escapeHtml(idea.fit_to_user_summary)}</p>`);
+      if (idea.misalignment_flags && idea.misalignment_flags.length) printWin.document.write(`<h2>Remaining Misalignment</h2><ul>${idea.misalignment_flags.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ul>`);
+      printWin.document.write(`<div class="footer">Generated by ScholarScout — scholarscout.app</div>`);
+      printWin.document.write('</body></html>');
+      printWin.document.close();
+      printWin.print();
+    };
+  }
+
+  if (copyBtn) {
+    copyBtn.onclick = function() {
+      const parts = [idea.idea_title || ''];
+      if (idea.field) parts.push(`Field: ${idea.field}`);
+      if (idea.difficulty) parts.push(`Level: ${idea.difficulty}`);
+      if (idea.abstract) parts.push(`\nAbstract: ${idea.abstract}`);
+      if (idea.why_hard) parts.push(`\nWhy hard: ${idea.why_hard}`);
+      if (idea.methodology_hint) parts.push(`\nMethodology: ${idea.methodology_hint}`);
+      if (idea.next_steps) parts.push(`\nNext steps:\n${idea.next_steps.split('|').map((s,i) => `  ${i+1}. ${s.trim()}`).join('\n')}`);
+      if (idea.key_papers) parts.push(`\nKey papers: ${idea.key_papers}`);
+      if (idea.resources_needed) parts.push(`\nResources: ${idea.resources_needed}`);
+      if (idea.critique_summary) parts.push(`\nInternal critique: ${idea.critique_summary}`);
+      if (idea.refinement_summary) parts.push(`\nWhy stronger: ${idea.refinement_summary}`);
+      if (idea.novelty_claim) parts.push(`\nSharper novelty claim: ${idea.novelty_claim}`);
+      if (idea.feasibility_warning) parts.push(`\nFeasibility warning: ${idea.feasibility_warning}`);
+      if (idea.fit_to_user_summary) parts.push(`\nFit to user: ${idea.fit_to_user_summary}`);
+      if (idea.misalignment_flags && idea.misalignment_flags.length) parts.push(`\nRemaining misalignment: ${idea.misalignment_flags.join(', ')}`);
+      parts.push('\n— Generated by ScholarScout');
+
+      navigator.clipboard.writeText(parts.join('\n')).then(() => {
+        this.textContent = 'Copied';
+        setTimeout(() => { this.textContent = 'Copy'; }, 2000);
+      });
+    };
+  }
+
+  if (bookmarkBtn) {
+    if (!isLocalStorageAvailable()) {
+      bookmarkBtn.disabled = true;
+      bookmarkBtn.textContent = 'Bookmark Off';
+    } else {
+      bookmarkBtn.disabled = false;
+      bookmarkBtn.onclick = function() {
+        if (isBookmarked(idea.idea_title)) removeBookmark(idea.idea_title);
+        else addBookmark({ ...idea, language: currentLanguage });
+        _syncModalBookmarkButton(idea);
+        document.querySelectorAll('.idea-card').forEach(card => {
+          if (card.getAttribute('data-title') !== (idea.idea_title || '')) return;
+          card.classList.toggle('bookmarked', isBookmarked(idea.idea_title));
+          const iconBtn = card.querySelector('.bookmark-btn');
+          if (iconBtn) {
+            iconBtn.classList.toggle('active', isBookmarked(idea.idea_title));
+            iconBtn.textContent = isBookmarked(idea.idea_title) ? '◆' : '◇';
+          }
+        });
+        refreshShortlist();
+      };
+    }
+  }
+
+  if (regenBtn) {
+    regenBtn.disabled = false;
+    regenBtn.textContent = 'Regenerate';
+    regenBtn.onclick = function() {
+      this.disabled = true;
+      this.textContent = 'Generating...';
+      fetch('/api/regenerate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          field: idea.field || '',
+          approach: document.getElementById('approachSelect').value,
+          language: document.getElementById('langSelect').value,
+          context: document.getElementById('researchContext').value.slice(0, 2000),
+          exclude_title: idea.idea_title,
+          user_profile: getPersonalityProfile(),
+          feedback_summary: getFeedbackMemory()
+        })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.idea) {
+          ideas.push(data.idea);
+          addIdeaCard(data.idea);
+          updateStats();
+          closeModal();
+          setTimeout(() => openIdeaDetail(data.idea), 300);
+        } else {
+          this.textContent = 'Failed';
+          setTimeout(() => { this.textContent = 'Regenerate'; this.disabled = false; }, 2000);
+        }
+      })
+      .catch(() => {
+        this.textContent = 'Failed';
+        setTimeout(() => { this.textContent = 'Regenerate'; this.disabled = false; }, 2000);
+      });
+    };
+  }
+
+  function saveFeedback(title, vote) {
+    let fb = {};
+    try { fb = JSON.parse(localStorage.getItem('scholarscout_feedback') || '{}'); } catch(e) {}
+    const prev = fb[title];
+    const prevReasons = prev && typeof prev === 'object' && Array.isArray(prev.reasons) ? prev.reasons : [];
+    const prevNote = prev && typeof prev === 'object' ? (prev.note || '') : '';
+    fb[title] = { vote, reasons: prevReasons, note: prevNote, ts: new Date().toISOString() };
+    localStorage.setItem('scholarscout_feedback', JSON.stringify(fb));
+  }
+
+  if (thumbUp) {
+    thumbUp.style.color = '';
+    thumbUp.onclick = function() {
+      saveFeedback(idea.idea_title, 'up');
+      this.style.color = '#66cc66';
+      if (thumbDown) thumbDown.style.color = '';
+      openFeedbackReasonModal(idea, 'up');
+    };
+  }
+  if (thumbDown) {
+    thumbDown.style.color = '';
+    thumbDown.onclick = function() {
+      saveFeedback(idea.idea_title, 'down');
+      this.style.color = 'var(--err)';
+      if (thumbUp) thumbUp.style.color = '';
+      openFeedbackReasonModal(idea, 'down');
+    };
+  }
+  try {
+    const fb = JSON.parse(localStorage.getItem('scholarscout_feedback') || '{}');
+    const entry = fb[idea.idea_title];
+    const vote = typeof entry === 'string' ? entry : (entry && entry.vote);
+    if (vote === 'up' && thumbUp) thumbUp.style.color = '#66cc66';
+    if (vote === 'down' && thumbDown) thumbDown.style.color = 'var(--err)';
+  } catch(e) {}
+}
+
 // ── Idea Detail Popup ──
-function openIdeaDetail(idea) {
+function openIdeaDetail(idea, triggerEl) {
   const modal = document.getElementById('deepDiveModal');
   const body = document.getElementById('deepDiveBody');
   
@@ -2081,8 +2533,12 @@ function openIdeaDetail(idea) {
       <span class="chip">${escapeHtml(idea.field || '')}</span>
       <span class="chip">${escapeHtml(idea.difficulty || '')}</span>
       <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+      ${_renderRefinementChip(idea)}
+      ${idea.user_fit_score ? `<span class="chip" data-tooltip="Estimated fit to your profile and past feedback.">${escapeHtml('Fit:' + idea.user_fit_score + '/10')}</span>` : ''}
     </div>
     ${idea.abstract ? `<div class="modal-section"><div class="modal-section-title">Abstract</div><p>${escapeHtml(idea.abstract)}</p></div>` : ''}
+    ${(idea.critique_summary || idea.refinement_summary || idea.novelty_claim || idea.feasibility_warning) ? _renderRefinementSections(idea) : ''}
+    ${(idea.fit_to_user_summary || (idea.misalignment_flags && idea.misalignment_flags.length)) ? _renderUserFitSections(idea) : ''}
     ${idea.why_hard ? `<div class="modal-section"><div class="modal-section-title">Why It's Hard</div><p>${escapeHtml(idea.why_hard)}</p></div>` : ''}
     ${idea.methodology_hint ? `<div class="modal-section"><div class="modal-section-title">Methodology</div><p>${escapeHtml(idea.methodology_hint)}</p></div>` : ''}
     ${nextSteps.length ? `<div class="modal-section"><div class="modal-section-title">Next Steps</div><ol>${nextSteps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol></div>` : ''}
@@ -2092,147 +2548,10 @@ function openIdeaDetail(idea) {
     ${idea.why_this_idea ? `<div class="modal-section"><div class="modal-section-title">Why This Idea?</div><p>${escapeHtml(idea.why_this_idea)}</p></div>` : ''}
     ${refs ? `<div class="modal-section"><div class="modal-section-title">Inspired By</div><p style="font-family:monospace;font-size:11px">${refs}</p></div>` : ''}
     ${idea.quality_score ? `<div style="font-size:10px;color:var(--muted);margin-top:8px">Quality score: ${idea.quality_score}/10</div>` : ''}
-    <div style="margin-top:12px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-run" id="modalDeepDiveBtn">Deep Dive ↓</button>
-      <button class="btn" id="modalExportBtn">Export PDF</button>
-      <button class="btn" id="modalCopyBtn">Copy</button>
-      <button class="btn" id="modalRegenBtn">Regenerate</button>
-      <span style="margin-left:auto;display:flex;gap:6px">
-        <button class="btn" id="modalThumbUp" style="font-size:14px;padding:4px 8px" title="This idea is useful">▲</button>
-        <button class="btn" id="modalThumbDown" style="font-size:14px;padding:4px 8px" title="This idea is not useful">▼</button>
-      </span>
-    </div>
   `;
   
   modal.classList.add('visible');
-  
-  // Wire Deep Dive button inside popup
-  const ddBtn = document.getElementById('modalDeepDiveBtn');
-  if (ddBtn) {
-    ddBtn.addEventListener('click', function() {
-      this.disabled = true;
-      this.textContent = 'Loading...';
-      openDeepDive(idea, this);
-    });
-  }
-  
-  // Wire Export PDF button — prints only this idea's detail
-  const exportBtn = document.getElementById('modalExportBtn');
-  if (exportBtn) {
-    exportBtn.addEventListener('click', function() {
-      const content = document.getElementById('deepDiveBody');
-      const printWin = window.open('', '_blank');
-      printWin.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(idea.idea_title || 'Research Idea')}</title>
-        <style>body{font-family:Inter,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#222;line-height:1.6}
-        h1{font-size:18px;margin-bottom:16px}h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#666;margin:20px 0 8px}
-        p,li{font-size:13px}ol,ul{padding-left:20px}li{margin-bottom:4px}
-        .meta{display:flex;gap:8px;margin-bottom:16px}.chip{font-size:10px;padding:2px 8px;border:1px solid #ccc;border-radius:2px}
-        .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#999}</style></head><body>`);
-      printWin.document.write(`<h1>${escapeHtml(idea.idea_title || 'Untitled')}</h1>`);
-      printWin.document.write(`<div class="meta"><span class="chip">${escapeHtml(idea.field || '')}</span><span class="chip">${escapeHtml(idea.difficulty || '')}</span><span class="chip">${escapeHtml(idea.cost_estimate || '')}</span></div>`);
-      if (idea.abstract) printWin.document.write(`<h2>Abstract</h2><p>${escapeHtml(idea.abstract)}</p>`);
-      if (idea.why_hard) printWin.document.write(`<h2>Why It's Hard</h2><p>${escapeHtml(idea.why_hard)}</p>`);
-      if (idea.methodology_hint) printWin.document.write(`<h2>Methodology</h2><p>${escapeHtml(idea.methodology_hint)}</p>`);
-      if (idea.next_steps) { const steps = idea.next_steps.split('|').map(s=>s.trim()).filter(Boolean); if(steps.length) printWin.document.write(`<h2>Next Steps</h2><ol>${steps.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ol>`); }
-      if (idea.key_papers) { const papers = idea.key_papers.split('|').map(s=>s.trim()).filter(Boolean); if(papers.length) printWin.document.write(`<h2>Key Papers</h2><ul>${papers.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ul>`); }
-      if (idea.resources_needed) printWin.document.write(`<h2>Resources Needed</h2><p>${escapeHtml(idea.resources_needed)}</p>`);
-      printWin.document.write(`<div class="footer">Generated by ScholarScout — scholarscout.app</div>`);
-      printWin.document.write('</body></html>');
-      printWin.document.close();
-      printWin.print();
-    });
-  }
-  
-  // Wire Copy button
-  const copyBtn = document.getElementById('modalCopyBtn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', function() {
-      const parts = [idea.idea_title || ''];
-      if (idea.field) parts.push(`Field: ${idea.field}`);
-      if (idea.difficulty) parts.push(`Level: ${idea.difficulty}`);
-      if (idea.abstract) parts.push(`\nAbstract: ${idea.abstract}`);
-      if (idea.why_hard) parts.push(`\nWhy hard: ${idea.why_hard}`);
-      if (idea.methodology_hint) parts.push(`\nMethodology: ${idea.methodology_hint}`);
-      if (idea.next_steps) parts.push(`\nNext steps:\n${idea.next_steps.split('|').map((s,i) => `  ${i+1}. ${s.trim()}`).join('\n')}`);
-      if (idea.key_papers) parts.push(`\nKey papers: ${idea.key_papers}`);
-      if (idea.resources_needed) parts.push(`\nResources: ${idea.resources_needed}`);
-      parts.push('\n— Generated by ScholarScout');
-      
-      navigator.clipboard.writeText(parts.join('\n')).then(() => {
-        this.textContent = 'Copied';
-        setTimeout(() => { this.textContent = 'Copy'; }, 2000);
-      });
-    });
-  }
-  
-  // Wire Regenerate button
-  const regenBtn = document.getElementById('modalRegenBtn');
-  if (regenBtn) {
-    regenBtn.addEventListener('click', function() {
-      this.disabled = true;
-      this.textContent = 'Generating...';
-      // Call API to regenerate a single idea for this category
-      fetch('/api/regenerate', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          field: idea.field || '',
-          approach: document.getElementById('approachSelect').value,
-          language: document.getElementById('langSelect').value,
-          context: document.getElementById('researchContext').value.slice(0, 2000),
-          exclude_title: idea.idea_title
-        })
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.idea) {
-          // Add new idea to grid and open its detail
-          ideas.push(data.idea);
-          addIdeaCard(data.idea);
-          updateStats();
-          closeModal();
-          setTimeout(() => openIdeaDetail(data.idea), 300);
-        } else {
-          this.textContent = 'Failed';
-          setTimeout(() => { this.textContent = 'Regenerate'; this.disabled = false; }, 2000);
-        }
-      })
-      .catch(() => {
-        this.textContent = 'Failed';
-        setTimeout(() => { this.textContent = 'Regenerate'; this.disabled = false; }, 2000);
-      });
-    });
-  }
-  
-  // Wire Thumbs up/down (feedback stored in localStorage)
-  const thumbUp = document.getElementById('modalThumbUp');
-  const thumbDown = document.getElementById('modalThumbDown');
-  function saveFeedback(title, vote) {
-    let fb = {};
-    try { fb = JSON.parse(localStorage.getItem('scholarscout_feedback') || '{}'); } catch(e) {}
-    fb[title] = vote;
-    localStorage.setItem('scholarscout_feedback', JSON.stringify(fb));
-  }
-  if (thumbUp) {
-    thumbUp.addEventListener('click', function() {
-      saveFeedback(idea.idea_title, 'up');
-      this.style.color = '#66cc66';
-      thumbDown.style.color = '';
-    });
-  }
-  if (thumbDown) {
-    thumbDown.addEventListener('click', function() {
-      saveFeedback(idea.idea_title, 'down');
-      this.style.color = 'var(--err)';
-      thumbUp.style.color = '';
-    });
-  }
-  // Restore previous feedback state
-  try {
-    const fb = JSON.parse(localStorage.getItem('scholarscout_feedback') || '{}');
-    if (fb[idea.idea_title] === 'up' && thumbUp) thumbUp.style.color = '#66cc66';
-    if (fb[idea.idea_title] === 'down' && thumbDown) thumbDown.style.color = 'var(--err)';
-  } catch(e) {}
+  _bindModalIdeaActions(idea);
 }
 
 // ── Novelty Check ──
@@ -2414,6 +2733,7 @@ function _renderReviewResults(review, topic) {
 function _openReviewCluster(cluster) {
   const modal = document.getElementById('deepDiveModal');
   const body = document.getElementById('deepDiveBody');
+  _setModalRailVisible(false);
   
   let html = `<div class="modal-title">${escapeHtml(cluster.name || 'Cluster')}</div>`;
   html += `<div style="font-size:11px;color:var(--muted);margin-bottom:16px">${cluster.paper_count || 0} papers in this cluster</div>`;
@@ -2465,10 +2785,14 @@ function addIdeaCard(idea) {
         <span class="chip" data-tooltip="${escapeHtml(_difficultyTooltip(idea.difficulty))}">${escapeHtml(idea.difficulty || "Master's")}</span>
         <span class="chip">${escapeHtml(idea.cost_estimate || 'Cloud GPU')}</span>
         ${idea.quality_score ? `<span class="chip" data-tooltip="LLM self-rated quality: ${idea.quality_score}/10. Higher = more novel and feasible.">Q:${idea.quality_score}</span>` : ''}
+        ${idea.user_fit_score ? `<span class="chip" data-tooltip="Estimated fit to your profile and vote history.">Fit:${idea.user_fit_score}</span>` : ''}
+        ${_renderRefinementChip(idea)}
         ${currentLanguage === 'id' ? '<span class="chip">ID</span>' : ''}
       </div>
       ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
       <div class="idea-why">${escapeHtml(idea.why_hard || '')}</div>
+      ${idea.refinement_summary ? `<div class="idea-refine-note"><span class="idea-method-label">Why stronger:</span> ${escapeHtml(idea.refinement_summary)}</div>` : ''}
+      ${idea.fit_to_user_summary ? `<div class="idea-why-this"><span class="idea-method-label">Fit:</span> ${escapeHtml(idea.fit_to_user_summary)}</div>` : ''}
       ${idea.why_this_idea ? `<div class="idea-why-this"><span class="idea-method-label">Why this idea:</span> ${escapeHtml(idea.why_this_idea)}</div>` : ''}
       ${idea.methodology_hint ? `<div class="idea-method"><span class="idea-method-label">Approach:</span> ${escapeHtml(idea.methodology_hint)}</div>` : ''}
       ${idea.next_steps ? `<div class="idea-steps"><span class="idea-method-label">Start here:</span> ${escapeHtml(idea.next_steps)}</div>` : ''}
@@ -2712,11 +3036,13 @@ function quickMode() {
   const approach = document.getElementById('approachSelect').value;
   const goal = document.getElementById('goalSelect').value;
   const context = document.getElementById('researchContext').value.slice(0, 2000);
+  const userProfile = getPersonalityProfile();
+  const feedbackSummary = getFeedbackMemory();
   
   fetch('/api/quick', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ categories: selectedCats, max_ideas: maxIdeas, language: language, approach: approach, goal: goal, context: context })
+    body: JSON.stringify({ categories: selectedCats, max_ideas: maxIdeas, language: language, approach: approach, goal: goal, context: context, user_profile: userProfile, feedback_summary: feedbackSummary })
   })
   .then(r => r.json())
   .then(data => {
@@ -2796,11 +3122,13 @@ function _doStartPipeline() {
   const research_context = document.getElementById('researchContext').value.slice(0, 2000);
   const approach = document.getElementById('approachSelect').value;
   const mode = (goal === 'SYNTHESIS') ? 'review' : 'default';
+  const userProfile = getPersonalityProfile();
+  const feedbackSummary = getFeedbackMemory();
 
   fetch('/api/run', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, mode: mode, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0' })
+    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, mode: mode, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0', user_profile: userProfile, feedback_summary: feedbackSummary })
   }).catch(err => { addLog('[ERR] Failed: ' + err, 'err'); });
 }
 
@@ -3216,6 +3544,10 @@ document.addEventListener('keydown', function(e) {
     closeActivityCenter();
   }
 });
+
+document.getElementById('feedbackReasonModal')?.addEventListener('click', function(e) {
+  if (e.target && e.target.id === 'feedbackReasonModal') closeFeedbackReasonModal();
+});
 document.getElementById('deepDiveModal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
@@ -3351,9 +3683,13 @@ function _renderDefaultSessionDetail(grid, session) {
           <span class="chip">${escapeHtml(idea.difficulty || "Master's")}</span>
           <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
           ${idea.quality_score ? `<span class="chip">Q:${idea.quality_score}</span>` : ''}
+          ${idea.user_fit_score ? `<span class="chip">Fit:${idea.user_fit_score}</span>` : ''}
+          ${_renderRefinementChip(idea)}
         </div>
         ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
         ${idea.why_hard ? `<div class="idea-why">${escapeHtml(idea.why_hard)}</div>` : ''}
+        ${idea.refinement_summary ? `<div class="idea-refine-note"><span class="idea-method-label">Why stronger:</span> ${escapeHtml(idea.refinement_summary)}</div>` : ''}
+        ${idea.fit_to_user_summary ? `<div class="idea-why-this"><span class="idea-method-label">Fit:</span> ${escapeHtml(idea.fit_to_user_summary)}</div>` : ''}
         ${idea.methodology_hint ? `<div class="idea-method"><span class="idea-method-label">Approach:</span> ${escapeHtml(idea.methodology_hint)}</div>` : ''}
         ${idea.next_steps ? `<div class="idea-steps"><span class="idea-method-label">Start here:</span> ${escapeHtml(idea.next_steps)}</div>` : ''}
         ${insp ? `<div class="idea-insp">REF: ${insp}</div>` : ''}
@@ -3460,6 +3796,7 @@ function showSettingsStatus(msg, ok) {
 }
 
 function saveSettings() {
+  _persistPersonalitySettings();
   const body = {
     provider: document.getElementById('settProvider').value,
     model: document.getElementById('settModel').value,
@@ -3532,6 +3869,13 @@ function testConnection() {
     el.addEventListener('change', function() {
       localStorage.setItem(key, this.checked ? '1' : '0');
     });
+  });
+  _loadPersonalitySettingsUI();
+  ['settWorkStyle', 'settScopePreference', 'settRiskTolerance', 'settOutputTone', 'settPersonalityConstraints'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', _persistPersonalitySettings);
+    if (el.tagName === 'TEXTAREA') el.addEventListener('blur', _persistPersonalitySettings);
   });
 })();
 

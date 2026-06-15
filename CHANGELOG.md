@@ -1,5 +1,75 @@
 # Changelog
 
+## v1.6.0 (2026-05-28)
+
+### Research-Grade Trust Layer (new)
+- Evidence Pack on every idea: source papers, evidence claims, grounding score, and risk flags
+- Evidence badges in the dashboard: Grounded, Partial, Needs Review
+- Invalid or missing paper refs now surface as review warnings instead of disappearing silently
+
+### Persistence & Recovery (improved)
+- Browser session recovery now restores ideas together with cached Deep Dive and Implementation Scout results
+- Session badge shows when current research artifacts were last saved in the browser
+- Older snapshots without evidence fields remain readable
+
+### Implementation Discovery (new)
+- "Find Implementations" button on every idea card
+- 10 sources: Papers With Code, GitHub, Awesome Lists, Hugging Face, PyPI, ClinicalTrials.gov, ChEMBL, UniProt, Zenodo, Kaggle
+- Category-aware routing (e.g., med.* gets ClinicalTrials, chem.* gets ChEMBL)
+- Results cached in sessionStorage (no re-query for same idea)
+- Smart PyPI lookup with keyword-to-package mapping (60+ research terms)
+
+### Idea Comparison View (new)
+- Checkbox on each idea card for selection (max 4)
+- Floating "Compare (N)" button when 2+ selected
+- Side-by-side table with adaptive dimensions (only shows fields that have data)
+- Works across modes (Academic + Product + Develop mixed)
+
+### Export (new)
+- Export dropdown: Obsidian (.md + YAML frontmatter), Markdown (.md), Notion (clipboard)
+- New "Research Notes" export format for thesis/skripsi-style Markdown
+- Includes Deep Dive content if previously fetched
+- "Export All" button in comparison modal
+- Adaptive — only includes sections with data
+
+### Weekly Diff (new)
+- "Diff vs current" button on each session in Recent tab
+- Compares ideas (Jaccard on title tokens), source papers, categories, difficulty distribution
+- Shows: new ideas, overlapping ideas, removed ideas, new papers, category changes
+
+### Idea Refinement Chat (new)
+- "Refine" button in idea detail modal opens interactive chat
+- Multi-turn conversation with LLM to refine scope, methodology, assumptions
+- Full idea context injected as system prompt (LLM knows the idea deeply)
+- Supports all LLM providers (Gemini multi-turn, OpenAI-compatible messages)
+- Chat history maintained per session
+
+### Research Roadmap (new)
+- "Roadmap" button in idea detail modal generates a zero-to-mastery knowledge graph
+- Full-page card-based graph in dedicated Roadmap tab
+- LLM generates 12-20 nodes across 4 tiers: Foundation → Intermediate → Advanced → Execution
+- Node types: theory, method, tool, paper, experiment, milestone, goal
+- Click any node to see description, resources, prerequisites, and what it unlocks
+- Progress tracking: mark nodes as done, progress bar shows % complete (saved in localStorage)
+- Supports multiple roadmaps (switch between up to 5)
+
+### Security & Polish
+- Server binds to 127.0.0.1 by default (SCOUT_HOST env var for LAN)
+- MAX_CONTENT_LENGTH = 5MB at Flask level
+- Toast warning when Quick mode has no cached papers
+- ARIA labels on nav tabs, buttons, and interactive elements
+- Keyboard navigation for tabs (Enter/Space)
+
+### API
+- `POST /api/implementations` — find code repos, models, datasets for an idea
+- `POST /api/refine` — multi-turn chat to refine an idea with LLM
+- `POST /api/roadmap` — generate knowledge graph (nodes + edges) for an idea
+
+### Testing
+- 43 new unit tests for impl_finder.py (121 total)
+
+---
+
 ## v1.5.3 (2026-05-26)
 
 ### Review Mode (new)

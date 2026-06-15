@@ -59,6 +59,11 @@ class TestParseResponse(unittest.TestCase):
         raw = 'data: {"choices":[{"message":{"content":"Full response"}}]}\ndata: [DONE]\n'
         self.assertEqual(self.client._parse_response(raw), "Full response")
 
+    def test_pure_json_with_reasoning_content_only(self):
+        """Reasoning models may leave content empty but include reasoning_content."""
+        raw = '{"choices":[{"message":{"content":"","reasoning_content":"Thinking..."}}]}'
+        self.assertEqual(self.client._parse_response(raw), "Thinking...")
+
     def test_malformed_json(self):
         """Malformed JSON returns empty string."""
         raw = '{"choices":[{"message":{"content":"trunca'
@@ -86,6 +91,14 @@ class TestParseResponse(unittest.TestCase):
             'data: {"choices":[{"delta":{"content":"no done"}}]}\n'
         )
         self.assertEqual(self.client._parse_response(raw), "no done")
+
+    def test_sse_with_reasoning_content_only(self):
+        """Streaming/non-streaming chunks with reasoning_content still count as text."""
+        raw = (
+            'data: {"choices":[{"message":{"content":"","reasoning_content":"Reasoning alive"}}]}\n'
+            'data: [DONE]\n'
+        )
+        self.assertEqual(self.client._parse_response(raw), "Reasoning alive")
 
 
 class TestParseSse(unittest.TestCase):

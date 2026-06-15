@@ -10,6 +10,7 @@ from flask import Blueprint, jsonify, request
 from src.core.config import Config
 from src.core.llm import LLMClient
 from src.core.analyzer import TrendAnalyzer
+from src.core.personalization import build_personalization_brief
 
 ideas_bp = Blueprint("ideas", __name__)
 
@@ -63,6 +64,18 @@ def _format_idea(raw: dict, field: str) -> dict:
         "inspiration_title": "",
         "inspiration_link": "",
         "generated_date":   Config.TODAY_STR,
+        "source_papers":    raw.get("source_papers", []),
+        "evidence_claims":  raw.get("evidence_claims", []),
+        "grounding_score":  raw.get("grounding_score", 0),
+        "risk_flags":       raw.get("risk_flags", []),
+        "critique_summary": raw.get("critique_summary", ""),
+        "refinement_summary": raw.get("refinement_summary", ""),
+        "novelty_claim":    raw.get("novelty_claim", ""),
+        "feasibility_warning": raw.get("feasibility_warning", ""),
+        "refined":          bool(raw.get("refined", False)),
+        "fit_to_user_summary": raw.get("fit_to_user_summary", ""),
+        "misalignment_flags": raw.get("misalignment_flags", []),
+        "user_fit_score":   raw.get("user_fit_score", 0),
     }
 
 
@@ -78,6 +91,8 @@ def api_quick():
     approach   = body.get("approach", "any")
     goal       = body.get("goal", "any")
     context    = body.get("context", "")
+    user_profile = body.get("user_profile", {})
+    feedback_summary = body.get("feedback_summary", {})
 
     # Append uploaded file context if available
     from src.web.routes.upload import get_uploaded_context
@@ -95,6 +110,11 @@ def api_quick():
 
     paper_context = ""
     from_cache = bool(relevant)
+    # Calculate staleness: average _used_count of papers being used
+    avg_usage = 0
+    if relevant:
+        usage_counts = [p.get("_used_count", 0) for p in relevant[:15]]
+        avg_usage = sum(usage_counts) / len(usage_counts) if usage_counts else 0
     if relevant:
         top = relevant[:15]
         lines = "\n".join(
@@ -118,6 +138,9 @@ def api_quick():
     }
     approach_hint = approach_hints.get(approach, "")
     lang_hint = "Write in formal academic Bahasa Indonesia." if language == "id" else ""
+    personalization_hint = build_personalization_brief(user_profile, feedback_summary)
+    if personalization_hint:
+        personalization_hint = f"\n{personalization_hint}\nPrefer ideas that fit this user profile over generic ambitious ideas.\n"
 
     if is_develop:
         # ── DEVELOP MODE PROMPT ──
@@ -129,7 +152,7 @@ def api_quick():
             f"CRITICAL: Every idea MUST be directly applicable to the project below. Do NOT suggest new standalone products.\n\n"
             f"=== THE USER'S PROJECT ===\n{context}\n=== END ===\n\n"
             f"Fields: {cats_str}\n{approach_hint}\n{lang_hint}\n"
-            f"{paper_context}\n"
+            f"{paper_context}\n{personalization_hint}\n"
             "Return a JSON array. Each object must have:\n"
             "- idea_title: feature/improvement name (specific to the project, 5-15 words)\n"
             "- difficulty: \"Hackathon\" | \"Side Project\" | \"Industry\"\n"
@@ -140,6 +163,9 @@ def api_quick():
             "- resources_needed: tech stack needed (comma-separated, prefer project's existing stack)\n"
             "- prerequisites: who benefits from this improvement\n"
             "- why_this_idea: effort estimate (hours/days/weeks)\n"
+            "- fit_to_user_summary: 1 sentence on why this fits the user's profile\n"
+            "- misalignment_flags: array of short warnings if it still mismatches the user\n"
+            "- user_fit_score: 1-10 for user fit\n"
             "- quality_score: 1-10 (relevance to project + feasibility + impact)\n"
             f"{'Reference papers using P-numbers.' if paper_context else ''}\n"
             "Respond ONLY with valid JSON array. No markdown."
@@ -158,7 +184,7 @@ def api_quick():
             f"You are a product strategist. Generate exactly {max_ideas} BUILDABLE product ideas for the fields: {cats_str}\n"
             f"{approach_hint}\n{goal_hint}\n{lang_hint}\n"
             f"{'Builder context: ' + context if context else ''}\n"
-            f"{paper_context}\n"
+            f"{paper_context}\n{personalization_hint}\n"
             "Each idea is a tool/app/service that solves a real problem.\n\n"
             "Return a JSON array. Each object must have:\n"
             "- idea_title: product name (catchy, 5-12 words)\n"
@@ -170,6 +196,9 @@ def api_quick():
             "- resources_needed: tech stack (comma-separated)\n"
             "- prerequisites: target user description\n"
             "- why_this_idea: revenue model (1 sentence)\n"
+            "- fit_to_user_summary: 1 sentence on why this fits the user's profile\n"
+            "- misalignment_flags: array of short warnings if it still mismatches the user\n"
+            "- user_fit_score: 1-10 for user fit\n"
             "- quality_score: 1-10 (viability + differentiation)\n"
             f"{'Reference papers using P-numbers.' if paper_context else ''}\n"
             "Respond ONLY with valid JSON array. No markdown."
@@ -187,11 +216,12 @@ def api_quick():
             f"Generate exactly {max_ideas} research project ideas for the fields: {cats_str}\n"
             f"{approach_hint}\n{goal_hint}\n{lang_hint}\n"
             f"{'Student context: ' + context if context else ''}\n"
-            f"{paper_context}\n"
+            f"{paper_context}\n{personalization_hint}\n"
             "Return a JSON array. Each object must have: idea_title, difficulty "
             "(\"Undergraduate\" | \"Master's\" | \"PhD\"), abstract (3 sentences), "
             "why_hard, methodology_hint, next_steps (array of 3), resources_needed, "
-            "prerequisites (array of 3-5 skills), why_this_idea, quality_score (1-10).\n"
+            "prerequisites (array of 3-5 skills), why_this_idea, fit_to_user_summary, "
+            "misalignment_flags (array), user_fit_score (1-10), quality_score (1-10).\n"
             f"{'Reference papers using P-numbers from the list above.' if paper_context else ''}\n"
             "Respond ONLY with valid JSON array. No markdown."
         )
@@ -211,7 +241,13 @@ def api_quick():
             _format_idea(idea, categories[0] if categories else "")
             for idea in ideas_raw[:max_ideas]
         ]
-        return jsonify({"ideas": ideas, "from_cache": from_cache})
+        # Local telemetry
+        try:
+            from src.core.health import record_usage
+            record_usage("quick_mode", ideas=len(ideas), from_cache=from_cache, goal=goal)
+        except Exception:
+            pass
+        return jsonify({"ideas": ideas, "from_cache": from_cache, "avg_usage": round(avg_usage, 1)})
 
     except Exception as e:
         return jsonify({"error": str(e), "ideas": []}), 500
@@ -225,6 +261,8 @@ def api_regenerate():
     approach = body.get("approach", "any")
     language = body.get("language", "en")
     context  = body.get("context", "")
+    user_profile = body.get("user_profile", {})
+    feedback_summary = body.get("feedback_summary", {})
     exclude  = body.get("exclude_title", "")
 
     approach_hints = {
@@ -234,6 +272,9 @@ def api_regenerate():
     }
     approach_hint = approach_hints.get(approach, "")
     lang_hint = "Write ALL fields in formal academic Bahasa Indonesia." if language == "id" else ""
+    personalization_hint = build_personalization_brief(user_profile, feedback_summary)
+    if personalization_hint:
+        personalization_hint = f"\n{personalization_hint}\nPrefer fit-to-user over generic novelty.\n"
 
     keywords = TrendAnalyzer.KEYWORD_SEEDS.get(field, ["research", "analysis"])[:5]
 
@@ -242,11 +283,13 @@ def api_regenerate():
         f"Keywords in this area: {', '.join(keywords)}\n"
         f"{approach_hint}\n{lang_hint}\n"
         f"{'Student context: ' + context if context else ''}\n"
+        f"{personalization_hint}\n"
         f"Do NOT generate this title: {exclude}\n\n"
         "Return a JSON object with: idea_title, difficulty (Undergraduate|Master's|PhD), "
         "abstract (3 sentences), why_hard (2 sentences), methodology_hint (2 sentences), "
         "next_steps (array of 3 strings), resources_needed, prerequisites (array of 3-5 skills), "
-        "why_this_idea (1 sentence), quality_score (1-10).\n\n"
+        "why_this_idea (1 sentence), fit_to_user_summary, misalignment_flags (array), "
+        "user_fit_score (1-10), quality_score (1-10).\n\n"
         "Respond ONLY with valid JSON. No markdown."
     )
 

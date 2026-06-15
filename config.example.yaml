@@ -13,6 +13,18 @@ llm:
   # base_url: only needed for custom/ollama providers
   # base_url: http://localhost:11434/v1/chat/completions
 
+# Implementation Discovery (v1.6)
+# GitHub token is optional — increases rate limit from 10 to 30 req/min
+# You can set it here OR via GITHUB_TOKEN env var.
+# Get one at: https://github.com/settings/tokens (no scopes needed for public search)
+# github_token: 'ghp_...'
+
+# Kaggle credentials — optional, enables Kaggle dataset search
+# You can set them here OR via KAGGLE_USERNAME / KAGGLE_KEY env vars.
+# Get from: https://www.kaggle.com/account → Create New Token
+# kaggle_username: ''
+# kaggle_key: ''
+
 features:
   refine: false
   sensitivity: false

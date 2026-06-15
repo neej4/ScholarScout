@@ -87,7 +87,8 @@ Same papers, four different lenses:
 
 ### Intelligence
 - Trend analysis with confidence scoring
-- Anti-hallucination: P-number grounding (LLM can only cite fetched papers)
+- Evidence Pack per generated idea: source papers, evidence claims, grounding score, and audit flags
+- Anti-hallucination: P-number grounding (LLM citations are validated against fetched papers)
 - Novelty check via semantic similarity (Gemini embeddings) or Jaccard fallback
 - Quality scoring 1-10, low-quality filtered
 - Deep dive: outline, methodology, datasets, timeline, tools, references
@@ -108,7 +109,9 @@ Same papers, four different lenses:
 
 ### Dashboard
 - Real-time SSE streaming
-- Search, filter, bookmark, export PDF
+- Search, filter, bookmark, export all ideas to Markdown
+- Session recovery restores ideas plus cached deep dives/implementation scouting
+- Evidence badges: Grounded, Partial, or Needs Review
 - Session history (last 20 runs, review + default)
 - Toast notifications (no browser alerts)
 - Keyboard shortcuts

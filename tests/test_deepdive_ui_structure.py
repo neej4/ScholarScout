@@ -12,7 +12,7 @@ def test_deep_dive_button_exists():
     content = dashboard_path.read_text(encoding="utf-8")
     
     # Check for Deep Dive button in the idea card
-    assert "Deep Dive ↓" in content, "Deep Dive button text not found"
+    assert "Deep Dive" in content, "Deep Dive button text not found"
     assert "openDeepDive" in content, "openDeepDive function call not found"
     assert "btn-sm" in content, "Button styling class not found"
 
@@ -167,7 +167,7 @@ def test_deep_dive_button_in_idea_card():
     assert "idea-card-footer" in content or "idea-actions" in content, "idea card action area not found"
     
     # Deep Dive is now in the detail popup (openIdeaDetail), not in the card directly
-    assert "function openIdeaDetail(idea)" in content, "openIdeaDetail function not found"
+    assert "function openIdeaDetail(idea, triggerEl)" in content, "openIdeaDetail function not found"
     assert "openDeepDive(idea" in content, "openDeepDive call not found in detail popup"
 
 

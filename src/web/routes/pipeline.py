@@ -52,6 +52,8 @@ def api_run():
             "goal":             "SCOUT_GOAL",
             "refine":           "SCOUT_REFINE",
             "sensitivity":      "SCOUT_SENSITIVITY",
+            "user_profile":     "SCOUT_USER_PROFILE",
+            "feedback_summary": "SCOUT_FEEDBACK_SUMMARY",
         }
         for key, env_key in _env_map.items():
             val = body.get(key)
@@ -62,12 +64,16 @@ def api_run():
             elif key == "categories":
                 env["SCOUT_CATEGORIES"] = ",".join(val)
             elif env_key:
-                env[env_key] = str(val)
+                env[env_key] = json.dumps(val, ensure_ascii=False) if isinstance(val, (dict, list)) else str(val)
 
         # Pipeline mode (default or review)
         mode = body.get("mode", "default")
         if mode:
             env["SCOUT_MODE"] = mode
+
+        # Force refresh: bypass cache entirely, fetch fresh papers
+        if body.get("force_refresh"):
+            env["SCOUT_FORCE_REFRESH"] = "1"
 
         # Append uploaded file context to SCOUT_CONTEXT (if any)
         from src.web.routes.upload import get_uploaded_context

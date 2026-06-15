@@ -37,7 +37,7 @@ def test_startpipeline_includes_language_in_payload():
         html_content = f.read()
     
     # Find _doStartPipeline function (actual pipeline logic)
-    match = re.search(r'function _doStartPipeline\(\)\s*\{(.*?)\n\}', html_content, re.DOTALL)
+    match = re.search(r'function _doStartPipeline\([^)]*\)\s*\{(.*?)\n\}', html_content, re.DOTALL)
     assert match is not None, "_doStartPipeline function not found"
     
     function_body = match.group(1)
