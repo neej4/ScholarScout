@@ -1,5 +1,46 @@
 # Changelog
 
+## v1.6.0 Release Notes (2026-06-15)
+
+### Research-grade trust layer
+- Evidence Pack on every generated idea: source papers, evidence claims, grounding score, and risk flags
+- Invalid or missing paper references now surface explicitly instead of failing silently
+- Deep Dive grounding verification and evidence-aware serialization are now part of the default research workflow
+
+### Better idea quality
+- Self-improvement upgraded from light text cleanup to a critique-and-rewrite loop
+- Refined ideas can now explain their main weakness, why the rewritten version is stronger, where the novelty sits, and what execution risk still remains
+- Refined ideas are marked directly in the dashboard and idea detail modal
+
+### Personalized idea steering
+- Added user preference steering for generation and refinement
+- New personality controls: work style, scope preference, risk tolerance, output tone, and extra constraints
+- Upvote/downvote now supports reason capture, so ScholarScout can learn what the user actually likes or rejects
+- Ideas can now show fit-to-user summary, misalignment flags, and user fit score
+
+### Dashboard workflow improvements
+- Idea detail modal upgraded with a floating action rail for Deep Dive, Export, Copy, Bookmark, Regenerate, and feedback
+- Export and copy from the modal now include refinement and user-fit context
+- Session rendering remains backward-compatible with older ideas that do not yet have evidence or refinement fields
+
+### Reliability and generation fairness
+- Idea distribution across selected categories is now dynamic and fairer
+- Fixed the old behavior where early categories could consume the full idea budget before later categories were reached
+- Quick mode, regenerate, and full pipeline now all accept personality/profile context
+
+### Research tooling
+- Implementation discovery stack included for finding related code, tools, datasets, and packages
+- Health/usage helpers, evidence helpers, and analysis utilities added to support more audit-ready output
+- `config.yaml` removed from version control; `config.example.yaml` remains the source of truth for setup
+
+### API and backend
+- Added or extended support for `POST /api/implementations`, `POST /api/refine`, and `POST /api/roadmap`
+- Capability/personality-aware request flow now reaches the pipeline and idea generation routes
+
+### Testing
+- Added coverage for evidence helpers, refinement flow, personalization helpers, implementation discovery, and UI structural checks
+- Core Python tests, JS tests, and compile checks passed for the v1.6 release path
+
 ## v1.6.0 (2026-05-28)
 
 ### Research-Grade Trust Layer (new)
