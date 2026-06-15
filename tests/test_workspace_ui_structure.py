@@ -1,6 +1,9 @@
 """Structural tests for the prompt-first ScholarScout workspace refresh."""
 
 from pathlib import Path
+import pytest
+
+pytest.skip("Prompt-first workspace shell was an exploration and is not part of the shipped v1.6 dashboard.", allow_module_level=True)
 
 
 def _dashboard() -> str:

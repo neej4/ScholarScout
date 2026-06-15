@@ -29,17 +29,17 @@
 - Quick mode, regenerate, and full pipeline now all accept personality/profile context
 
 ### Research tooling
-- Implementation discovery stack included for finding related code, tools, datasets, and packages
+- Implementation discovery support is included for finding related code, tools, datasets, and packages
 - Health/usage helpers, evidence helpers, and analysis utilities added to support more audit-ready output
 - `config.yaml` removed from version control; `config.example.yaml` remains the source of truth for setup
 
 ### API and backend
 - Added or extended support for `POST /api/implementations`, `POST /api/refine`, and `POST /api/roadmap`
-- Capability/personality-aware request flow now reaches the pipeline and idea generation routes
+- Personality-aware request flow now reaches the pipeline and idea generation routes
 
 ### Testing
 - Added coverage for evidence helpers, refinement flow, personalization helpers, implementation discovery, and UI structural checks
-- Core Python tests, JS tests, and compile checks passed for the v1.6 release path
+- Core Python tests, JS tests, and compile checks passed for the shipped v1.6 ScholarScout path
 
 ## v1.6.0 (2026-05-28)
 

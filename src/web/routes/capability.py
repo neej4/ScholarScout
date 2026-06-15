@@ -6,6 +6,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 from flask import Blueprint, jsonify, request
 
@@ -16,16 +17,31 @@ _capability_src = _base_dir.parent / "capabilityscout" / "src"
 if str(_capability_src) not in sys.path:
     sys.path.insert(0, str(_capability_src))
 
-from capabilityscout import (  # type: ignore  # noqa: E402
-    CapabilityProfile,
-    CapabilityValidationError,
-    ScholarScoutCoreShim,
-    run_capability_pipeline,
-)
+CapabilityProfile = None
+CapabilityValidationError = ValueError
+ScholarScoutCoreShim = None
+run_capability_pipeline = None
+_CAPABILITY_IMPORT_ERROR: Optional[Exception] = None
+
+try:
+    from capabilityscout import (  # type: ignore  # noqa: E402
+        CapabilityProfile,
+        CapabilityValidationError,
+        ScholarScoutCoreShim,
+        run_capability_pipeline,
+    )
+except Exception as exc:  # pragma: no cover - exercised in integration/CI environments
+    _CAPABILITY_IMPORT_ERROR = exc
 
 
 @capability_bp.route("/api/capability", methods=["POST"])
 def api_capability():
+    if _CAPABILITY_IMPORT_ERROR is not None:
+        return jsonify({
+            "error": "Capability mode is unavailable because capabilityscout is not installed.",
+            "details": str(_CAPABILITY_IMPORT_ERROR),
+        }), 503
+
     body = request.get_json(silent=True) or {}
     selected_categories = body.get("field_focus") or body.get("categories") or []
     profile_data = dict(body.get("profile") or {})

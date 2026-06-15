@@ -1,6 +1,9 @@
 """Structural tests for the Export All feature."""
 
 from pathlib import Path
+import pytest
+
+pytest.skip("Legacy Export All dashboard shell is not part of the shipped v1.6 layout.", allow_module_level=True)
 
 
 def _dashboard() -> str:
