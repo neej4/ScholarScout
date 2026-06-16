@@ -35,6 +35,7 @@ class Orchestrator:
         self.language = language or os.environ.get('SCOUT_LANGUAGE', 'en')
         self.approach = approach or os.environ.get('SCOUT_APPROACH', 'any')
         self.goal = os.environ.get('SCOUT_GOAL', 'any')
+        self.goal_style = os.environ.get('SCOUT_GOAL_STYLE', '')
         self.refine = os.environ.get('SCOUT_REFINE', '0') == '1'
         self.sensitivity = os.environ.get('SCOUT_SENSITIVITY', '0') == '1'
         self.force_refresh = os.environ.get('SCOUT_FORCE_REFRESH', '0') == '1'
@@ -399,6 +400,7 @@ class Orchestrator:
                     language=self.language,
                     approach=self.approach,
                     goal=self.goal,
+                    goal_style=self.goal_style,
                     refine=self.refine,
                     user_profile=self.user_profile,
                     feedback_summary=self.feedback_summary,
@@ -431,6 +433,8 @@ class Orchestrator:
             "run_timestamp": run_timestamp,
             "model": Config.LLM_MODEL,
             "approach": self.approach,
+            "goal": self.goal,
+            "goal_style": self.goal_style,
             "user_profile": self.user_profile,
             "feedback_summary": self.feedback_summary,
             "categories": list(cat_counts.keys()),
@@ -455,9 +459,12 @@ class Orchestrator:
             "date": Config.TODAY_STR,
             "categories": list(cat_counts.keys()),
             "approach": self.approach,
+            "goal": self.goal,
+            "goal_style": self.goal_style,
             "user_profile": self.user_profile,
             "papers_total": len(all_papers),
             "ideas_total": len(all_ideas),
+            "cat_counts": cat_counts,
             "ideas": [idea.to_dict() for idea in all_ideas],
         })
         # Keep last 20 sessions

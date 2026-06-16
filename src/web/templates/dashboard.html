@@ -135,6 +135,9 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 /* BOOKMARK BUTTON */
 .bookmark-btn{position:absolute;top:12px;right:12px;background:none;border:none;font-size:16px;cursor:pointer;color:#ffffff;opacity:0.5;transition:opacity 0.2s;padding:4px;line-height:1;z-index:1}
 .bookmark-btn:hover,.bookmark-btn.active{opacity:1}
+.select-idea-btn{position:absolute;top:12px;left:12px;width:20px;height:20px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.18s;z-index:1}
+.select-idea-btn:hover,.select-idea-btn.active{color:#fff;border-color:#8aa5c2;background:rgba(138,165,194,0.18)}
+.idea-card.selected{border-color:#8aa5c2;box-shadow:0 0 0 1px rgba(138,165,194,0.22) inset}
 .idea-card-body{position:relative}
 
 /* CARD ACTION BUTTONS */
@@ -372,6 +375,20 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .toast.visible{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
 .toast.toast-error{border-color:var(--err);color:var(--err)}
 .toast.toast-ok{border-color:#66cc66;color:#66cc66}
+.run-insights{display:none;gap:10px;align-items:flex-start;justify-content:space-between;margin:12px 0 8px;padding:12px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px}
+.run-insights-main{display:grid;gap:5px}
+.run-insights-title{font-size:12px;font-weight:600;color:#fff}
+.run-insights-sub{font-size:11px;color:var(--muted);line-height:1.5}
+.run-insights-meta{font-size:10px;color:var(--muted);white-space:nowrap}
+.memory-summary{margin-top:14px;padding:12px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px}
+.memory-summary-title{font-size:11px;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:0.08em}
+.memory-summary-copy{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px}
+.memory-summary-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.memory-chip{padding:5px 9px;border:1px solid var(--border);border-radius:999px;font-size:10px;color:var(--text);background:rgba(255,255,255,0.03)}
+@media (max-width: 900px){
+  .run-insights{flex-direction:column}
+  .run-insights-meta{white-space:normal}
+}
 </style>
 </head>
 <body>
@@ -403,6 +420,8 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <button class="btn btn-run" id="btnRun" onclick="startPipeline()" title="Fetch fresh papers and generate ideas (takes 1-3 min)">Run</button>
     <button class="btn" onclick="quickMode()" title="Generate ideas instantly from cached papers (~10 sec, no fetching)">Quick</button>
     <button class="btn btn-stop" id="btnStop" onclick="stopPipeline()" style="display:none">Stop</button>
+    <button class="btn" id="btnExportAll" onclick="exportAllIdeas()" title="Export all generated ideas as Markdown" disabled>Export All</button>
+    <button class="btn" id="btnExportSelected" onclick="exportSelectedIdeas()" title="Export only selected ideas as Markdown" disabled>Export Selected</button>
     <button class="btn" onclick="clearStorage()" title="Clear all generated ideas and reset dashboard">Clear</button>
   </div>
   <div class="ctrl-group">
@@ -414,6 +433,11 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       <option value="id">Bahasa Indonesia</option>
     </select>
     <input type="number" id="maxIdeas" value="10" min="1" max="200" style="width:56px" title="Number of ideas">
+    <select id="presetSelect" title="Saved run preset">
+      <option value="">Presets</option>
+    </select>
+    <button class="btn" onclick="applySelectedPreset()" title="Apply selected run preset">Apply Preset</button>
+    <button class="btn" onclick="saveCurrentPreset()" title="Save current categories and settings as a preset">Save Preset</button>
   </div>
   <!-- Hidden selects for data storage (read by pipeline) -->
   <select id="approachSelect" style="display:none">
@@ -438,6 +462,13 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <option value="EXTENSION">Extension</option>
     <option value="PIVOT">Pivot</option>
     <option value="SYNTHESIS">Synthesis</option>
+  </select>
+  <select id="goalStyleSelect" style="display:none">
+    <option value="">Auto</option>
+    <option value="breakthrough">Breakthrough</option>
+    <option value="thesis">Thesis</option>
+    <option value="project">Project</option>
+    <option value="assignment">Assignment</option>
   </select>
   <textarea id="researchContext" style="display:none"></textarea>
 </div>
@@ -636,6 +667,17 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       </div>
     </div>
 
+    <div class="profile-section" id="goalStyleSection">
+      <div class="profile-label">Goal Style</div>
+      <div class="profile-cards" id="goalStyleCards">
+        <div class="profile-card selected" data-value="breakthrough" title="Broad, high-novelty, multi-gap ideas">Breakthrough</div>
+        <div class="profile-card" data-value="thesis" title="Feasible academic scope with strong evidence">Thesis</div>
+        <div class="profile-card" data-value="project" title="Practical and build-oriented">Project</div>
+        <div class="profile-card" data-value="assignment" title="Narrow, fast, and safe to execute">Assignment</div>
+      </div>
+      <div id="goalStyleHint" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5"></div>
+    </div>
+
     <!-- STEP 3: Approach -->
     <div class="profile-section">
       <div class="profile-label">Approach</div>
@@ -716,6 +758,13 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <div class="stat"><div class="stat-val" id="sIdeas">0</div><div class="stat-lbl">Ideas Generated</div></div>
         <div class="stat"><div class="stat-val" id="sCats">0</div><div class="stat-lbl">Categories</div></div>
         <div class="stat"><div class="stat-val" id="sCost">-</div><div class="stat-lbl">Time</div></div>
+      </div>
+      <div class="run-insights" id="runInsights">
+        <div class="run-insights-main">
+          <div class="run-insights-title" id="runInsightsTitle">Search-first summary</div>
+          <div class="run-insights-sub" id="runInsightsSummary">Run ScholarScout to see category spread and session save status.</div>
+        </div>
+        <div class="run-insights-meta" id="runInsightsMeta"></div>
       </div>
       <div class="filter-bar">
         <input type="text" id="ideaSearch" placeholder="Search ideas..." style="flex:1">
@@ -945,6 +994,11 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
               <label class="settings-label">Extra constraints</label>
               <textarea id="settPersonalityConstraints" placeholder="Example: I prefer thesis-friendly NLP ideas, 3-6 months scope, limited GPU, and practical evaluation."></textarea>
             </div>
+          </div>
+          <div class="memory-summary" id="feedbackMemorySummary">
+            <div class="memory-summary-title">Preference memory</div>
+            <div class="memory-summary-copy" id="feedbackMemoryCopy">No feedback saved yet. Upvote or downvote ideas with reasons, and ScholarScout will start learning your taste.</div>
+            <div class="memory-summary-chips" id="feedbackMemoryChips"></div>
           </div>
         </div>
 
@@ -1602,6 +1656,9 @@ function _wizardFinish() {
   if (goal && goal !== 'any') {
     document.getElementById('goalSelect').value = goal;
     sessionStorage.setItem('scholarscout_goal', goal);
+    document.getElementById('goalStyleSelect').value = suggestGoalStyleForGoal(goal);
+    sessionStorage.setItem('scholarscout_goal_style', suggestGoalStyleForGoal(goal));
+    sessionStorage.removeItem('scholarscout_goal_style_manual');
     // Sync to profile popup cards
     document.querySelectorAll('#goalCards .profile-card').forEach(c => {
       c.classList.toggle('selected', c.dataset.value === goal);
@@ -1722,6 +1779,242 @@ function getFeedbackMemory() {
   }
 }
 
+function summarizeFeedbackMemory(feedback, limit = 4) {
+  const likes = {};
+  const dislikes = {};
+  const notes = [];
+  Object.values(feedback || {}).forEach(entry => {
+    if (!entry || typeof entry !== 'object') return;
+    const vote = String(entry.vote || '').toLowerCase();
+    const reasons = Array.isArray(entry.reasons) ? entry.reasons : [];
+    reasons.forEach(reason => {
+      const key = String(reason || '').trim();
+      if (!key) return;
+      const bucket = vote === 'up' ? likes : dislikes;
+      bucket[key] = (bucket[key] || 0) + 1;
+    });
+    const note = String(entry.note || '').trim();
+    if (note) notes.push(note);
+  });
+  const sortTop = bucket => Object.entries(bucket)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([label, count]) => ({ label, count }));
+  return {
+    likes: sortTop(likes),
+    dislikes: sortTop(dislikes),
+    notes: notes.slice(0, 2)
+  };
+}
+
+function renderFeedbackMemorySummary() {
+  const copy = document.getElementById('feedbackMemoryCopy');
+  const chips = document.getElementById('feedbackMemoryChips');
+  if (!copy || !chips) return;
+  const summary = summarizeFeedbackMemory(getFeedbackMemory());
+  const hasFeedback = summary.likes.length || summary.dislikes.length || summary.notes.length;
+  if (!hasFeedback) {
+    copy.textContent = 'No feedback saved yet. Upvote or downvote ideas with reasons, and ScholarScout will start learning your taste.';
+    chips.innerHTML = '';
+    return;
+  }
+  const parts = [];
+  if (summary.likes.length) parts.push(`Likes: ${summary.likes.map(item => item.label).join(', ')}`);
+  if (summary.dislikes.length) parts.push(`Avoids: ${summary.dislikes.map(item => item.label).join(', ')}`);
+  if (summary.notes.length) parts.push(`Notes: ${summary.notes.join(' | ')}`);
+  copy.textContent = parts.join(' ');
+  chips.innerHTML = [
+    ...summary.likes.map(item => `<span class="memory-chip">+ ${escapeHtml(item.label)} (${item.count})</span>`),
+    ...summary.dislikes.map(item => `<span class="memory-chip">- ${escapeHtml(item.label)} (${item.count})</span>`)
+  ].join('');
+}
+
+function _presetStorageKey() {
+  return 'scholarscout_run_presets';
+}
+
+function _loadPresetMap() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(_presetStorageKey()) || '{}');
+    return raw && typeof raw === 'object' ? raw : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function _selectedCategories() {
+  return Array.from(document.querySelectorAll('.cat-item input:checked')).map(el => el.value);
+}
+
+function _setSelectedCategories(categoryIds) {
+  const picked = new Set(categoryIds || []);
+  document.querySelectorAll('.cat-item input[type=checkbox]').forEach(cb => {
+    cb.checked = picked.has(cb.value);
+  });
+}
+
+const GOAL_STYLE_DEFAULTS = {
+  PUBLICATION: 'breakthrough',
+  GRANT_PROPOSAL: 'breakthrough',
+  PIVOT: 'breakthrough',
+  THESIS: 'thesis',
+  HACKATHON: 'assignment',
+  SIDE_PROJECT: 'project',
+  AI_TOOL: 'project',
+  INDUSTRY_RND: 'project',
+  FEATURE: 'project',
+  INTEGRATION: 'project',
+  OPTIMIZATION: 'project',
+  EXTENSION: 'project',
+  SYNTHESIS: ''
+};
+const MODE_GOAL_STYLE_OPTIONS = {
+  academic: ['breakthrough', 'thesis', 'project', 'assignment'],
+  product: ['breakthrough', 'project'],
+  develop: ['breakthrough', 'project', 'assignment'],
+  review: []
+};
+const GOAL_STYLE_LABELS = {
+  breakthrough: 'Breakthrough',
+  thesis: 'Thesis',
+  project: 'Project',
+  assignment: 'Assignment'
+};
+const GOAL_STYLE_HINTS = {
+  breakthrough: 'Broad, high-novelty, multi-paper synthesis. Best when you want bold ideas from landscape-level gaps.',
+  thesis: 'Feasible academic scope with stronger grounding, clearer evaluation path, and realistic completion risk.',
+  project: 'Practical and build-oriented. Good for MVPs, implementation ideas, and execution-first outcomes.',
+  assignment: 'Narrow, safe, and quick to execute. Good for tasks, prototypes, or small scoped deliverables.'
+};
+
+function suggestGoalStyleForGoal(goal) {
+  return GOAL_STYLE_DEFAULTS[String(goal || 'any').toUpperCase()] || 'project';
+}
+
+function allowedGoalStylesForMode(mode) {
+  return MODE_GOAL_STYLE_OPTIONS[String(mode || 'academic').toLowerCase()] || MODE_GOAL_STYLE_OPTIONS.academic;
+}
+
+function _profileMode() {
+  return document.querySelector('#modeCards .profile-card.selected')?.dataset.mode || 'academic';
+}
+
+function _selectedGoalValue() {
+  return document.querySelector('#goalCards .profile-card.selected, #goalCardsProduct .profile-card.selected, #goalCardsDevelop .profile-card.selected, #goalCardsReview .profile-card.selected')?.dataset.value || document.getElementById('goalSelect').value || 'any';
+}
+
+function syncGoalStyleUI(options = {}) {
+  const mode = options.mode || _profileMode();
+  const goal = options.goal || _selectedGoalValue();
+  const select = document.getElementById('goalStyleSelect');
+  const section = document.getElementById('goalStyleSection');
+  const hint = document.getElementById('goalStyleHint');
+  const cards = document.querySelectorAll('#goalStyleCards .profile-card');
+  if (!select || !section || !hint || !cards.length) return;
+
+  const allowed = allowedGoalStylesForMode(mode);
+  if (!allowed.length || goal === 'SYNTHESIS') {
+    section.style.display = 'none';
+    select.value = '';
+    return;
+  }
+
+  section.style.display = '';
+  const manual = sessionStorage.getItem('scholarscout_goal_style_manual') === '1';
+  const suggested = suggestGoalStyleForGoal(goal);
+  let nextStyle = select.value || suggested;
+  if (options.forceSuggestion || !manual || !allowed.includes(nextStyle)) nextStyle = allowed.includes(suggested) ? suggested : allowed[0];
+
+  cards.forEach(card => {
+    const active = allowed.includes(card.dataset.value);
+    card.style.display = active ? '' : 'none';
+    card.classList.toggle('selected', active && card.dataset.value === nextStyle);
+  });
+  select.value = nextStyle;
+  hint.textContent = GOAL_STYLE_HINTS[nextStyle] || '';
+}
+
+function _captureCurrentPreset() {
+  return {
+    categories: _selectedCategories(),
+    maxIdeas: parseInt(document.getElementById('maxIdeas').value, 10) || 10,
+    language: document.getElementById('langSelect').value || 'en',
+    approach: document.getElementById('approachSelect').value || 'any',
+    goal: document.getElementById('goalSelect').value || 'any',
+    goal_style: document.getElementById('goalStyleSelect').value || '',
+    context: document.getElementById('researchContext').value || '',
+    personality: getPersonalityProfile()
+  };
+}
+
+function loadRunPresets() {
+  const select = document.getElementById('presetSelect');
+  if (!select) return;
+  const presets = _loadPresetMap();
+  const current = select.value;
+  select.innerHTML = '<option value="">Presets</option>';
+  Object.keys(presets).sort((a, b) => a.localeCompare(b)).forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  });
+  if (current && presets[current]) select.value = current;
+}
+
+function saveCurrentPreset() {
+  const name = window.prompt('Preset name?');
+  if (!name) return;
+  const presetName = name.trim();
+  if (!presetName) return;
+  const presets = _loadPresetMap();
+  presets[presetName] = _captureCurrentPreset();
+  localStorage.setItem(_presetStorageKey(), JSON.stringify(presets));
+  loadRunPresets();
+  document.getElementById('presetSelect').value = presetName;
+  showToast(`Saved preset: ${presetName}`, 'ok');
+}
+
+function applySelectedPreset() {
+  const select = document.getElementById('presetSelect');
+  if (!select || !select.value) {
+    showToast('Choose a preset first', 'error');
+    return;
+  }
+  const presets = _loadPresetMap();
+  const preset = presets[select.value];
+  if (!preset) {
+    showToast('Preset not found', 'error');
+    return;
+  }
+  _setSelectedCategories(preset.categories || []);
+  document.getElementById('maxIdeas').value = preset.maxIdeas || 10;
+  document.getElementById('langSelect').value = preset.language || 'en';
+  document.getElementById('approachSelect').value = preset.approach || 'any';
+  document.getElementById('goalSelect').value = preset.goal || 'any';
+  document.getElementById('goalStyleSelect').value = preset.goal_style || suggestGoalStyleForGoal(preset.goal || 'any');
+  document.getElementById('researchContext').value = preset.context || '';
+  document.getElementById('profileContext').value = preset.context || '';
+  sessionStorage.setItem('scholarscout_goal_style', document.getElementById('goalStyleSelect').value || '');
+  sessionStorage.setItem('scholarscout_goal_style_manual', '1');
+
+  const personality = preset.personality || {};
+  const mapping = {
+    settWorkStyle: personality.work_style || 'balanced',
+    settScopePreference: personality.scope_preference || 'balanced',
+    settRiskTolerance: personality.risk_tolerance || 'medium',
+    settOutputTone: personality.output_tone || 'academic',
+    settPersonalityConstraints: personality.constraints || ''
+  };
+  Object.entries(mapping).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+  _persistPersonalitySettings();
+  syncGoalStyleUI({ mode: _profileMode(), goal: preset.goal || 'any' });
+  showToast(`Applied preset: ${select.value}`, 'ok');
+}
+
 function openFeedbackReasonModal(idea, vote) {
   _pendingFeedbackVote = {idea, vote, reasons: []};
   const modal = document.getElementById('feedbackReasonModal');
@@ -1768,6 +2061,7 @@ function submitFeedbackReason() {
   };
   localStorage.setItem('scholarscout_feedback', JSON.stringify(feedback));
   closeFeedbackReasonModal();
+  renderFeedbackMemorySummary();
   showToast('Feedback saved for idea steering', 'ok');
 }
 
@@ -1818,6 +2112,7 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
       // closes profile without clicking Save
       document.getElementById('goalSelect').value = firstCard.dataset.value || 'any';
       sessionStorage.setItem('scholarscout_goal', firstCard.dataset.value || 'any');
+      sessionStorage.removeItem('scholarscout_goal_style_manual');
     }
     // Update context label: required for review, optional for others
     const ctxLabel = document.getElementById('contextLabel');
@@ -1826,6 +2121,7 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
         ? 'Topic <span style="font-weight:500;color:#ff6b6b">(required for Review)</span>'
         : 'Context <span style="font-weight:400;color:var(--muted)">(optional)</span>';
     }
+    syncGoalStyleUI({ mode, goal: firstCard ? firstCard.dataset.value || 'any' : 'any' });
     goalSection.style.opacity = '1';
   }, 150);
 });
@@ -1836,8 +2132,29 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
 (function restoreProfile() {
   const approach = sessionStorage.getItem('scholarscout_approach') || 'any';
   const goal = sessionStorage.getItem('scholarscout_goal') || 'any';
+  const goalStyle = sessionStorage.getItem('scholarscout_goal_style') || suggestGoalStyleForGoal(goal);
   const ctx = sessionStorage.getItem('scholarscout_context') || '';
+  const goalModeMap = {
+    HACKATHON: 'product',
+    SIDE_PROJECT: 'product',
+    AI_TOOL: 'product',
+    INDUSTRY_RND: 'product',
+    FEATURE: 'develop',
+    INTEGRATION: 'develop',
+    OPTIMIZATION: 'develop',
+    EXTENSION: 'develop',
+    PIVOT: 'develop',
+    SYNTHESIS: 'review'
+  };
+  const mode = goalModeMap[goal] || 'academic';
   
+  document.querySelectorAll('#modeCards .profile-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.mode === mode);
+  });
+  document.getElementById('goalCards').style.display = mode === 'academic' ? '' : 'none';
+  document.getElementById('goalCardsProduct').style.display = mode === 'product' ? '' : 'none';
+  document.getElementById('goalCardsDevelop').style.display = mode === 'develop' ? '' : 'none';
+  document.getElementById('goalCardsReview').style.display = mode === 'review' ? '' : 'none';
   document.querySelectorAll('#approachCards .profile-card').forEach(c => {
     c.classList.toggle('selected', c.dataset.value === approach);
   });
@@ -1848,7 +2165,9 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
   document.getElementById('profileContext').value = ctx;
   document.getElementById('approachSelect').value = approach;
   document.getElementById('goalSelect').value = goal;
+  document.getElementById('goalStyleSelect').value = goalStyle;
   document.getElementById('researchContext').value = ctx;
+  syncGoalStyleUI({ mode, goal, forceSuggestion: !sessionStorage.getItem('scholarscout_goal_style_manual') });
 })();
 
 function saveProfile() {
@@ -1860,6 +2179,7 @@ function saveProfile() {
                      document.querySelector('#goalCardsReview .profile-card.selected');
   const approach   = approachEl ? approachEl.dataset.value : 'any';
   const goal       = goalEl     ? goalEl.dataset.value     : 'any';
+  const goalStyle  = document.getElementById('goalStyleSelect').value || suggestGoalStyleForGoal(goal);
   const ctx        = document.getElementById('profileContext').value.trim();
   
   // Review mode requires context (topic for literature review)
@@ -1872,11 +2192,13 @@ function saveProfile() {
   // Persist to session
   sessionStorage.setItem('scholarscout_approach', approach);
   sessionStorage.setItem('scholarscout_goal', goal);
+  sessionStorage.setItem('scholarscout_goal_style', goalStyle);
   sessionStorage.setItem('scholarscout_context', ctx);
   
   // Sync to hidden selects/textarea used by pipeline
   document.getElementById('approachSelect').value = approach;
   document.getElementById('goalSelect').value = goal;
+  document.getElementById('goalStyleSelect').value = goalStyle;
   document.getElementById('researchContext').value = ctx;
   
   closePopup('profileModal');
@@ -1894,8 +2216,21 @@ document.querySelectorAll('#goalCards, #goalCardsProduct, #goalCardsDevelop, #go
     if (card.dataset.value) {
       document.getElementById('goalSelect').value = card.dataset.value;
       sessionStorage.setItem('scholarscout_goal', card.dataset.value);
+      sessionStorage.removeItem('scholarscout_goal_style_manual');
+      syncGoalStyleUI({ goal: card.dataset.value, mode: _profileMode(), forceSuggestion: true });
     }
   });
+});
+
+document.getElementById('goalStyleCards').addEventListener('click', function(e) {
+  const card = e.target.closest('.profile-card');
+  if (!card || card.style.display === 'none') return;
+  this.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  document.getElementById('goalStyleSelect').value = card.dataset.value || '';
+  document.getElementById('goalStyleHint').textContent = GOAL_STYLE_HINTS[card.dataset.value] || '';
+  sessionStorage.setItem('scholarscout_goal_style', card.dataset.value || '');
+  sessionStorage.setItem('scholarscout_goal_style_manual', '1');
 });
 
 // ── File Upload for Profile (drag & drop) ──
@@ -2017,6 +2352,8 @@ document.querySelectorAll('#goalCards, #goalCardsProduct, #goalCardsDevelop, #go
   }).catch(() => {});
 })();
 let running = false, es = null, ideas = [], startTime = null, currentLanguage = 'en';
+let lastRunMeta = null;
+let selectedIdeaKeys = new Set();
 
 // HTML-escape utility to prevent XSS (top-level so available everywhere)
 function escapeHtml(str) {
@@ -2370,6 +2707,7 @@ function _bindModalIdeaActions(idea) {
         .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:10px;color:#999}</style></head><body>`);
       printWin.document.write(`<h1>${escapeHtml(idea.idea_title || 'Untitled')}</h1>`);
       printWin.document.write(`<div class="meta"><span class="chip">${escapeHtml(idea.field || '')}</span><span class="chip">${escapeHtml(idea.difficulty || '')}</span><span class="chip">${escapeHtml(idea.cost_estimate || '')}</span></div>`);
+      if (idea.goal_style) printWin.document.write(`<h2>Goal Style</h2><p>${escapeHtml(GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style)}</p>`);
       if (idea.abstract) printWin.document.write(`<h2>Abstract</h2><p>${escapeHtml(idea.abstract)}</p>`);
       if (idea.why_hard) printWin.document.write(`<h2>Why It's Hard</h2><p>${escapeHtml(idea.why_hard)}</p>`);
       if (idea.methodology_hint) printWin.document.write(`<h2>Methodology</h2><p>${escapeHtml(idea.methodology_hint)}</p>`);
@@ -2394,6 +2732,7 @@ function _bindModalIdeaActions(idea) {
       const parts = [idea.idea_title || ''];
       if (idea.field) parts.push(`Field: ${idea.field}`);
       if (idea.difficulty) parts.push(`Level: ${idea.difficulty}`);
+      if (idea.goal_style) parts.push(`Goal style: ${GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style}`);
       if (idea.abstract) parts.push(`\nAbstract: ${idea.abstract}`);
       if (idea.why_hard) parts.push(`\nWhy hard: ${idea.why_hard}`);
       if (idea.methodology_hint) parts.push(`\nMethodology: ${idea.methodology_hint}`);
@@ -2451,6 +2790,7 @@ function _bindModalIdeaActions(idea) {
         body: JSON.stringify({
           field: idea.field || '',
           approach: document.getElementById('approachSelect').value,
+          goal_style: document.getElementById('goalStyleSelect').value,
           language: document.getElementById('langSelect').value,
           context: document.getElementById('researchContext').value.slice(0, 2000),
           exclude_title: idea.idea_title,
@@ -2533,9 +2873,11 @@ function openIdeaDetail(idea, triggerEl) {
       <span class="chip">${escapeHtml(idea.field || '')}</span>
       <span class="chip">${escapeHtml(idea.difficulty || '')}</span>
       <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
+      ${idea.goal_style ? `<span class="chip">${escapeHtml(String(idea.goal_style).toUpperCase())}</span>` : ''}
       ${_renderRefinementChip(idea)}
       ${idea.user_fit_score ? `<span class="chip" data-tooltip="Estimated fit to your profile and past feedback.">${escapeHtml('Fit:' + idea.user_fit_score + '/10')}</span>` : ''}
     </div>
+    ${idea.goal_style ? `<div class="modal-section"><div class="modal-section-title">Goal Style</div><p>Generated for ${escapeHtml(GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style)} style.</p></div>` : ''}
     ${idea.abstract ? `<div class="modal-section"><div class="modal-section-title">Abstract</div><p>${escapeHtml(idea.abstract)}</p></div>` : ''}
     ${(idea.critique_summary || idea.refinement_summary || idea.novelty_claim || idea.feasibility_warning) ? _renderRefinementSections(idea) : ''}
     ${(idea.fit_to_user_summary || (idea.misalignment_flags && idea.misalignment_flags.length)) ? _renderUserFitSections(idea) : ''}
@@ -2768,9 +3110,10 @@ function addIdeaCard(idea) {
   const insp = ids.map((id, i) => `<a href="${escapeHtml(links[i] || '#')}" target="_blank">${escapeHtml(id)}</a>`).join(', ');
   const title = idea.idea_title || 'Untitled';
   const bm = isBookmarked(title);
+  const selected = selectedIdeaKeys.has(_ideaKey(idea));
   
   const card = document.createElement('div');
-  card.className = 'idea-card' + (bm ? ' bookmarked' : '');
+  card.className = 'idea-card' + (bm ? ' bookmarked' : '') + (selected ? ' selected' : '');
   card.setAttribute('data-title', title);
   
   // Disable bookmark button if localStorage is not available
@@ -2778,6 +3121,7 @@ function addIdeaCard(idea) {
   
   card.innerHTML = `
     <div class="idea-card-body">
+      <button class="select-idea-btn${selected ? ' active' : ''}" data-action="select" aria-pressed="${selected ? 'true' : 'false'}" title="Select for Export Selected">${selected ? '✓' : '+'}</button>
       <button class="bookmark-btn${bm ? ' active' : ''}" data-action="bookmark" ${bookmarkDisabled ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''}>${bm ? '◆' : '◇'}</button>
       <div class="idea-field">${escapeHtml(idea.field || 'Uncategorized')}</div>
       <div class="idea-title">${escapeHtml(title)}</div>
@@ -2786,6 +3130,7 @@ function addIdeaCard(idea) {
         <span class="chip">${escapeHtml(idea.cost_estimate || 'Cloud GPU')}</span>
         ${idea.quality_score ? `<span class="chip" data-tooltip="LLM self-rated quality: ${idea.quality_score}/10. Higher = more novel and feasible.">Q:${idea.quality_score}</span>` : ''}
         ${idea.user_fit_score ? `<span class="chip" data-tooltip="Estimated fit to your profile and vote history.">Fit:${idea.user_fit_score}</span>` : ''}
+        ${idea.goal_style ? `<span class="chip" data-tooltip="Generated for ${escapeHtml(GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style)} style.">${escapeHtml(String(idea.goal_style).toUpperCase())}</span>` : ''}
         ${_renderRefinementChip(idea)}
         ${currentLanguage === 'id' ? '<span class="chip">ID</span>' : ''}
       </div>
@@ -2811,6 +3156,13 @@ function addIdeaCard(idea) {
       card.classList.add('expanded');
     }
   });
+  const selectBtn = card.querySelector('[data-action="select"]');
+  if (selectBtn) {
+    selectBtn.textContent = selected ? '✓' : '+';
+    selectBtn.addEventListener('click', function() {
+      toggleIdeaSelection(idea, this);
+    });
+  }
   const bookmarkBtn = card.querySelector('[data-action="bookmark"]');
   if (bookmarkBtn) {
     bookmarkBtn.addEventListener('click', function() {
@@ -2833,6 +3185,235 @@ function addIdeaCard(idea) {
 
 function updateStats() {
   document.getElementById('sIdeas').textContent = ideas.length;
+  _updateExportAllButton();
+  _updateExportSelectedButton();
+  updateRunInsights();
+}
+
+function _buildIdeaDistribution() {
+  const counts = {};
+  ideas.forEach(idea => {
+    const key = (idea && idea.field ? String(idea.field) : 'Uncategorized').trim() || 'Uncategorized';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function _formatRunTimestamp(value) {
+  if (!value) return '';
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return '';
+  return dt.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function updateRunInsights(meta) {
+  if (meta) lastRunMeta = meta;
+  const panel = document.getElementById('runInsights');
+  const title = document.getElementById('runInsightsTitle');
+  const summary = document.getElementById('runInsightsSummary');
+  const metaEl = document.getElementById('runInsightsMeta');
+  if (!panel || !title || !summary || !metaEl) return;
+
+  if (!ideas.length) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  const distribution = _buildIdeaDistribution();
+  const spread = distribution.slice(0, 4).map(([label, count]) => `${label} ${count}`).join(' · ');
+  const categoryCount = distribution.length;
+  title.textContent = categoryCount > 1
+    ? `Ideas spread across ${categoryCount} categories`
+    : `Ideas concentrated in ${distribution[0]?.[0] || '1 category'}`;
+  summary.textContent = spread || `${ideas.length} ideas ready to review`;
+
+  const selectedCount = lastRunMeta && Array.isArray(lastRunMeta.categories) ? lastRunMeta.categories.length : 0;
+  const savedAt = _formatRunTimestamp(lastRunMeta && lastRunMeta.timestamp);
+  const metaParts = [];
+  if (selectedCount) metaParts.push(`${selectedCount} categories selected`);
+  if (savedAt) metaParts.push(`Saved in session ${savedAt}`);
+  metaEl.textContent = metaParts.join(' · ');
+  panel.style.display = 'flex';
+}
+
+function _updateExportAllButton() {
+  const btn = document.getElementById('btnExportAll');
+  if (!btn) return;
+  btn.disabled = !ideas.length;
+  btn.textContent = ideas.length ? `Export All (${ideas.length})` : 'Export All';
+}
+
+function _updateExportSelectedButton() {
+  const btn = document.getElementById('btnExportSelected');
+  if (!btn) return;
+  const count = selectedIdeaKeys.size;
+  btn.disabled = !count;
+  btn.textContent = count ? `Export Selected (${count})` : 'Export Selected';
+}
+
+function _ideaKey(idea) {
+  return [
+    idea && idea.idea_title ? String(idea.idea_title).trim() : '',
+    idea && idea.field ? String(idea.field).trim() : '',
+    idea && idea.abstract ? String(idea.abstract).trim().slice(0, 80) : ''
+  ].join('||');
+}
+
+function _selectedIdeas() {
+  return ideas.filter(idea => selectedIdeaKeys.has(_ideaKey(idea)));
+}
+
+function toggleIdeaSelection(idea, btn) {
+  const key = _ideaKey(idea);
+  if (selectedIdeaKeys.has(key)) selectedIdeaKeys.delete(key);
+  else selectedIdeaKeys.add(key);
+  const active = selectedIdeaKeys.has(key);
+  if (btn) {
+    btn.classList.toggle('active', active);
+    btn.textContent = active ? '✓' : '+';
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  }
+  const card = btn ? btn.closest('.idea-card') : null;
+  if (card) card.classList.toggle('selected', active);
+  _updateExportSelectedButton();
+}
+
+function _appendIdeaSection(lines, title, value) {
+  if (!value) return;
+  lines.push(`## ${title}`);
+  lines.push(String(value).trim());
+  lines.push('');
+}
+
+function _appendIdeaListSection(lines, title, values) {
+  if (!values || !values.length) return;
+  lines.push(`## ${title}`);
+  values.forEach(value => lines.push(`- ${String(value).trim()}`));
+  lines.push('');
+}
+
+function _buildIdeaMarkdown(idea, index) {
+  const lines = [`# Idea ${index + 1}: ${idea.idea_title || 'Untitled'}`, ''];
+  const meta = [
+    idea.field ? `Field: ${idea.field}` : '',
+    idea.difficulty ? `Difficulty: ${idea.difficulty}` : '',
+    idea.cost_estimate ? `Cost: ${idea.cost_estimate}` : '',
+    idea.quality_score ? `Quality: ${idea.quality_score}/10` : '',
+    idea.user_fit_score ? `Fit: ${idea.user_fit_score}/10` : '',
+    idea.refined ? 'Refined: yes' : ''
+  ].filter(Boolean);
+  if (meta.length) {
+    lines.push(meta.join(' | '));
+    lines.push('');
+  }
+  if (idea.goal_style) {
+    lines.push(`Goal Style: ${GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style}`);
+    lines.push('');
+  }
+
+  _appendIdeaSection(lines, 'Abstract', idea.abstract);
+  _appendIdeaSection(lines, "Why It's Hard", idea.why_hard);
+  _appendIdeaSection(lines, 'Methodology', idea.methodology_hint);
+  _appendIdeaSection(lines, 'Why This Idea', idea.why_this_idea);
+  _appendIdeaSection(lines, 'Why This Version Is Stronger', idea.refinement_summary);
+  _appendIdeaSection(lines, 'Internal Critique', idea.critique_summary);
+  _appendIdeaSection(lines, 'Sharper Novelty Claim', idea.novelty_claim);
+  _appendIdeaSection(lines, 'Feasibility Warning', idea.feasibility_warning);
+  _appendIdeaSection(lines, 'Fit To User', idea.fit_to_user_summary);
+
+  const nextSteps = (idea.next_steps || '').split('|').map(s => s.trim()).filter(Boolean);
+  _appendIdeaListSection(lines, 'Next Steps', nextSteps);
+
+  const prereqs = (idea.prerequisites || '').split('|').map(s => s.trim()).filter(Boolean);
+  _appendIdeaListSection(lines, 'Prerequisites', prereqs);
+
+  if (idea.resources_needed) {
+    const resources = String(idea.resources_needed).split(',').map(s => s.trim()).filter(Boolean);
+    _appendIdeaListSection(lines, 'Resources Needed', resources);
+  }
+
+  if (idea.misalignment_flags && idea.misalignment_flags.length) {
+    _appendIdeaListSection(lines, 'Misalignment Flags', idea.misalignment_flags);
+  }
+
+  if (idea.source_papers && idea.source_papers.length) {
+    lines.push('## Evidence Pack');
+    lines.push('');
+    lines.push('### Source Papers');
+    idea.source_papers.forEach((paper, paperIndex) => {
+      const link = paper.link || paper.url || '';
+      const title = paper.title || `Paper ${paperIndex + 1}`;
+      const source = paper.source ? ` (${paper.source})` : '';
+      lines.push(`- ${title}${source}${link ? ` - ${link}` : ''}`);
+    });
+    lines.push('');
+  }
+
+  if (idea.evidence_claims && idea.evidence_claims.length) {
+    lines.push('### Evidence Claims');
+    idea.evidence_claims.forEach(claim => {
+      const refs = (claim.paper_ids || []).join(', ');
+      lines.push(`- ${claim.claim || ''}${refs ? ` [${refs}]` : ''}`);
+    });
+    lines.push('');
+  }
+
+  if (idea.risk_flags && idea.risk_flags.length) {
+    lines.push('### Risk Flags');
+    idea.risk_flags.forEach(flag => lines.push(`- ${flag}`));
+    lines.push('');
+  }
+
+  return lines.join('\n').trim();
+}
+
+function _exportIdeasAsMarkdown(ideasToExport, filenamePrefix) {
+  if (!ideasToExport.length) {
+    showToast('No ideas to export yet', 'error');
+    return;
+  }
+  const sections = [
+    '# ScholarScout Export',
+    '',
+    `Generated: ${new Date().toISOString()}`,
+    `Total ideas: ${ideasToExport.length}`,
+    ''
+  ];
+  ideasToExport.forEach((idea, index) => {
+    sections.push(_buildIdeaMarkdown(idea, index));
+    sections.push('');
+    sections.push('---');
+    sections.push('');
+  });
+  const blob = new Blob([sections.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filenamePrefix}${new Date().toISOString().slice(0, 10)}.md`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${ideasToExport.length} ideas`, 'ok');
+}
+
+function exportAllIdeas() {
+  _exportIdeasAsMarkdown(ideas, 'scholarscout_ideas_');
+}
+
+function exportSelectedIdeas() {
+  const picked = _selectedIdeas();
+  if (!picked.length) {
+    showToast('Select at least one idea first', 'error');
+    return;
+  }
+  _exportIdeasAsMarkdown(picked, 'scholarscout_selected_ideas_');
 }
 
 function _difficultyTooltip(level) {
@@ -2971,6 +3552,13 @@ function handleEvent(ev) {
     }
     // Load results from snapshot (handles both default and review mode)
     fetch('/api/results').then(r => r.json()).then(data => {
+      if (Array.isArray(data.ideas) && data.ideas.length) {
+        updateRunInsights({
+          categories: data.categories || [],
+          timestamp: data.run_timestamp || new Date().toISOString(),
+          cat_counts: data.cat_counts || {}
+        });
+      }
       if (data.mode === 'review' && data.review) {
         _renderReviewResults(data.review, data.topic || '');
       }
@@ -3017,6 +3605,8 @@ function stopSpriteAnim() {
 
 function clearStorage() {
   ideas = [];
+  lastRunMeta = null;
+  selectedIdeaKeys = new Set();
   document.getElementById('ideasGrid').innerHTML='<div class="empty"><span>▸</span>Execute pipeline to generate insights</div>';
   updateStats();
 }
@@ -3030,11 +3620,13 @@ function quickMode() {
   
   const grid = document.getElementById('ideasGrid');
   grid.innerHTML = '<div class="empty"><span>▸</span>Generating ideas (quick mode)...</div>';
+  selectedIdeaKeys = new Set();
   
   const maxIdeas = parseInt(document.getElementById('maxIdeas').value) || 5;
   const language = document.getElementById('langSelect').value;
   const approach = document.getElementById('approachSelect').value;
   const goal = document.getElementById('goalSelect').value;
+  const goalStyle = document.getElementById('goalStyleSelect').value;
   const context = document.getElementById('researchContext').value.slice(0, 2000);
   const userProfile = getPersonalityProfile();
   const feedbackSummary = getFeedbackMemory();
@@ -3042,7 +3634,7 @@ function quickMode() {
   fetch('/api/quick', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ categories: selectedCats, max_ideas: maxIdeas, language: language, approach: approach, goal: goal, context: context, user_profile: userProfile, feedback_summary: feedbackSummary })
+    body: JSON.stringify({ categories: selectedCats, max_ideas: maxIdeas, language: language, approach: approach, goal: goal, goal_style: goalStyle, context: context, user_profile: userProfile, feedback_summary: feedbackSummary })
   })
   .then(r => r.json())
   .then(data => {
@@ -3050,6 +3642,11 @@ function quickMode() {
       grid.innerHTML = '';
       ideas = data.ideas;
       data.ideas.forEach(idea => addIdeaCard(idea));
+      updateRunInsights({
+        categories: selectedCats,
+        timestamp: new Date().toISOString(),
+        source: data.from_cache ? 'cache' : 'quick'
+      });
       updateStats();
       if (data.from_cache) addLog('[QUICK] Generated from cached papers', 'ok');
       else addLog('[QUICK] Generated from LLM knowledge (no cache available)', 'warn');
@@ -3096,6 +3693,7 @@ function _doStartPipeline() {
   }
 
   ideas = []; 
+  selectedIdeaKeys = new Set();
   document.getElementById('ideasGrid').innerHTML = '<div class="empty"><span>▸</span>Processing...</div>';
   document.getElementById('logBox').innerHTML = '';
   
@@ -3121,6 +3719,7 @@ function _doStartPipeline() {
   currentLanguage = language;
   const research_context = document.getElementById('researchContext').value.slice(0, 2000);
   const approach = document.getElementById('approachSelect').value;
+  const goalStyle = document.getElementById('goalStyleSelect').value;
   const mode = (goal === 'SYNTHESIS') ? 'review' : 'default';
   const userProfile = getPersonalityProfile();
   const feedbackSummary = getFeedbackMemory();
@@ -3128,7 +3727,7 @@ function _doStartPipeline() {
   fetch('/api/run', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, mode: mode, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0', user_profile: userProfile, feedback_summary: feedbackSummary })
+    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, goal_style: goalStyle, mode: mode, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0', user_profile: userProfile, feedback_summary: feedbackSummary })
   }).catch(err => { addLog('[ERR] Failed: ' + err, 'err'); });
 }
 
@@ -3654,6 +4253,11 @@ function _renderReviewSessionDetail(grid, session) {
 
 function _renderDefaultSessionDetail(grid, session) {
   const sessionIdeas = session.ideas || [];
+  const sessionDistribution = Object.entries((sessionIdeas || []).reduce((acc, idea) => {
+    const key = String((idea && idea.field) || 'Uncategorized').trim() || 'Uncategorized';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {})).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   if (!sessionIdeas.length) {
     const empty = document.createElement('div');
     empty.className = 'empty';
@@ -3662,6 +4266,12 @@ function _renderDefaultSessionDetail(grid, session) {
     return;
   }
 
+  if (sessionDistribution.length) {
+    const summary = document.createElement('div');
+    summary.style.cssText = 'grid-column:1/-1;margin-bottom:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted)';
+    summary.textContent = `Idea spread: ${sessionDistribution.slice(0, 4).map(([label, count]) => `${label} ${count}`).join(' · ')}`;
+    grid.appendChild(summary);
+  }
   const ideasContainer = document.createElement('div');
   ideasContainer.className = 'ideas-grid';
   grid.appendChild(ideasContainer);
@@ -3684,6 +4294,7 @@ function _renderDefaultSessionDetail(grid, session) {
           <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
           ${idea.quality_score ? `<span class="chip">Q:${idea.quality_score}</span>` : ''}
           ${idea.user_fit_score ? `<span class="chip">Fit:${idea.user_fit_score}</span>` : ''}
+          ${idea.goal_style ? `<span class="chip">${escapeHtml(String(idea.goal_style).toUpperCase())}</span>` : ''}
           ${_renderRefinementChip(idea)}
         </div>
         ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
@@ -3871,6 +4482,8 @@ function testConnection() {
     });
   });
   _loadPersonalitySettingsUI();
+  renderFeedbackMemorySummary();
+  loadRunPresets();
   ['settWorkStyle', 'settScopePreference', 'settRiskTolerance', 'settOutputTone', 'settPersonalityConstraints'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;

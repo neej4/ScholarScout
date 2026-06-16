@@ -74,6 +74,7 @@ class ProjectIdea:
     fit_to_user_summary: str = ""
     misalignment_flags: List[str] = field(default_factory=list)
     user_fit_score: int = 0
+    goal_style: str = ""
     
     def to_dict(self) -> dict:
         return {
@@ -107,6 +108,7 @@ class ProjectIdea:
             "fit_to_user_summary": self.fit_to_user_summary,
             "misalignment_flags": self.misalignment_flags,
             "user_fit_score": self.user_fit_score,
+            "goal_style": self.goal_style,
         }
 
 

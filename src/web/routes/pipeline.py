@@ -50,6 +50,7 @@ def api_run():
             "language":         "SCOUT_LANGUAGE",
             "approach":         "SCOUT_APPROACH",
             "goal":             "SCOUT_GOAL",
+            "goal_style":       "SCOUT_GOAL_STYLE",
             "refine":           "SCOUT_REFINE",
             "sensitivity":      "SCOUT_SENSITIVITY",
             "user_profile":     "SCOUT_USER_PROFILE",

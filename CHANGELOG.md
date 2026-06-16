@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.6.1 Release Notes (2026-06-16)
+
+### Dashboard workflow polish
+- Added a shipped `Export All` button in the main dashboard controls for full-run Markdown export
+- Added `Export Selected`, so users can pick a smaller working set instead of exporting every generated idea
+- Export output now carries refinement notes, user-fit context, evidence claims, source papers, and risk flags
+- Added a lightweight run summary strip so users can immediately see category spread and the latest session save timestamp
+
+### Reusable research setup
+- Added lightweight run presets for saving and re-applying favorite category, context, and personality configurations
+- Added a visible preference memory summary in Settings so vote reasons start surfacing as readable steering hints
+- Added `Goal Style` steering with suggested defaults from Goal and mode-aware options for Academic, Product, and Develop workflows
+- Goal Style now persists through presets, session state, exports, idea cards, idea detail modal, and pipeline snapshots
+
+### Stability and release fit
+- CI now ignores integration tests explicitly instead of relying on collection-time markers
+- Capability route no longer breaks ScholarScout startup when `capabilityscout` is not installed; the route degrades gracefully with a clear API error
+- Stale structural tests for unfinished dashboard experiments are skipped so shipped UI and test expectations stay aligned
+- Release notes and shipped scope were tightened so `v1.6.x` docs no longer overclaim unfinished dashboard shells
+
+### Testing
+- Added coverage for Goal Style defaults and prompt steering
+- Core Python tests, JS tests, compile checks, and local dashboard smoke checks passed for the shipped v1.6.1 path
+
 ## v1.6.0 Release Notes (2026-06-15)
 
 ### Research-grade trust layer

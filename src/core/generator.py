@@ -79,6 +79,35 @@ PRODUCT_GOALS = {"HACKATHON", "SIDE_PROJECT", "AI_TOOL", "INDUSTRY_RND"}
 DEVELOP_GOALS = {"FEATURE", "INTEGRATION", "OPTIMIZATION", "EXTENSION", "PIVOT"}
 ACADEMIC_GOALS = {"THESIS", "PUBLICATION", "GRANT_PROPOSAL", "UNDERGRADUATE",
                   "MASTERS", "PHD", "LAB_SCIENTIST", "CLINICAL_RESEARCHER", "DATA_SCIENTIST"}
+GOAL_STYLE_DEFAULTS = {
+    "PUBLICATION": "breakthrough",
+    "GRANT_PROPOSAL": "breakthrough",
+    "PIVOT": "breakthrough",
+    "THESIS": "thesis",
+    "HACKATHON": "assignment",
+    "SIDE_PROJECT": "project",
+    "AI_TOOL": "project",
+    "INDUSTRY_RND": "project",
+    "FEATURE": "project",
+    "INTEGRATION": "project",
+    "OPTIMIZATION": "project",
+    "EXTENSION": "project",
+    "SYNTHESIS": "",
+}
+MODE_GOAL_STYLE_OPTIONS = {
+    "academic": ["breakthrough", "thesis", "project", "assignment"],
+    "product": ["breakthrough", "project"],
+    "develop": ["breakthrough", "project", "assignment"],
+    "review": [],
+}
+
+
+def suggest_goal_style(goal: str) -> str:
+    return GOAL_STYLE_DEFAULTS.get(str(goal or "any").upper(), "project")
+
+
+def allowed_goal_styles_for_mode(mode: str) -> List[str]:
+    return MODE_GOAL_STYLE_OPTIONS.get(str(mode or "academic").lower(), MODE_GOAL_STYLE_OPTIONS["academic"])
 
 
 class IdeaGenerator:
@@ -147,6 +176,58 @@ class IdeaGenerator:
     def _is_develop_mode(self, goal: str) -> bool:
         return goal.upper() in DEVELOP_GOALS
 
+    def _mode_for_goal(self, goal: str) -> str:
+        upper = str(goal or "").upper()
+        if upper == "SYNTHESIS":
+            return "review"
+        if self._is_develop_mode(upper):
+            return "develop"
+        if self._is_product_mode(upper):
+            return "product"
+        return "academic"
+
+    def _normalize_goal_style(self, goal_style: str, goal: str) -> str:
+        mode = self._mode_for_goal(goal)
+        allowed = allowed_goal_styles_for_mode(mode)
+        style = str(goal_style or "").strip().lower()
+        if not allowed:
+            return ""
+        if style in allowed:
+            return style
+        suggested = suggest_goal_style(goal)
+        if suggested in allowed:
+            return suggested
+        return allowed[0]
+
+    def _goal_style_block(self, goal: str, goal_style: str) -> str:
+        style = self._normalize_goal_style(goal_style, goal)
+        if not style:
+            return ""
+        blocks = {
+            "breakthrough": (
+                "Goal style: breakthrough.\n"
+                "Favor multi-paper and landscape-level reasoning over single-paper inspiration.\n"
+                "Each idea should synthesize broader unresolved gaps, recurring bottlenecks, or underexplored combinations.\n"
+                "Prefer 2-3 anchor papers plus a wider supporting set, and avoid safe generic ideas."
+            ),
+            "thesis": (
+                "Goal style: thesis.\n"
+                "Favor feasible academic scope with strong grounding, clear evaluation paths, and realistic timeline control.\n"
+                "Ideas should still use multiple papers, but must be finishable and evidence-heavy rather than overly ambitious."
+            ),
+            "project": (
+                "Goal style: project.\n"
+                "Favor buildable, actionable ideas with clear implementation path, practical constraints, and immediate next steps.\n"
+                "Use paper evidence to justify the direction, but keep the output concrete and execution-oriented."
+            ),
+            "assignment": (
+                "Goal style: assignment.\n"
+                "Favor narrow, safe, and quickly executable scope.\n"
+                "Ideas should have clear deliverables, minimal ambiguity, and avoid over-ambitious novelty."
+            ),
+        }
+        return f"\n{blocks[style]}\n"
+
     def _personalization_block(self, user_profile: str = "", feedback_summary: str = "") -> str:
         brief = build_personalization_brief(user_profile, feedback_summary).strip()
         if not brief:
@@ -181,7 +262,7 @@ class IdeaGenerator:
     def generate(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
                  research_context: str = '', language: str = 'en',
                  approach: str = 'any', goal: str = 'any',
-                 refine: bool = False, user_profile: str = '',
+                 goal_style: str = '', refine: bool = False, user_profile: str = '',
                  feedback_summary: str = '') -> List[ProjectIdea]:
         """Route to academic, product, or develop generator based on goal.
         
@@ -202,9 +283,12 @@ class IdeaGenerator:
             batch_size = min(remaining, self.CHUNK_SIZE)
             try:
                 batch = gen_fn(trend, existing_titles, batch_size,
-                               research_context, language, approach, goal,
+                               research_context, language, approach, goal, goal_style,
                                user_profile, feedback_summary)
                 ideas.extend(batch)
+                if not batch:
+                    self.llm._emit("llm_warn", msg=f"No ideas returned for {trend.category}; stopping remaining batches")
+                    break
             except Exception as e:
                 self.llm._emit("llm_error", msg=f"Batch generation failed: {e}")
                 # Continue with next batch — partial results better than nothing
@@ -407,7 +491,7 @@ Respond ONLY with valid JSON array. No markdown, no explanation.
         return ideas
 
     def _generate_develop(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
-                          research_context: str, language: str, approach: str, goal: str,
+                          research_context: str, language: str, approach: str, goal: str, goal_style: str,
                           user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate feature/improvement ideas for an EXISTING project, grounded in papers."""
         category = trend.category
@@ -419,6 +503,7 @@ Respond ONLY with valid JSON array. No markdown, no explanation.
         paper_count = len(available_papers)
 
         goal_section = self._load_skill_constraints(goal)
+        goal_style_section = self._goal_style_block(goal, goal_style)
         avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
         personalization = self._personalization_block(user_profile, feedback_summary)
 
@@ -447,7 +532,7 @@ Trending techniques in this area: {', '.join(trend.top_keywords)}
 
 Already suggested (DO NOT duplicate):
 {avoid_str}
-{language_section}{goal_section}{personalization}
+{language_section}{goal_section}{goal_style_section}{personalization}
 Generate exactly {n} development ideas as a JSON array. Each idea is a concrete improvement to the user's project, inspired by a technique from the papers above.
 
 Each object MUST have:
@@ -474,10 +559,10 @@ Respond ONLY with valid JSON array. No markdown.
 """).strip()
 
         response = self.llm.call(prompt, task_type="idea_generation")
-        return self._parse_develop_response(response, available_papers, category, existing_titles, goal)
+        return self._parse_develop_response(response, available_papers, category, existing_titles, goal, goal_style)
 
     def _parse_develop_response(self, response: Optional[str], available_papers: list,
-                                 category: str, existing_titles: Set[str], goal: str) -> List[ProjectIdea]:
+                                 category: str, existing_titles: Set[str], goal: str, goal_style: str) -> List[ProjectIdea]:
         """Parse LLM response for develop mode into ProjectIdea objects."""
         results: List[ProjectIdea] = []
         if not response:
@@ -562,6 +647,7 @@ Respond ONLY with valid JSON array. No markdown.
                 fit_to_user_summary=idea.get("fit_to_user_summary", ""),
                 misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
                 user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
+                goal_style=self._normalize_goal_style(goal_style, goal),
                 **self._evidence_kwargs(idea, available_papers, insp),
             )
             results.append(obj)
@@ -573,7 +659,7 @@ Respond ONLY with valid JSON array. No markdown.
     # ─── PRODUCT MODE ─────────────────────────────────────────────────────────
 
     def _generate_product(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
-                          research_context: str, language: str, approach: str, goal: str,
+                          research_context: str, language: str, approach: str, goal: str, goal_style: str,
                           user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate buildable product ideas grounded in recent papers."""
         category = trend.category
@@ -585,6 +671,7 @@ Respond ONLY with valid JSON array. No markdown.
         paper_count = len(available_papers)
 
         goal_section = self._load_skill_constraints(goal)
+        goal_style_section = self._goal_style_block(goal, goal_style)
         avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
 
         context_section = ""
@@ -611,7 +698,7 @@ Research gaps (= unmet needs):
 
 Already generated (DO NOT duplicate):
 {avoid_str}
-{context_section}{language_section}{goal_section}{personalization}
+{context_section}{language_section}{goal_section}{goal_style_section}{personalization}
 Generate exactly {n} PRODUCT ideas as a JSON array. Each idea is a buildable tool/app/service inspired by the papers above.
 
 Each object MUST have:
@@ -639,10 +726,10 @@ Respond ONLY with valid JSON array. No markdown.
 """).strip()
 
         response = self.llm.call(prompt, task_type="idea_generation")
-        return self._parse_product_response(response, available_papers, category, existing_titles, goal)
+        return self._parse_product_response(response, available_papers, category, existing_titles, goal, goal_style)
 
     def _parse_product_response(self, response: Optional[str], available_papers: list,
-                                 category: str, existing_titles: Set[str], goal: str) -> List[ProjectIdea]:
+                                 category: str, existing_titles: Set[str], goal: str, goal_style: str) -> List[ProjectIdea]:
         """Parse LLM response for product mode into ProjectIdea objects."""
         results: List[ProjectIdea] = []
         if not response:
@@ -732,6 +819,7 @@ Respond ONLY with valid JSON array. No markdown.
                 fit_to_user_summary=idea.get("fit_to_user_summary", ""),
                 misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
                 user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
+                goal_style=self._normalize_goal_style(goal_style, goal),
                 **self._evidence_kwargs(idea, available_papers, insp),
             )
             results.append(obj)
@@ -743,7 +831,7 @@ Respond ONLY with valid JSON array. No markdown.
     # ─── ACADEMIC MODE (original) ─────────────────────────────────────────────
 
     def _generate_academic(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
-                           research_context: str, language: str, approach: str, goal: str,
+                           research_context: str, language: str, approach: str, goal: str, goal_style: str,
                            user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate research project ideas (original behavior)."""
         category = trend.category
@@ -759,6 +847,7 @@ Respond ONLY with valid JSON array. No markdown.
         goal_section = ""
         if goal and goal != "any":
             goal_section = self._load_skill_constraints(goal)
+        goal_style_section = self._goal_style_block(goal, goal_style)
 
         methods_ctx = ""
         if trend.methodology_patterns:
@@ -811,7 +900,7 @@ Identified research gaps:
 
 Already generated (DO NOT duplicate):
 {avoid_str}
-{context_section}{language_section}{approach_section}{goal_section}{personalization}
+{context_section}{language_section}{approach_section}{goal_section}{goal_style_section}{personalization}
 Generate exactly {n} research project ideas as a JSON array. Each object MUST have:
 
 - "idea_title": Specific, descriptive (8-18 words). NOT generic.
@@ -840,10 +929,10 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
 """).strip()
 
         response = self.llm.call(prompt, task_type="idea_generation")
-        return self._parse_academic_response(response, available_papers, category, existing_titles, trend)
+        return self._parse_academic_response(response, available_papers, category, existing_titles, trend, goal, goal_style)
 
     def _parse_academic_response(self, response: Optional[str], available_papers: list,
-                                  category: str, existing_titles: Set[str], trend: TrendAnalysis) -> List[ProjectIdea]:
+                                  category: str, existing_titles: Set[str], trend: TrendAnalysis, goal: str = "any", goal_style: str = "") -> List[ProjectIdea]:
         """Parse LLM response for academic mode into ProjectIdea objects."""
         results: List[ProjectIdea] = []
         if not response:
@@ -950,6 +1039,7 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                 fit_to_user_summary=idea.get("fit_to_user_summary", ""),
                 misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
                 user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
+                goal_style=self._normalize_goal_style(goal_style, goal),
                 **self._evidence_kwargs(idea, available_papers, insp),
             )
             results.append(obj)

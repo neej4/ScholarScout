@@ -11,6 +11,7 @@ from src.core.config import Config
 from src.core.llm import LLMClient
 from src.core.analyzer import TrendAnalyzer
 from src.core.personalization import build_personalization_brief
+from src.core.generator import suggest_goal_style
 
 ideas_bp = Blueprint("ideas", __name__)
 
@@ -36,7 +37,7 @@ def _load_cache() -> dict:
         return {}
 
 
-def _format_idea(raw: dict, field: str) -> dict:
+def _format_idea(raw: dict, field: str, goal_style: str = "") -> dict:
     """Normalise a raw LLM idea dict into the standard idea schema."""
     diff = raw.get("difficulty", "Master's")
     next_steps = raw.get("next_steps", "")
@@ -76,6 +77,7 @@ def _format_idea(raw: dict, field: str) -> dict:
         "fit_to_user_summary": raw.get("fit_to_user_summary", ""),
         "misalignment_flags": raw.get("misalignment_flags", []),
         "user_fit_score":   raw.get("user_fit_score", 0),
+        "goal_style":       goal_style or raw.get("goal_style", ""),
     }
 
 
@@ -90,6 +92,7 @@ def api_quick():
     language   = body.get("language", "en")
     approach   = body.get("approach", "any")
     goal       = body.get("goal", "any")
+    goal_style = body.get("goal_style", "") or suggest_goal_style(goal)
     context    = body.get("context", "")
     user_profile = body.get("user_profile", {})
     feedback_summary = body.get("feedback_summary", {})
@@ -141,6 +144,10 @@ def api_quick():
     personalization_hint = build_personalization_brief(user_profile, feedback_summary)
     if personalization_hint:
         personalization_hint = f"\n{personalization_hint}\nPrefer ideas that fit this user profile over generic ambitious ideas.\n"
+    goal_style_hint = (
+        f"\nGoal style: {goal_style}.\n"
+        if goal_style and goal.upper() != "SYNTHESIS" else ""
+    )
 
     if is_develop:
         # ── DEVELOP MODE PROMPT ──
@@ -152,7 +159,7 @@ def api_quick():
             f"CRITICAL: Every idea MUST be directly applicable to the project below. Do NOT suggest new standalone products.\n\n"
             f"=== THE USER'S PROJECT ===\n{context}\n=== END ===\n\n"
             f"Fields: {cats_str}\n{approach_hint}\n{lang_hint}\n"
-            f"{paper_context}\n{personalization_hint}\n"
+            f"{paper_context}\n{goal_style_hint}{personalization_hint}\n"
             "Return a JSON array. Each object must have:\n"
             "- idea_title: feature/improvement name (specific to the project, 5-15 words)\n"
             "- difficulty: \"Hackathon\" | \"Side Project\" | \"Industry\"\n"
@@ -184,7 +191,7 @@ def api_quick():
             f"You are a product strategist. Generate exactly {max_ideas} BUILDABLE product ideas for the fields: {cats_str}\n"
             f"{approach_hint}\n{goal_hint}\n{lang_hint}\n"
             f"{'Builder context: ' + context if context else ''}\n"
-            f"{paper_context}\n{personalization_hint}\n"
+            f"{paper_context}\n{goal_style_hint}{personalization_hint}\n"
             "Each idea is a tool/app/service that solves a real problem.\n\n"
             "Return a JSON array. Each object must have:\n"
             "- idea_title: product name (catchy, 5-12 words)\n"
@@ -216,7 +223,7 @@ def api_quick():
             f"Generate exactly {max_ideas} research project ideas for the fields: {cats_str}\n"
             f"{approach_hint}\n{goal_hint}\n{lang_hint}\n"
             f"{'Student context: ' + context if context else ''}\n"
-            f"{paper_context}\n{personalization_hint}\n"
+            f"{paper_context}\n{goal_style_hint}{personalization_hint}\n"
             "Return a JSON array. Each object must have: idea_title, difficulty "
             "(\"Undergraduate\" | \"Master's\" | \"PhD\"), abstract (3 sentences), "
             "why_hard, methodology_hint, next_steps (array of 3), resources_needed, "
@@ -238,7 +245,7 @@ def api_quick():
             ideas_raw = [ideas_raw]
 
         ideas = [
-            _format_idea(idea, categories[0] if categories else "")
+            _format_idea(idea, categories[0] if categories else "", goal_style=goal_style)
             for idea in ideas_raw[:max_ideas]
         ]
         # Local telemetry
@@ -260,6 +267,7 @@ def api_regenerate():
     field   = body.get("field", "cs.AI")
     approach = body.get("approach", "any")
     language = body.get("language", "en")
+    goal_style = body.get("goal_style", "") or "project"
     context  = body.get("context", "")
     user_profile = body.get("user_profile", {})
     feedback_summary = body.get("feedback_summary", {})
@@ -275,6 +283,7 @@ def api_regenerate():
     personalization_hint = build_personalization_brief(user_profile, feedback_summary)
     if personalization_hint:
         personalization_hint = f"\n{personalization_hint}\nPrefer fit-to-user over generic novelty.\n"
+    goal_style_hint = f"\nGoal style: {goal_style}.\n" if goal_style else ""
 
     keywords = TrendAnalyzer.KEYWORD_SEEDS.get(field, ["research", "analysis"])[:5]
 
@@ -283,6 +292,7 @@ def api_regenerate():
         f"Keywords in this area: {', '.join(keywords)}\n"
         f"{approach_hint}\n{lang_hint}\n"
         f"{'Student context: ' + context if context else ''}\n"
+        f"{goal_style_hint}"
         f"{personalization_hint}\n"
         f"Do NOT generate this title: {exclude}\n\n"
         "Return a JSON object with: idea_title, difficulty (Undergraduate|Master's|PhD), "
@@ -301,7 +311,7 @@ def api_regenerate():
 
         cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
         idea_data = json.loads(cleaned)
-        return jsonify({"idea": _format_idea(idea_data, field)})
+        return jsonify({"idea": _format_idea(idea_data, field, goal_style=goal_style)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
