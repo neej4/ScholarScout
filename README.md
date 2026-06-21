@@ -47,6 +47,76 @@ python preview_server.py
 
 Open **http://localhost:5050** — the setup wizard walks you through in 30 seconds.
 
+## Updating
+
+You do **not** have to keep doing `git pull` if you installed ScholarScout from a downloaded ZIP or release folder.
+
+Pick the path that matches how you installed it:
+
+### 1. If you installed with Git
+
+```bash
+cd ScholarScout
+git pull
+pip install -r requirements.txt
+python preview_server.py
+```
+
+Use this if you originally ran `git clone`.
+
+### 2. If you installed from ZIP / Download
+
+1. Download the latest release ZIP from GitHub.
+2. Extract it to a **new folder** such as `ScholarScout-v1.6.5`.
+3. Copy your old `data/` folder into the new folder if you want to keep cache, snapshots, and session history.
+4. Copy your `config.yaml` into the new folder if you already set up your provider and API key.
+5. Run:
+
+```bash
+cd ScholarScout-v1.6.5
+pip install -r requirements.txt
+python preview_server.py
+```
+
+This is the safest update path for non-Git users.
+
+### 3. If you only want a quick overwrite update
+
+You can extract the new ZIP on top of the old folder, but this is less safe because old files can get left behind after big releases.
+
+Preferred rule:
+
+- Replace app files with the new version
+- Keep your own `data/` and `config.yaml`
+- If anything feels broken after update, start from a fresh folder and copy only `data/` + `config.yaml`
+
+### What should be kept
+
+- `config.yaml`: your provider, model, and API key settings
+- `data/`: your cache, snapshots, bookmarks, and session history
+
+### What should be replaced by the new version
+
+- `src/`
+- `docs/`
+- `skills/`
+- `preview_server.py`
+- `run_pipeline.py`
+- `requirements.txt`, `pyproject.toml`, `VERSION`, and other app files
+
+### Recommended tutorial for end users
+
+1. Close ScholarScout.
+2. Download the latest release ZIP.
+3. Extract it into a new folder.
+4. Move `config.yaml` and `data/` from the old folder into the new one.
+5. Open terminal in the new folder.
+6. Run `pip install -r requirements.txt`.
+7. Run `python preview_server.py`.
+8. Open `http://localhost:5050`.
+
+If the dashboard shows an update banner, this is the process it should point to today.
+
 Need an LLM? Pick one:
 
 | Provider | Cost | Speed | Setup |

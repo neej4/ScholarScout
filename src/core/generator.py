@@ -228,6 +228,100 @@ class IdeaGenerator:
         }
         return f"\n{blocks[style]}\n"
 
+    def _gap_candidates_block(self, trend: TrendAnalysis) -> str:
+        candidates = getattr(trend, "gap_candidates", []) or []
+        if not candidates:
+            return ""
+        lines = ["=== GAP CANDIDATES ==="]
+        for idx, candidate in enumerate(candidates[:8], start=1):
+            papers = ", ".join(candidate.get("paper_ids", [])[:6]) or "none"
+            lines.append(
+                f"[G{idx}] {candidate.get('title', 'Untitled gap')} | "
+                f"type={candidate.get('gap_type', 'recurring_limitation')} | "
+                f"strength={candidate.get('strength_score', 0)}"
+            )
+            lines.append(f"    Summary: {candidate.get('summary', '')}")
+            lines.append(f"    Papers: {papers}")
+        lines.append("=== END GAP CANDIDATES ===")
+        return "\n" + "\n".join(lines) + "\n"
+
+    def _paper_lookup(self, papers: list) -> dict:
+        lookup = {}
+        for idx, paper in enumerate(papers, start=1):
+            lookup[f"P{idx}"] = paper
+        return lookup
+
+    def _paper_dicts_from_ids(self, paper_ids: list, lookup: dict) -> list:
+        results = []
+        seen = set()
+        for pid in paper_ids or []:
+            key = str(pid).strip().upper()
+            paper = lookup.get(key)
+            if not paper or paper.id in seen:
+                continue
+            seen.add(paper.id)
+            results.append(paper.to_dict())
+        return results
+
+    def _gap_metadata_kwargs(self, raw_idea: dict, available_papers: list, fallback_papers: list) -> dict:
+        lookup = self._paper_lookup(available_papers)
+        anchor = self._paper_dicts_from_ids(raw_idea.get("anchor_paper_ids", []), lookup)
+        supporting = self._paper_dicts_from_ids(raw_idea.get("supporting_paper_ids", []), lookup)
+        if not anchor:
+            anchor = [paper.to_dict() for paper in fallback_papers[:3]]
+        if not supporting:
+            fallback_support = [paper.to_dict() for paper in available_papers[: min(6, len(available_papers))]]
+            supporting = [paper for paper in fallback_support if paper.get("id") not in {p.get("id") for p in anchor}]
+
+        coverage_ids = {paper.get("id") for paper in anchor + supporting if paper.get("id")}
+        available_count = max(len(available_papers), 1)
+        return {
+            "anchor_papers": anchor,
+            "supporting_papers": supporting,
+            "landscape_gap_summary": raw_idea.get("landscape_gap_summary", ""),
+            "coverage_count": len(coverage_ids),
+            "coverage_ratio": round(len(coverage_ids) / available_count, 3),
+            "gap_type": raw_idea.get("gap_type", ""),
+        }
+
+    def _gap_steering_block(self, gap_steering: str) -> str:
+        steering = str(gap_steering or "balanced").strip().lower()
+        blocks = {
+            "balanced": (
+                "Gap steering: balanced.\n"
+                "Spread ideas across the strongest available gaps without over-focusing on either risky breakthroughs or only safe implementation problems."
+            ),
+            "breakthrough": (
+                "Gap steering: breakthrough.\n"
+                "Prefer broader synthesis, underexplored combinations, and ambitious multi-paper gaps over narrow implementation polish."
+            ),
+            "practical": (
+                "Gap steering: practical.\n"
+                "Prefer implementation bottlenecks, deployability issues, and evaluation gaps that can turn into buildable, actionable work quickly."
+            ),
+        }
+        return f"\n{blocks.get(steering, blocks['balanced'])}\n"
+
+    def _idea_gap_signature(self, raw_idea: dict) -> tuple:
+        anchor = tuple(sorted(str(pid).strip().upper() for pid in (raw_idea.get("anchor_paper_ids") or []) if str(pid).strip()))
+        supporting = tuple(sorted(str(pid).strip().upper() for pid in (raw_idea.get("supporting_paper_ids") or []) if str(pid).strip()))
+        summary = str(raw_idea.get("landscape_gap_summary", "")).strip().lower()[:120]
+        gap_type = str(raw_idea.get("gap_type", "")).strip().lower()
+        return gap_type, anchor, supporting[:4], summary
+
+    def _is_gap_duplicate(self, raw_idea: dict, seen_signatures: set) -> bool:
+        signature = self._idea_gap_signature(raw_idea)
+        if signature in seen_signatures:
+            return True
+        gap_type, anchor, supporting, summary = signature
+        current_ids = set(anchor) | set(supporting)
+        for prev_gap_type, prev_anchor, prev_supporting, prev_summary in seen_signatures:
+            prev_ids = set(prev_anchor) | set(prev_supporting)
+            if current_ids and prev_ids and len(current_ids & prev_ids) >= min(2, len(current_ids), len(prev_ids)):
+                if gap_type == prev_gap_type or (summary and prev_summary and summary[:60] == prev_summary[:60]):
+                    return True
+        return False
+
     def _personalization_block(self, user_profile: str = "", feedback_summary: str = "") -> str:
         brief = build_personalization_brief(user_profile, feedback_summary).strip()
         if not brief:
@@ -262,7 +356,7 @@ class IdeaGenerator:
     def generate(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
                  research_context: str = '', language: str = 'en',
                  approach: str = 'any', goal: str = 'any',
-                 goal_style: str = '', refine: bool = False, user_profile: str = '',
+                 goal_style: str = '', gap_steering: str = 'balanced', refine: bool = False, user_profile: str = '',
                  feedback_summary: str = '') -> List[ProjectIdea]:
         """Route to academic, product, or develop generator based on goal.
         
@@ -283,7 +377,7 @@ class IdeaGenerator:
             batch_size = min(remaining, self.CHUNK_SIZE)
             try:
                 batch = gen_fn(trend, existing_titles, batch_size,
-                               research_context, language, approach, goal, goal_style,
+                               research_context, language, approach, goal, goal_style, gap_steering,
                                user_profile, feedback_summary)
                 ideas.extend(batch)
                 if not batch:
@@ -492,6 +586,7 @@ Respond ONLY with valid JSON array. No markdown, no explanation.
 
     def _generate_develop(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
                           research_context: str, language: str, approach: str, goal: str, goal_style: str,
+                          gap_steering: str = 'balanced',
                           user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate feature/improvement ideas for an EXISTING project, grounded in papers."""
         category = trend.category
@@ -501,9 +596,11 @@ Respond ONLY with valid JSON array. No markdown, no explanation.
             for i, p in enumerate(available_papers)
         )
         paper_count = len(available_papers)
+        gap_ctx = self._gap_candidates_block(trend)
 
         goal_section = self._load_skill_constraints(goal)
         goal_style_section = self._goal_style_block(goal, goal_style)
+        gap_steering_section = self._gap_steering_block(gap_steering)
         avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
         personalization = self._personalization_block(user_profile, feedback_summary)
 
@@ -529,10 +626,11 @@ Trending techniques in this area: {', '.join(trend.top_keywords)}
 === RECENT PAPERS (P1 to P{paper_count}) ===
 {paper_ctx}
 === END OF PAPERS ===
+{gap_ctx}
 
 Already suggested (DO NOT duplicate):
 {avoid_str}
-{language_section}{goal_section}{goal_style_section}{personalization}
+{language_section}{goal_section}{goal_style_section}{gap_steering_section}{personalization}
 Generate exactly {n} development ideas as a JSON array. Each idea is a concrete improvement to the user's project, inspired by a technique from the papers above.
 
 Each object MUST have:
@@ -542,6 +640,10 @@ Each object MUST have:
 - "implementation_plan": Array of 3-5 concrete implementation steps
 - "tech_stack": Array of 2-4 technologies/libraries needed (prefer what the project already uses)
 - "effort_estimate": "hours" | "days" | "weeks" (realistic for a solo developer)
+- "landscape_gap_summary": 1-2 sentences describing which broader gap candidate this idea addresses
+- "gap_type": one of "underexplored_combination", "recurring_limitation", "conflicting_findings", "missing_evaluation", "implementation_bottleneck"
+- "anchor_paper_ids": Array of 1-3 core paper IDs from the provided P-number list
+- "supporting_paper_ids": Array of 2-6 supporting paper IDs from the provided P-number list
 - "inspired_by_ids": Array of paper IDs (e.g., ["P1", "P3"]) — which paper technique enables this
 - "evidence_claims": Array of 2-4 objects: {{"claim": "specific claim this idea relies on", "paper_ids": ["P1"]}}. Use ONLY available P-numbers.
 - "risk": 1 sentence — what could go wrong or be harder than expected
@@ -553,16 +655,17 @@ RULES:
 2. If the project description mentions specific tech (Python, Flask, etc.), use that stack.
 3. Ideas must be ADDITIVE (don't suggest rewriting existing features).
 4. Reference papers using P-numbers only.
+5. Prefer different gap candidates across ideas instead of reusing the same tiny paper cluster.
 5. If you cannot find relevant techniques for the project, say so — do NOT generate generic ideas.
 
 Respond ONLY with valid JSON array. No markdown.
 """).strip()
 
         response = self.llm.call(prompt, task_type="idea_generation")
-        return self._parse_develop_response(response, available_papers, category, existing_titles, goal, goal_style)
+        return self._parse_develop_response(response, available_papers, category, existing_titles, goal, goal_style, gap_steering)
 
     def _parse_develop_response(self, response: Optional[str], available_papers: list,
-                                 category: str, existing_titles: Set[str], goal: str, goal_style: str) -> List[ProjectIdea]:
+                                 category: str, existing_titles: Set[str], goal: str, goal_style: str, gap_steering: str = "balanced") -> List[ProjectIdea]:
         """Parse LLM response for develop mode into ProjectIdea objects."""
         results: List[ProjectIdea] = []
         if not response:
@@ -581,9 +684,13 @@ Respond ONLY with valid JSON array. No markdown.
                 return results
             self.llm._emit("llm_warn", msg=f"Recovered {len(ideas_raw)} ideas from truncated response ({category})")
 
+        seen_gap_signatures = set()
         for idea in ideas_raw:
             title = idea.get("idea_title", "").strip()
             if not title or title in existing_titles:
+                continue
+            if self._is_gap_duplicate(idea, seen_gap_signatures):
+                self.llm._emit("llm_warn", msg=f"Skipped overly similar gap cluster in {category}: {title[:48]}")
                 continue
 
             try:
@@ -648,10 +755,13 @@ Respond ONLY with valid JSON array. No markdown.
                 misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
                 user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
                 goal_style=self._normalize_goal_style(goal_style, goal),
+                gap_steering=str(gap_steering or "balanced"),
                 **self._evidence_kwargs(idea, available_papers, insp),
+                **self._gap_metadata_kwargs(idea, available_papers, insp),
             )
             results.append(obj)
             existing_titles.add(title)
+            seen_gap_signatures.add(self._idea_gap_signature(idea))
             self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
 
         return results
@@ -660,6 +770,7 @@ Respond ONLY with valid JSON array. No markdown.
 
     def _generate_product(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
                           research_context: str, language: str, approach: str, goal: str, goal_style: str,
+                          gap_steering: str = 'balanced',
                           user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate buildable product ideas grounded in recent papers."""
         category = trend.category
@@ -669,9 +780,11 @@ Respond ONLY with valid JSON array. No markdown.
             for i, p in enumerate(available_papers)
         )
         paper_count = len(available_papers)
+        gap_ctx = self._gap_candidates_block(trend)
 
         goal_section = self._load_skill_constraints(goal)
         goal_style_section = self._goal_style_block(goal, goal_style)
+        gap_steering_section = self._gap_steering_block(gap_steering)
         avoid_str = "\n".join(f"  - {t}" for t in list(existing_titles)[-10:]) or "  None"
 
         context_section = ""
@@ -695,10 +808,11 @@ Research gaps (= unmet needs):
 === RECENT PAPERS (P1 to P{paper_count}) ===
 {paper_ctx}
 === END OF PAPERS ===
+{gap_ctx}
 
 Already generated (DO NOT duplicate):
 {avoid_str}
-{context_section}{language_section}{goal_section}{goal_style_section}{personalization}
+{context_section}{language_section}{goal_section}{goal_style_section}{gap_steering_section}{personalization}
 Generate exactly {n} PRODUCT ideas as a JSON array. Each idea is a buildable tool/app/service inspired by the papers above.
 
 Each object MUST have:
@@ -711,6 +825,10 @@ Each object MUST have:
 - "competitors": Array of 1-3 existing tools that partially solve this + what they're missing
 - "moat": 1-2 sentences. Why is this hard to copy? What's the unfair advantage?
 - "next_steps": Array of 3 concrete first actions to start building
+- "landscape_gap_summary": 1-2 sentences describing which broader gap candidate this product addresses
+- "gap_type": one of "underexplored_combination", "recurring_limitation", "conflicting_findings", "missing_evaluation", "implementation_bottleneck"
+- "anchor_paper_ids": Array of 1-3 core paper IDs from the provided P-number list
+- "supporting_paper_ids": Array of 2-6 supporting paper IDs from the provided P-number list
 - "inspired_by_ids": Array of paper IDs (e.g., ["P1", "P3"])
 - "evidence_claims": Array of 2-4 objects: {{"claim": "specific claim this product relies on", "paper_ids": ["P1"]}}. Use ONLY available P-numbers.
 - "difficulty": "Hackathon" | "Side Project" | "Industry"
@@ -721,15 +839,16 @@ RULES:
 2. Do NOT suggest generic ideas ("build a chatbot"). Be specific about WHAT technique from WHICH paper.
 3. Ideas must be BUILDABLE with current technology (not research proposals).
 4. Reference papers using P-numbers only.
+5. Prefer different gap candidates across ideas instead of collapsing onto the same 1-2 papers.
 
 Respond ONLY with valid JSON array. No markdown.
 """).strip()
 
         response = self.llm.call(prompt, task_type="idea_generation")
-        return self._parse_product_response(response, available_papers, category, existing_titles, goal, goal_style)
+        return self._parse_product_response(response, available_papers, category, existing_titles, goal, goal_style, gap_steering)
 
     def _parse_product_response(self, response: Optional[str], available_papers: list,
-                                 category: str, existing_titles: Set[str], goal: str, goal_style: str) -> List[ProjectIdea]:
+                                 category: str, existing_titles: Set[str], goal: str, goal_style: str, gap_steering: str = "balanced") -> List[ProjectIdea]:
         """Parse LLM response for product mode into ProjectIdea objects."""
         results: List[ProjectIdea] = []
         if not response:
@@ -747,9 +866,13 @@ Respond ONLY with valid JSON array. No markdown.
                 return results
             self.llm._emit("llm_warn", msg=f"Recovered {len(ideas_raw)} ideas from truncated response ({category})")
 
+        seen_gap_signatures = set()
         for idea in ideas_raw:
             title = idea.get("idea_title", "").strip()
             if not title or title in existing_titles:
+                continue
+            if self._is_gap_duplicate(idea, seen_gap_signatures):
+                self.llm._emit("llm_warn", msg=f"Skipped overly similar gap cluster in {category}: {title[:48]}")
                 continue
 
             # Quality filter
@@ -820,10 +943,13 @@ Respond ONLY with valid JSON array. No markdown.
                 misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
                 user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
                 goal_style=self._normalize_goal_style(goal_style, goal),
+                gap_steering=str(gap_steering or "balanced"),
                 **self._evidence_kwargs(idea, available_papers, insp),
+                **self._gap_metadata_kwargs(idea, available_papers, insp),
             )
             results.append(obj)
             existing_titles.add(title)
+            seen_gap_signatures.add(self._idea_gap_signature(idea))
             self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
 
         return results
@@ -832,6 +958,7 @@ Respond ONLY with valid JSON array. No markdown.
 
     def _generate_academic(self, trend: TrendAnalysis, existing_titles: Set[str], n: int,
                            research_context: str, language: str, approach: str, goal: str, goal_style: str,
+                           gap_steering: str = 'balanced',
                            user_profile: str = '', feedback_summary: str = '') -> List[ProjectIdea]:
         """Generate research project ideas (original behavior)."""
         category = trend.category
@@ -843,11 +970,13 @@ Respond ONLY with valid JSON array. No markdown.
             for i, p in enumerate(available_papers)
         )
         paper_count = len(available_papers)
+        gap_ctx = self._gap_candidates_block(trend)
 
         goal_section = ""
         if goal and goal != "any":
             goal_section = self._load_skill_constraints(goal)
         goal_style_section = self._goal_style_block(goal, goal_style)
+        gap_steering_section = self._gap_steering_block(gap_steering)
 
         methods_ctx = ""
         if trend.methodology_patterns:
@@ -897,10 +1026,11 @@ Identified research gaps:
 === AVAILABLE PAPERS (P1 to P{paper_count}) ===
 {paper_ctx}
 === END OF PAPERS ===
+{gap_ctx}
 
 Already generated (DO NOT duplicate):
 {avoid_str}
-{context_section}{language_section}{approach_section}{goal_section}{goal_style_section}{personalization}
+{context_section}{language_section}{approach_section}{goal_section}{goal_style_section}{gap_steering_section}{personalization}
 Generate exactly {n} research project ideas as a JSON array. Each object MUST have:
 
 - "idea_title": Specific, descriptive (8-18 words). NOT generic.
@@ -911,6 +1041,10 @@ Generate exactly {n} research project ideas as a JSON array. Each object MUST ha
 - "next_steps": Exactly 3 items as an array. First 3 actions to start.
 - "key_paper_ids": Array of 2-3 paper IDs from the list above (e.g., ["P1", "P3", "P7"]).
   CRITICAL: You may ONLY reference papers from the list above (P1 to P{paper_count}).
+- "landscape_gap_summary": 1-2 sentences describing the broader gap candidate this research tackles.
+- "gap_type": one of "underexplored_combination", "recurring_limitation", "conflicting_findings", "missing_evaluation", "implementation_bottleneck"
+- "anchor_paper_ids": Array of 1-3 core paper IDs from the provided P-number list.
+- "supporting_paper_ids": Array of 2-6 supporting paper IDs from the provided P-number list.
 - "resources_needed": comma-separated list.
 - "prerequisites": Array of 3-5 skills/knowledge needed.
 - "inspired_by_ids": Array of paper IDs from above.
@@ -924,15 +1058,16 @@ ANTI-HALLUCINATION RULES:
 3. Do NOT reference datasets you are not certain exist.
 4. If you are unsure about something, leave it out rather than fabricate.
 5. Ideas must be directly derivable from the papers provided.
+6. Spread ideas across different gap candidates when possible; do not anchor every idea to the same tiny paper subset.
 
 Respond ONLY with a valid JSON array. No markdown, no explanation.
 """).strip()
 
         response = self.llm.call(prompt, task_type="idea_generation")
-        return self._parse_academic_response(response, available_papers, category, existing_titles, trend, goal, goal_style)
+        return self._parse_academic_response(response, available_papers, category, existing_titles, trend, goal, goal_style, gap_steering)
 
     def _parse_academic_response(self, response: Optional[str], available_papers: list,
-                                  category: str, existing_titles: Set[str], trend: TrendAnalysis, goal: str = "any", goal_style: str = "") -> List[ProjectIdea]:
+                                  category: str, existing_titles: Set[str], trend: TrendAnalysis, goal: str = "any", goal_style: str = "", gap_steering: str = "balanced") -> List[ProjectIdea]:
         """Parse LLM response for academic mode into ProjectIdea objects."""
         results: List[ProjectIdea] = []
         if not response:
@@ -950,9 +1085,13 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                 return self._academic_fallback(trend, existing_titles)
             self.llm._emit("llm_warn", msg=f"Recovered {len(ideas_raw)} ideas from truncated response ({category})")
 
+        seen_gap_signatures = set()
         for idea in ideas_raw:
             title = idea.get("idea_title", "").strip()
             if not title or title in existing_titles:
+                continue
+            if self._is_gap_duplicate(idea, seen_gap_signatures):
+                self.llm._emit("llm_warn", msg=f"Skipped overly similar gap cluster in {category}: {title[:48]}")
                 continue
 
             # Normalize difficulty
@@ -1040,10 +1179,13 @@ Respond ONLY with a valid JSON array. No markdown, no explanation.
                 misalignment_flags=idea.get("misalignment_flags", []) if isinstance(idea.get("misalignment_flags", []), list) else [],
                 user_fit_score=self._coerce_int(idea.get("user_fit_score"), 0),
                 goal_style=self._normalize_goal_style(goal_style, goal),
+                gap_steering=str(gap_steering or "balanced"),
                 **self._evidence_kwargs(idea, available_papers, insp),
+                **self._gap_metadata_kwargs(idea, available_papers, insp),
             )
             results.append(obj)
             existing_titles.add(title)
+            seen_gap_signatures.add(self._idea_gap_signature(idea))
             self.llm._emit("idea", idea=obj.to_dict(), msg=title[:60])
 
         if not results:

@@ -26,6 +26,10 @@ def test_academic_parser_accepts_evidence_claims(stub_papers, stub_trend):
             "methodology_hint": "Compare recent architectures.",
             "next_steps": ["Read papers", "Build baseline", "Evaluate"],
             "key_paper_ids": ["P1", "P3"],
+            "landscape_gap_summary": "Recent work still lacks a grounded benchmark for fetched-paper-aware NLP evaluation.",
+            "gap_type": "missing_evaluation",
+            "anchor_paper_ids": ["P1"],
+            "supporting_paper_ids": ["P1", "P3"],
             "resources_needed": "GPU, datasets",
             "prerequisites": ["Python", "NLP"],
             "inspired_by_ids": ["P1"],
@@ -43,6 +47,8 @@ def test_academic_parser_accepts_evidence_claims(stub_papers, stub_trend):
     assert ideas[0].source_papers
     assert ideas[0].evidence_claims[0]["paper_ids"] == ["P1"]
     assert ideas[0].grounding_score > 0
+    assert ideas[0].anchor_papers
+    assert ideas[0].coverage_count >= 1
 
 
 def test_academic_parser_flags_invalid_evidence_refs(stub_papers, stub_trend):
@@ -97,6 +103,52 @@ def test_academic_parser_keeps_legacy_response_without_evidence(stub_papers, stu
     assert len(ideas) == 1
     assert ideas[0].to_dict()["evidence_claims"] == []
     assert "missing_evidence_claims" in ideas[0].risk_flags
+
+
+def test_academic_parser_skips_duplicate_gap_clusters(stub_papers, stub_trend):
+    generator = _generator()
+    response = json.dumps([
+        {
+            "idea_title": "Idea one",
+            "difficulty": "Master's",
+            "abstract": "First idea.",
+            "why_hard": "Needs care.",
+            "methodology_hint": "Test one setup.",
+            "next_steps": ["A", "B", "C"],
+            "key_paper_ids": ["P1"],
+            "anchor_paper_ids": ["P1"],
+            "supporting_paper_ids": ["P1", "P3"],
+            "landscape_gap_summary": "Need stronger grounded benchmark coverage.",
+            "gap_type": "missing_evaluation",
+            "resources_needed": "Laptop",
+            "prerequisites": ["Python"],
+            "inspired_by_ids": ["P1"],
+            "why_this_idea": "Fills an evaluation gap.",
+            "quality_score": 8,
+        },
+        {
+            "idea_title": "Idea two",
+            "difficulty": "Master's",
+            "abstract": "Second idea.",
+            "why_hard": "Needs care too.",
+            "methodology_hint": "Test one setup again.",
+            "next_steps": ["A", "B", "C"],
+            "key_paper_ids": ["P1"],
+            "anchor_paper_ids": ["P1"],
+            "supporting_paper_ids": ["P1", "P3"],
+            "landscape_gap_summary": "Need stronger grounded benchmark coverage.",
+            "gap_type": "missing_evaluation",
+            "resources_needed": "Laptop",
+            "prerequisites": ["Python"],
+            "inspired_by_ids": ["P1"],
+            "why_this_idea": "Fills an evaluation gap too.",
+            "quality_score": 8,
+        }
+    ])
+
+    ideas = generator._parse_academic_response(response, stub_papers, "cs.CL", set(), stub_trend)
+
+    assert len(ideas) == 1
 
 
 def test_refine_with_critique_updates_visible_fields(stub_idea):

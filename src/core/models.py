@@ -40,6 +40,7 @@ class TrendAnalysis:
     cross_pollination: List[str] = field(default_factory=list)
     ref_papers: List[Paper] = field(default_factory=list)
     confidence: int = 7  # 1-10 self-rated confidence in the analysis
+    gap_candidates: List[dict] = field(default_factory=list)
     
 @dataclass
 class ProjectIdea:
@@ -75,6 +76,13 @@ class ProjectIdea:
     misalignment_flags: List[str] = field(default_factory=list)
     user_fit_score: int = 0
     goal_style: str = ""
+    gap_steering: str = "balanced"
+    anchor_papers: List[dict] = field(default_factory=list)
+    supporting_papers: List[dict] = field(default_factory=list)
+    landscape_gap_summary: str = ""
+    coverage_count: int = 0
+    coverage_ratio: float = 0.0
+    gap_type: str = ""
     
     def to_dict(self) -> dict:
         return {
@@ -109,6 +117,13 @@ class ProjectIdea:
             "misalignment_flags": self.misalignment_flags,
             "user_fit_score": self.user_fit_score,
             "goal_style": self.goal_style,
+            "gap_steering": self.gap_steering,
+            "anchor_papers": self.anchor_papers,
+            "supporting_papers": self.supporting_papers,
+            "landscape_gap_summary": self.landscape_gap_summary,
+            "coverage_count": self.coverage_count,
+            "coverage_ratio": self.coverage_ratio,
+            "gap_type": self.gap_type,
         }
 
 

@@ -1,5 +1,35 @@
 # Changelog
 
+## v1.6.5 Release Notes (2026-06-21)
+
+### Gap-first generation
+- Added a new gap synthesis stage before idea generation so ScholarScout now reasons over reusable `gap_candidates`, not just paper lists
+- Generated ideas can now carry `landscape_gap_summary`, `gap_type`, `anchor_papers`, `supporting_papers`, and paper coverage metadata
+- Gap synthesis now supports explicit steering modes: `Balanced`, `Breakthrough-heavy`, and `Practical-first`
+
+### Better use of fetched papers
+- Added diversity guards so multiple ideas are less likely to collapse onto the same small paper cluster
+- Added contributed-paper and supporting-paper metrics to snapshots and session history
+- Added category-level gap diagnostics so each run records which categories produced the strongest gap coverage
+
+### Dashboard and workflow upgrades
+- Added a Gap Monitor inside Activity Center to show synthesized gap candidates per category while the pipeline is running
+- Added evidence-aware gap chips to idea cards, detail modals, export output, copy output, and print/export views
+- Added a lightweight coverage visual in the run summary so users can quickly see which categories produced the densest gap landscape
+- Added post-run recommendations that suggest better next moves, such as narrowing categories or switching gap steering mode
+- Added an `Update now` flow in the dashboard so ZIP-based users can stage a new build, keep `config.yaml` and `data/`, and launch the updated app without using Git
+
+### Persistence and steering
+- Gap steering now persists across the profile modal, quick mode, full pipeline runs, regenerate, presets, snapshots, and session restore
+- Run summaries and transparency output now surface gap steering, gap candidate totals, contributed papers, and average supporting-paper depth
+- Added a backward-compatible session/snapshot normalizer so older runs without gap-first metadata still restore cleanly
+- Synced runtime version sources (`VERSION`, `pyproject.toml`, dashboard badge) to avoid release drift
+
+### Testing and verification
+- Added coverage for gap synthesis heuristics, gap steering prompt injection, duplicate gap-cluster filtering, and new dashboard structural hooks
+- Added guard coverage for version consistency, legacy session compatibility, and updater helpers
+- Core Python tests, JS tests, compile checks, and a local dashboard smoke check passed for the v1.6.5 path
+
 ## v1.6.1 Release Notes (2026-06-16)
 
 ### Dashboard workflow polish

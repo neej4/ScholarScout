@@ -10,6 +10,7 @@ import sys
 import glob
 
 from flask import Blueprint, Response, jsonify, request
+from src.core.session_compat import normalize_session
 
 pipeline_bp = Blueprint("pipeline", __name__)
 
@@ -51,6 +52,7 @@ def api_run():
             "approach":         "SCOUT_APPROACH",
             "goal":             "SCOUT_GOAL",
             "goal_style":       "SCOUT_GOAL_STYLE",
+            "gap_steering":     "SCOUT_GAP_STEERING",
             "refine":           "SCOUT_REFINE",
             "sensitivity":      "SCOUT_SENSITIVITY",
             "user_profile":     "SCOUT_USER_PROFILE",
@@ -118,7 +120,7 @@ def api_results():
         return jsonify({"ideas": [], "papers_total": 0})
     try:
         with open(snaps[0], encoding="utf-8") as f:
-            return jsonify(json.load(f))
+            return jsonify(normalize_session(json.load(f)))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

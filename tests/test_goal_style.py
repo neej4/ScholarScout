@@ -69,8 +69,10 @@ def test_goal_style_is_injected_into_generation_prompt():
         language="en",
         goal="FEATURE",
         goal_style="breakthrough",
+        gap_steering="practical",
     )
 
     prompt = mock_llm.call.call_args[0][0]
     assert "Goal style: breakthrough" in prompt
+    assert "Gap steering: practical" in prompt
     assert "multi-paper" in prompt.lower() or "landscape" in prompt.lower()

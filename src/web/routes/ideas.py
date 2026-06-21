@@ -37,7 +37,17 @@ def _load_cache() -> dict:
         return {}
 
 
-def _format_idea(raw: dict, field: str, goal_style: str = "") -> dict:
+def _gap_steering_hint(value: str) -> str:
+    steering = str(value or "balanced").strip().lower()
+    hints = {
+        "balanced": "Balance broad opportunities with executable gaps.",
+        "breakthrough": "Prefer ambitious multi-paper gaps and underexplored combinations.",
+        "practical": "Prefer actionable implementation bottlenecks and deployable evaluation gaps.",
+    }
+    return hints.get(steering, hints["balanced"])
+
+
+def _format_idea(raw: dict, field: str, goal_style: str = "", gap_steering: str = "balanced") -> dict:
     """Normalise a raw LLM idea dict into the standard idea schema."""
     diff = raw.get("difficulty", "Master's")
     next_steps = raw.get("next_steps", "")
@@ -69,6 +79,12 @@ def _format_idea(raw: dict, field: str, goal_style: str = "") -> dict:
         "evidence_claims":  raw.get("evidence_claims", []),
         "grounding_score":  raw.get("grounding_score", 0),
         "risk_flags":       raw.get("risk_flags", []),
+        "anchor_papers":    raw.get("anchor_papers", []),
+        "supporting_papers": raw.get("supporting_papers", []),
+        "landscape_gap_summary": raw.get("landscape_gap_summary", ""),
+        "coverage_count":   raw.get("coverage_count", 0),
+        "coverage_ratio":   raw.get("coverage_ratio", 0),
+        "gap_type":         raw.get("gap_type", ""),
         "critique_summary": raw.get("critique_summary", ""),
         "refinement_summary": raw.get("refinement_summary", ""),
         "novelty_claim":    raw.get("novelty_claim", ""),
@@ -78,6 +94,7 @@ def _format_idea(raw: dict, field: str, goal_style: str = "") -> dict:
         "misalignment_flags": raw.get("misalignment_flags", []),
         "user_fit_score":   raw.get("user_fit_score", 0),
         "goal_style":       goal_style or raw.get("goal_style", ""),
+        "gap_steering":     raw.get("gap_steering", gap_steering or "balanced"),
     }
 
 
@@ -93,6 +110,7 @@ def api_quick():
     approach   = body.get("approach", "any")
     goal       = body.get("goal", "any")
     goal_style = body.get("goal_style", "") or suggest_goal_style(goal)
+    gap_steering = body.get("gap_steering", "balanced") or "balanced"
     context    = body.get("context", "")
     user_profile = body.get("user_profile", {})
     feedback_summary = body.get("feedback_summary", {})
@@ -148,6 +166,7 @@ def api_quick():
         f"\nGoal style: {goal_style}.\n"
         if goal_style and goal.upper() != "SYNTHESIS" else ""
     )
+    gap_steering_hint = f"\nGap steering: {gap_steering}. {_gap_steering_hint(gap_steering)}\n"
 
     if is_develop:
         # ── DEVELOP MODE PROMPT ──
@@ -159,7 +178,7 @@ def api_quick():
             f"CRITICAL: Every idea MUST be directly applicable to the project below. Do NOT suggest new standalone products.\n\n"
             f"=== THE USER'S PROJECT ===\n{context}\n=== END ===\n\n"
             f"Fields: {cats_str}\n{approach_hint}\n{lang_hint}\n"
-            f"{paper_context}\n{goal_style_hint}{personalization_hint}\n"
+            f"{paper_context}\n{goal_style_hint}{gap_steering_hint}{personalization_hint}\n"
             "Return a JSON array. Each object must have:\n"
             "- idea_title: feature/improvement name (specific to the project, 5-15 words)\n"
             "- difficulty: \"Hackathon\" | \"Side Project\" | \"Industry\"\n"
@@ -191,7 +210,7 @@ def api_quick():
             f"You are a product strategist. Generate exactly {max_ideas} BUILDABLE product ideas for the fields: {cats_str}\n"
             f"{approach_hint}\n{goal_hint}\n{lang_hint}\n"
             f"{'Builder context: ' + context if context else ''}\n"
-            f"{paper_context}\n{goal_style_hint}{personalization_hint}\n"
+            f"{paper_context}\n{goal_style_hint}{gap_steering_hint}{personalization_hint}\n"
             "Each idea is a tool/app/service that solves a real problem.\n\n"
             "Return a JSON array. Each object must have:\n"
             "- idea_title: product name (catchy, 5-12 words)\n"
@@ -223,7 +242,7 @@ def api_quick():
             f"Generate exactly {max_ideas} research project ideas for the fields: {cats_str}\n"
             f"{approach_hint}\n{goal_hint}\n{lang_hint}\n"
             f"{'Student context: ' + context if context else ''}\n"
-            f"{paper_context}\n{goal_style_hint}{personalization_hint}\n"
+            f"{paper_context}\n{goal_style_hint}{gap_steering_hint}{personalization_hint}\n"
             "Return a JSON array. Each object must have: idea_title, difficulty "
             "(\"Undergraduate\" | \"Master's\" | \"PhD\"), abstract (3 sentences), "
             "why_hard, methodology_hint, next_steps (array of 3), resources_needed, "
@@ -245,7 +264,7 @@ def api_quick():
             ideas_raw = [ideas_raw]
 
         ideas = [
-            _format_idea(idea, categories[0] if categories else "", goal_style=goal_style)
+            _format_idea(idea, categories[0] if categories else "", goal_style=goal_style, gap_steering=gap_steering)
             for idea in ideas_raw[:max_ideas]
         ]
         # Local telemetry
@@ -268,6 +287,7 @@ def api_regenerate():
     approach = body.get("approach", "any")
     language = body.get("language", "en")
     goal_style = body.get("goal_style", "") or "project"
+    gap_steering = body.get("gap_steering", "balanced") or "balanced"
     context  = body.get("context", "")
     user_profile = body.get("user_profile", {})
     feedback_summary = body.get("feedback_summary", {})
@@ -284,6 +304,7 @@ def api_regenerate():
     if personalization_hint:
         personalization_hint = f"\n{personalization_hint}\nPrefer fit-to-user over generic novelty.\n"
     goal_style_hint = f"\nGoal style: {goal_style}.\n" if goal_style else ""
+    gap_steering_hint = f"\nGap steering: {gap_steering}. {_gap_steering_hint(gap_steering)}\n"
 
     keywords = TrendAnalyzer.KEYWORD_SEEDS.get(field, ["research", "analysis"])[:5]
 
@@ -292,7 +313,7 @@ def api_regenerate():
         f"Keywords in this area: {', '.join(keywords)}\n"
         f"{approach_hint}\n{lang_hint}\n"
         f"{'Student context: ' + context if context else ''}\n"
-        f"{goal_style_hint}"
+        f"{goal_style_hint}{gap_steering_hint}"
         f"{personalization_hint}\n"
         f"Do NOT generate this title: {exclude}\n\n"
         "Return a JSON object with: idea_title, difficulty (Undergraduate|Master's|PhD), "
@@ -311,7 +332,7 @@ def api_regenerate():
 
         cleaned = re.sub(r"```(?:json)?|```", "", response).strip()
         idea_data = json.loads(cleaned)
-        return jsonify({"idea": _format_idea(idea_data, field, goal_style=goal_style)})
+        return jsonify({"idea": _format_idea(idea_data, field, goal_style=goal_style, gap_steering=gap_steering)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

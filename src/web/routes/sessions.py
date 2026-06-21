@@ -5,6 +5,7 @@ import os
 import json
 
 from flask import Blueprint, jsonify
+from src.core.session_compat import normalize_history, normalize_session
 
 sessions_bp = Blueprint("sessions", __name__)
 
@@ -16,7 +17,7 @@ _history_file = os.path.join(_data_dir, "session_history.json")
 def _load_history() -> list:
     try:
         with open(_history_file, "r", encoding="utf-8") as f:
-            return json.load(f)
+            return normalize_history(json.load(f))
     except Exception:
         return []
 
@@ -52,4 +53,4 @@ def api_session_detail(index: int):
     if index >= len(history):
         return jsonify({"error": "Session not found"}), 404
 
-    return jsonify(history[index])
+    return jsonify(normalize_session(history[index]))

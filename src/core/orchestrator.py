@@ -21,6 +21,7 @@ from src.core.fetchers.dblp_fetcher import DBLPFetcher
 from src.core.llm import LLMClient
 from src.core.analyzer import TrendAnalyzer
 from src.core.generator import IdeaGenerator
+from src.core.gap_synthesis import synthesize_gap_candidates
 
 class Orchestrator:
     """
@@ -36,6 +37,7 @@ class Orchestrator:
         self.approach = approach or os.environ.get('SCOUT_APPROACH', 'any')
         self.goal = os.environ.get('SCOUT_GOAL', 'any')
         self.goal_style = os.environ.get('SCOUT_GOAL_STYLE', '')
+        self.gap_steering = os.environ.get('SCOUT_GAP_STEERING', 'balanced')
         self.refine = os.environ.get('SCOUT_REFINE', '0') == '1'
         self.sensitivity = os.environ.get('SCOUT_SENSITIVITY', '0') == '1'
         self.force_refresh = os.environ.get('SCOUT_FORCE_REFRESH', '0') == '1'
@@ -382,7 +384,34 @@ class Orchestrator:
             return
 
         # ─── PHASE 3: Idea Generation ────────────────────────────────────────────
-        self._emit("phase", phase=3, msg="Generating ideas via LLM...")
+        self._emit("phase", phase=3, msg="Synthesizing landscape gaps...")
+        gap_candidates_total = 0
+        gap_diagnostics = []
+        for trend in trends:
+            papers_for_gap = cat_papers.get(trend.category, [])
+            trend.gap_candidates = synthesize_gap_candidates(trend, papers_for_gap, steering=self.gap_steering)
+            gap_candidates_total += len(trend.gap_candidates)
+            type_counts = {}
+            for candidate in trend.gap_candidates:
+                gap_type = candidate.get("gap_type", "unknown")
+                type_counts[gap_type] = type_counts.get(gap_type, 0) + 1
+            gap_diagnostics.append({
+                "category": trend.category,
+                "paper_count": len(papers_for_gap),
+                "gap_candidates": len(trend.gap_candidates),
+                "top_gap_types": type_counts,
+                "top_titles": [candidate.get("title", "") for candidate in trend.gap_candidates[:3]],
+            })
+            self._emit(
+                "gap_candidates",
+                cat=trend.category,
+                count=len(trend.gap_candidates),
+                titles=[candidate["title"] for candidate in trend.gap_candidates[:3]],
+                msg=f"{trend.category}: built {len(trend.gap_candidates)} gap candidates",
+            )
+
+        self._emit("phase3_done", total_gaps=gap_candidates_total, msg=f"Phase 3 done: {gap_candidates_total} gap candidates")
+        self._emit("phase", phase=4, msg="Generating ideas from gap candidates...")
         
         for idx, trend in enumerate(trends):
             if len(all_ideas) >= Config.MAX_IDEAS: 
@@ -401,6 +430,7 @@ class Orchestrator:
                     approach=self.approach,
                     goal=self.goal,
                     goal_style=self.goal_style,
+                    gap_steering=self.gap_steering,
                     refine=self.refine,
                     user_profile=self.user_profile,
                     feedback_summary=self.feedback_summary,
@@ -420,27 +450,42 @@ class Orchestrator:
                  total=len(all_ideas), msg=f"{trend.category}: +{len(ideas)} ideas (total: {len(all_ideas)})")
             time.sleep(6)
 
-        self._emit("phase3_done", total_ideas=len(all_ideas), msg=f"Phase 3 done: {len(all_ideas)} ideas")
+        self._emit("phase4_done", total_ideas=len(all_ideas), msg=f"Phase 4 done: {len(all_ideas)} ideas")
 
         # ─── PHASE 4: Save Results ────────────────────────────────────────────
-        self._emit("phase", phase=4, msg="Writing output...")
+        self._emit("phase", phase=5, msg="Writing output...")
         self.write_csv(all_ideas)
+
+        contributed_paper_ids = set()
+        supporting_counts = []
+        for idea in all_ideas:
+            for paper in idea.anchor_papers + idea.supporting_papers:
+                if paper.get("id"):
+                    contributed_paper_ids.add(paper["id"])
+            supporting_counts.append(len(idea.supporting_papers))
+        avg_supporting = round(sum(supporting_counts) / len(supporting_counts), 1) if supporting_counts else 0.0
 
         # Snapshot file untuk ditampilkan di Dashboard
         run_timestamp = datetime.now(timezone.utc).isoformat()
         snapshot_data = {
+            "schema_version": "1.6.5",
             "run_date": Config.TODAY_STR,
             "run_timestamp": run_timestamp,
             "model": Config.LLM_MODEL,
             "approach": self.approach,
             "goal": self.goal,
             "goal_style": self.goal_style,
+            "gap_steering": self.gap_steering,
             "user_profile": self.user_profile,
             "feedback_summary": self.feedback_summary,
             "categories": list(cat_counts.keys()),
             "papers_total": len(all_papers), 
             "ideas_total": len(all_ideas),
-            "cat_counts": cat_counts, 
+            "cat_counts": cat_counts,
+            "gap_candidates_total": gap_candidates_total,
+            "gap_diagnostics": gap_diagnostics,
+            "contributed_papers_total": len(contributed_paper_ids),
+            "avg_supporting_papers": avg_supporting,
             "ideas": [idea.to_dict() for idea in all_ideas],
         }
         with open(Config.SNAPSHOT_FILE, "w", encoding="utf-8") as f:
@@ -455,16 +500,22 @@ class Orchestrator:
             history = []
         
         history.insert(0, {
+            "schema_version": "1.6.5",
             "timestamp": run_timestamp,
             "date": Config.TODAY_STR,
             "categories": list(cat_counts.keys()),
             "approach": self.approach,
             "goal": self.goal,
             "goal_style": self.goal_style,
+            "gap_steering": self.gap_steering,
             "user_profile": self.user_profile,
             "papers_total": len(all_papers),
             "ideas_total": len(all_ideas),
             "cat_counts": cat_counts,
+            "gap_candidates_total": gap_candidates_total,
+            "gap_diagnostics": gap_diagnostics,
+            "contributed_papers_total": len(contributed_paper_ids),
+            "avg_supporting_papers": avg_supporting,
             "ideas": [idea.to_dict() for idea in all_ideas],
         })
         # Keep last 20 sessions
@@ -480,6 +531,9 @@ class Orchestrator:
         self._emit("done",
              papers=len(all_papers), ideas=len(all_ideas),
              top_cat=top_cat,
+             gap_candidates=gap_candidates_total,
+             contributed_papers=len(contributed_paper_ids),
+             avg_supporting_papers=avg_supporting,
              difficulty_breakdown=diff_counts,
              errors=errors,
              msg=f"Pipeline complete: {len(all_papers)} papers, {len(all_ideas)} ideas")
@@ -608,6 +662,7 @@ class Orchestrator:
         # Save snapshot
         run_timestamp = datetime.now(timezone.utc).isoformat()
         snapshot_data = {
+            "schema_version": "1.6.5",
             "run_date": Config.TODAY_STR,
             "run_timestamp": run_timestamp,
             "mode": "review",
@@ -629,6 +684,7 @@ class Orchestrator:
             history = []
 
         history.insert(0, {
+            "schema_version": "1.6.5",
             "timestamp": run_timestamp,
             "date": Config.TODAY_STR,
             "mode": "review",

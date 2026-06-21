@@ -161,7 +161,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 
 /* ONBOARDING WIZARD */
 .wizard-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px}
-.wizard-box{background:var(--card);border:1px solid var(--border);border-radius:10px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
+.wizard-box{background:var(--card);border:1px solid var(--border);border-radius:10px;width:100%;max-width:520px;max-height:calc(100vh - 48px);overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5);display:flex;flex-direction:column}
 .wizard-header{padding:24px 28px 0;display:flex;justify-content:space-between;align-items:flex-start}
 .wizard-steps{display:flex;gap:6px;align-items:center}
 .wizard-step-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:0.2s}
@@ -169,7 +169,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .wizard-step-dot.done{background:var(--muted)}
 .wizard-skip{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;padding:0;transition:0.2s}
 .wizard-skip:hover{color:var(--text)}
-.wizard-body{padding:28px}
+.wizard-body{padding:28px;overflow-y:auto;flex:1;min-height:0}
 .wizard-step{display:none}
 .wizard-step.active{display:block}
 .wizard-title{font-size:18px;font-weight:600;color:#ffffff;margin-bottom:6px;line-height:1.3}
@@ -187,7 +187,8 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .wizard-provider-card .wpc-badge{display:inline-block;font-size:9px;padding:1px 6px;border-radius:2px;border:1px solid;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px}
 .wpc-badge.free{border-color:#66cc66;color:#66cc66}
 .wpc-badge.paid{border-color:var(--muted);color:var(--muted)}
-.wizard-footer{padding:0 28px 24px;display:flex;gap:10px;align-items:center}
+.wizard-footer{padding:0 28px 24px;display:flex;gap:10px;align-items:center;flex-shrink:0}
+.profile-modal-footer{padding:16px 24px 24px;border-top:1px solid var(--border);background:var(--card);flex-shrink:0}
 .wizard-status{font-size:11px;padding:10px 12px;border-radius:6px;display:none;margin-bottom:16px}
 .wizard-status.ok{background:rgba(102,204,102,0.1);border:1px solid #66cc66;color:#66cc66}
 .wizard-status.err{background:rgba(255,107,107,0.1);border:1px solid var(--err);color:var(--err)}
@@ -199,6 +200,17 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 .wizard-cat-item input[type=checkbox]{accent-color:#fff;pointer-events:none}
 .wizard-progress{height:2px;background:var(--border)}
 .wizard-progress-bar{height:100%;background:#ffffff;transition:width 0.4s ease}
+
+/* APP UPDATE */
+.update-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.86);backdrop-filter:blur(6px);z-index:2600;display:none;align-items:center;justify-content:center;padding:24px}
+.update-box{background:var(--card);border:1px solid var(--border);border-radius:10px;width:min(520px,calc(100vw - 32px));padding:24px;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
+.update-title{font-size:18px;font-weight:600;color:#fff;margin-bottom:8px}
+.update-sub{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.update-progress{height:8px;background:var(--bg);border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-bottom:14px}
+.update-progress-fill{height:100%;width:0%;background:#ffffff;transition:width 0.3s ease}
+.update-status{font-size:12px;color:var(--text);min-height:18px}
+.update-meta{font-size:10px;color:var(--muted);margin-top:8px}
+.update-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
 
 /* SPRITE ANIMATION (logo mascot) */
 .sprite-anim{width:48px;height:48px;margin:0 auto 12px;position:relative}
@@ -393,6 +405,20 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
 </head>
 <body>
 
+<div class="update-overlay" id="updateOverlay">
+  <div class="update-box">
+    <div class="update-title">Updating ScholarScout</div>
+    <div class="update-sub">Downloading the new build, migrating your config and data, and launching the updated app in a fresh window.</div>
+    <div class="update-progress"><div class="update-progress-fill" id="updateProgressFill"></div></div>
+    <div class="update-status" id="updateStatusText">Preparing update...</div>
+    <div class="update-meta" id="updateMetaText">This can take a minute on the first run.</div>
+    <div class="update-actions">
+      <button class="btn" id="updateOpenBtn" onclick="openUpdatedApp()" style="display:none">Open Updated App</button>
+      <button class="btn" id="updateCloseBtn" onclick="hideUpdateOverlay()" style="display:none">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="header">
   <div class="logo-container">
     <img src="/static/logo_purewhite.png" class="logo-img" onerror="this.style.display='none'" alt="Logo">
@@ -469,6 +495,11 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
     <option value="thesis">Thesis</option>
     <option value="project">Project</option>
     <option value="assignment">Assignment</option>
+  </select>
+  <select id="gapSteeringSelect" style="display:none">
+    <option value="balanced">Balanced</option>
+    <option value="breakthrough">Breakthrough-heavy</option>
+    <option value="practical">Practical-first</option>
   </select>
   <textarea id="researchContext" style="display:none"></textarea>
 </div>
@@ -615,7 +646,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       <div style="font-size:14px;font-weight:600;color:#fff">Research Profile</div>
       <button class="wizard-skip" onclick="closePopup('profileModal')">&times;</button>
     </div>
-    <div class="wizard-body" style="padding:20px 24px 0">
+    <div class="wizard-body" style="padding:20px 24px">
 
     <!-- STEP 1: Mode selection (Academic / Product / Develop) -->
     <div class="profile-section">
@@ -678,6 +709,16 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       <div id="goalStyleHint" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5"></div>
     </div>
 
+    <div class="profile-section" id="gapSteeringSection">
+      <div class="profile-label">Gap Steering</div>
+      <div class="profile-cards" id="gapSteeringCards">
+        <div class="profile-card selected" data-value="balanced" title="Mix strong research gaps with executable opportunities">Balanced</div>
+        <div class="profile-card" data-value="breakthrough" title="Bias toward broader, riskier, multi-paper breakthrough gaps">Breakthrough-heavy</div>
+        <div class="profile-card" data-value="practical" title="Bias toward implementation bottlenecks and buildable opportunities">Practical-first</div>
+      </div>
+      <div id="gapSteeringHint" style="margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5"></div>
+    </div>
+
     <!-- STEP 3: Approach -->
     <div class="profile-section">
       <div class="profile-label">Approach</div>
@@ -707,10 +748,10 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
       </div>
       <div id="profileFileStatus" class="drop-zone-status"></div>
     </div>
-    
-    <button class="btn btn-run" style="width:100%;margin-top:12px" onclick="saveProfile()">Save Profile</button>
     </div><!-- /wizard-body -->
-    <div style="height:16px"></div>
+    <div class="profile-modal-footer">
+      <button class="btn btn-run" style="width:100%" onclick="saveProfile()">Save Profile</button>
+    </div>
   </div><!-- /wizard-box -->
 </div><!-- /profileModal -->
 
@@ -742,6 +783,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <div id="tpDateRange"></div>
         <div id="tpPapers"></div>
         <div id="tpCategories"></div>
+        <div id="tpCoverage"></div>
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;opacity:0.7">
           ⚠ Results reflect papers in the selected date range only. Novelty check is not a substitute for a full literature review.
         </div>
@@ -763,6 +805,8 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <div class="run-insights-main">
           <div class="run-insights-title" id="runInsightsTitle">Search-first summary</div>
           <div class="run-insights-sub" id="runInsightsSummary">Run ScholarScout to see category spread and session save status.</div>
+          <div id="runCoverageVisual" style="display:none;margin-top:10px"></div>
+          <div id="runRecommendations" style="display:none;margin-top:10px"></div>
         </div>
         <div class="run-insights-meta" id="runInsightsMeta"></div>
       </div>
@@ -1085,6 +1129,12 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}
         <div class="ac-tab-content active" id="acTabPipeline">
           <div class="ac-section-title">Phases</div>
           <div class="ac-phases" id="acPhases"></div>
+          <div class="ac-section-title" style="margin-top:8px">Gap Monitor</div>
+          <div id="acGapMonitor" style="border:1px solid var(--border);border-radius:4px;background:rgba(255,255,255,0.02);padding:10px">
+            <div id="acGapSummary" style="font-size:11px;color:var(--muted);line-height:1.6">Waiting for synthesized gap candidates...</div>
+            <div id="acGapBadges" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
+            <div id="acGapList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
+          </div>
           <div class="ac-section-title" style="margin-top:8px">Console</div>
           <div class="ac-console" id="acConsole"></div>
         </div>
@@ -1659,6 +1709,9 @@ function _wizardFinish() {
     document.getElementById('goalStyleSelect').value = suggestGoalStyleForGoal(goal);
     sessionStorage.setItem('scholarscout_goal_style', suggestGoalStyleForGoal(goal));
     sessionStorage.removeItem('scholarscout_goal_style_manual');
+    document.getElementById('gapSteeringSelect').value = suggestGapSteeringForGoal(goal);
+    sessionStorage.setItem('scholarscout_gap_steering', suggestGapSteeringForGoal(goal));
+    sessionStorage.removeItem('scholarscout_gap_steering_manual');
     // Sync to profile popup cards
     document.querySelectorAll('#goalCards .profile-card').forEach(c => {
       c.classList.toggle('selected', c.dataset.value === goal);
@@ -1886,6 +1939,16 @@ const GOAL_STYLE_HINTS = {
   project: 'Practical and build-oriented. Good for MVPs, implementation ideas, and execution-first outcomes.',
   assignment: 'Narrow, safe, and quick to execute. Good for tasks, prototypes, or small scoped deliverables.'
 };
+const GAP_STEERING_HINTS = {
+  balanced: 'Mix broader research opportunities with executable gaps so idea sets stay varied and useful.',
+  breakthrough: 'Bias toward underexplored combinations, bigger synthesis, and landscape-level novelty.',
+  practical: 'Bias toward implementation bottlenecks, evaluation gaps, and ideas that are easier to turn into work quickly.'
+};
+const GAP_STEERING_LABELS = {
+  balanced: 'Balanced',
+  breakthrough: 'Breakthrough-heavy',
+  practical: 'Practical-first'
+};
 
 function suggestGoalStyleForGoal(goal) {
   return GOAL_STYLE_DEFAULTS[String(goal || 'any').toUpperCase()] || 'project';
@@ -1893,6 +1956,13 @@ function suggestGoalStyleForGoal(goal) {
 
 function allowedGoalStylesForMode(mode) {
   return MODE_GOAL_STYLE_OPTIONS[String(mode || 'academic').toLowerCase()] || MODE_GOAL_STYLE_OPTIONS.academic;
+}
+
+function suggestGapSteeringForGoal(goal) {
+  const upper = String(goal || 'any').toUpperCase();
+  if (upper === 'PUBLICATION' || upper === 'GRANT_PROPOSAL' || upper === 'PIVOT') return 'breakthrough';
+  if (upper === 'HACKATHON' || upper === 'SIDE_PROJECT' || upper === 'AI_TOOL' || upper === 'FEATURE' || upper === 'INTEGRATION' || upper === 'OPTIMIZATION' || upper === 'EXTENSION') return 'practical';
+  return 'balanced';
 }
 
 function _profileMode() {
@@ -1934,6 +2004,30 @@ function syncGoalStyleUI(options = {}) {
   hint.textContent = GOAL_STYLE_HINTS[nextStyle] || '';
 }
 
+function syncGapSteeringUI(options = {}) {
+  const goal = options.goal || _selectedGoalValue();
+  const select = document.getElementById('gapSteeringSelect');
+  const section = document.getElementById('gapSteeringSection');
+  const hint = document.getElementById('gapSteeringHint');
+  const cards = document.querySelectorAll('#gapSteeringCards .profile-card');
+  if (!select || !section || !hint || !cards.length) return;
+  if (goal === 'SYNTHESIS') {
+    section.style.display = 'none';
+    select.value = 'balanced';
+    return;
+  }
+  section.style.display = '';
+  const manual = sessionStorage.getItem('scholarscout_gap_steering_manual') === '1';
+  const suggested = suggestGapSteeringForGoal(goal);
+  let nextValue = select.value || suggested;
+  if (options.forceSuggestion || !manual || !GAP_STEERING_HINTS[nextValue]) nextValue = suggested;
+  cards.forEach(card => {
+    card.classList.toggle('selected', card.dataset.value === nextValue);
+  });
+  select.value = nextValue;
+  hint.textContent = GAP_STEERING_HINTS[nextValue] || '';
+}
+
 function _captureCurrentPreset() {
   return {
     categories: _selectedCategories(),
@@ -1942,6 +2036,7 @@ function _captureCurrentPreset() {
     approach: document.getElementById('approachSelect').value || 'any',
     goal: document.getElementById('goalSelect').value || 'any',
     goal_style: document.getElementById('goalStyleSelect').value || '',
+    gap_steering: document.getElementById('gapSteeringSelect').value || 'balanced',
     context: document.getElementById('researchContext').value || '',
     personality: getPersonalityProfile()
   };
@@ -1993,10 +2088,13 @@ function applySelectedPreset() {
   document.getElementById('approachSelect').value = preset.approach || 'any';
   document.getElementById('goalSelect').value = preset.goal || 'any';
   document.getElementById('goalStyleSelect').value = preset.goal_style || suggestGoalStyleForGoal(preset.goal || 'any');
+  document.getElementById('gapSteeringSelect').value = preset.gap_steering || suggestGapSteeringForGoal(preset.goal || 'any');
   document.getElementById('researchContext').value = preset.context || '';
   document.getElementById('profileContext').value = preset.context || '';
   sessionStorage.setItem('scholarscout_goal_style', document.getElementById('goalStyleSelect').value || '');
   sessionStorage.setItem('scholarscout_goal_style_manual', '1');
+  sessionStorage.setItem('scholarscout_gap_steering', document.getElementById('gapSteeringSelect').value || 'balanced');
+  sessionStorage.setItem('scholarscout_gap_steering_manual', '1');
 
   const personality = preset.personality || {};
   const mapping = {
@@ -2012,6 +2110,7 @@ function applySelectedPreset() {
   });
   _persistPersonalitySettings();
   syncGoalStyleUI({ mode: _profileMode(), goal: preset.goal || 'any' });
+  syncGapSteeringUI({ goal: preset.goal || 'any' });
   showToast(`Applied preset: ${select.value}`, 'ok');
 }
 
@@ -2122,6 +2221,7 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
         : 'Context <span style="font-weight:400;color:var(--muted)">(optional)</span>';
     }
     syncGoalStyleUI({ mode, goal: firstCard ? firstCard.dataset.value || 'any' : 'any' });
+    syncGapSteeringUI({ goal: firstCard ? firstCard.dataset.value || 'any' : 'any', forceSuggestion: true });
     goalSection.style.opacity = '1';
   }, 150);
 });
@@ -2133,6 +2233,7 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
   const approach = sessionStorage.getItem('scholarscout_approach') || 'any';
   const goal = sessionStorage.getItem('scholarscout_goal') || 'any';
   const goalStyle = sessionStorage.getItem('scholarscout_goal_style') || suggestGoalStyleForGoal(goal);
+  const gapSteering = sessionStorage.getItem('scholarscout_gap_steering') || suggestGapSteeringForGoal(goal);
   const ctx = sessionStorage.getItem('scholarscout_context') || '';
   const goalModeMap = {
     HACKATHON: 'product',
@@ -2166,8 +2267,10 @@ document.getElementById('modeCards').addEventListener('click', function(e) {
   document.getElementById('approachSelect').value = approach;
   document.getElementById('goalSelect').value = goal;
   document.getElementById('goalStyleSelect').value = goalStyle;
+  document.getElementById('gapSteeringSelect').value = gapSteering;
   document.getElementById('researchContext').value = ctx;
   syncGoalStyleUI({ mode, goal, forceSuggestion: !sessionStorage.getItem('scholarscout_goal_style_manual') });
+  syncGapSteeringUI({ goal, forceSuggestion: !sessionStorage.getItem('scholarscout_gap_steering_manual') });
 })();
 
 function saveProfile() {
@@ -2180,6 +2283,7 @@ function saveProfile() {
   const approach   = approachEl ? approachEl.dataset.value : 'any';
   const goal       = goalEl     ? goalEl.dataset.value     : 'any';
   const goalStyle  = document.getElementById('goalStyleSelect').value || suggestGoalStyleForGoal(goal);
+  const gapSteering = document.getElementById('gapSteeringSelect').value || suggestGapSteeringForGoal(goal);
   const ctx        = document.getElementById('profileContext').value.trim();
   
   // Review mode requires context (topic for literature review)
@@ -2193,12 +2297,14 @@ function saveProfile() {
   sessionStorage.setItem('scholarscout_approach', approach);
   sessionStorage.setItem('scholarscout_goal', goal);
   sessionStorage.setItem('scholarscout_goal_style', goalStyle);
+  sessionStorage.setItem('scholarscout_gap_steering', gapSteering);
   sessionStorage.setItem('scholarscout_context', ctx);
   
   // Sync to hidden selects/textarea used by pipeline
   document.getElementById('approachSelect').value = approach;
   document.getElementById('goalSelect').value = goal;
   document.getElementById('goalStyleSelect').value = goalStyle;
+  document.getElementById('gapSteeringSelect').value = gapSteering;
   document.getElementById('researchContext').value = ctx;
   
   closePopup('profileModal');
@@ -2217,7 +2323,9 @@ document.querySelectorAll('#goalCards, #goalCardsProduct, #goalCardsDevelop, #go
       document.getElementById('goalSelect').value = card.dataset.value;
       sessionStorage.setItem('scholarscout_goal', card.dataset.value);
       sessionStorage.removeItem('scholarscout_goal_style_manual');
+      sessionStorage.removeItem('scholarscout_gap_steering_manual');
       syncGoalStyleUI({ goal: card.dataset.value, mode: _profileMode(), forceSuggestion: true });
+      syncGapSteeringUI({ goal: card.dataset.value, forceSuggestion: true });
     }
   });
 });
@@ -2231,6 +2339,17 @@ document.getElementById('goalStyleCards').addEventListener('click', function(e) 
   document.getElementById('goalStyleHint').textContent = GOAL_STYLE_HINTS[card.dataset.value] || '';
   sessionStorage.setItem('scholarscout_goal_style', card.dataset.value || '');
   sessionStorage.setItem('scholarscout_goal_style_manual', '1');
+});
+
+document.getElementById('gapSteeringCards').addEventListener('click', function(e) {
+  const card = e.target.closest('.profile-card');
+  if (!card) return;
+  this.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  document.getElementById('gapSteeringSelect').value = card.dataset.value || 'balanced';
+  document.getElementById('gapSteeringHint').textContent = GAP_STEERING_HINTS[card.dataset.value] || '';
+  sessionStorage.setItem('scholarscout_gap_steering', card.dataset.value || 'balanced');
+  sessionStorage.setItem('scholarscout_gap_steering_manual', '1');
 });
 
 // ── File Upload for Profile (drag & drop) ──
@@ -2674,6 +2793,64 @@ function _renderUserFitSections(idea) {
   return `<div class="modal-refinement-grid">${blocks.join('')}</div>`;
 }
 
+function _evidenceStatusMeta(idea) {
+  const score = Number(idea && idea.grounding_score || 0);
+  const flags = Array.isArray(idea && idea.risk_flags) ? idea.risk_flags : [];
+  if (score >= 8 && !flags.length) return { label: 'Grounded', tone: 'ok' };
+  if (score >= 5) return { label: 'Partial', tone: 'warn' };
+  return { label: 'Needs Review', tone: 'err' };
+}
+
+function _renderPaperList(items) {
+  if (!items || !items.length) return '';
+  return `<ul>${items.map(paper => {
+    const title = escapeHtml(paper.title || paper.id || 'Untitled');
+    const meta = [paper.id, paper.source].filter(Boolean).map(escapeHtml).join(' · ');
+    const label = meta ? `${title} <span style="color:var(--muted)">(${meta})</span>` : title;
+    return `<li>${paper.link ? `<a href="${escapeHtml(paper.link)}" target="_blank" style="color:var(--text);border-bottom:1px solid var(--border)">${label}</a>` : label}</li>`;
+  }).join('')}</ul>`;
+}
+
+function _renderGapSections(idea) {
+  if (!idea) return '';
+  const blocks = [];
+  if (idea.landscape_gap_summary) {
+    blocks.push(`<div class="modal-section"><div class="modal-section-title">Landscape Gap</div><p>${escapeHtml(idea.landscape_gap_summary)}</p></div>`);
+  }
+  const meta = [];
+  if (idea.gap_type) meta.push(`Gap type: ${escapeHtml(String(idea.gap_type).replaceAll('_', ' '))}`);
+  if (idea.coverage_count) meta.push(`Coverage: ${escapeHtml(String(idea.coverage_count))} papers`);
+  if (idea.coverage_ratio) meta.push(`Coverage ratio: ${escapeHtml(String(Math.round(Number(idea.coverage_ratio) * 100)))}%`);
+  if (meta.length) {
+    blocks.push(`<div class="modal-section"><div class="modal-section-title">Gap Coverage</div><p>${meta.join(' · ')}</p></div>`);
+  }
+  if (idea.anchor_papers && idea.anchor_papers.length) {
+    blocks.push(`<div class="modal-section"><div class="modal-section-title">Anchor Papers</div>${_renderPaperList(idea.anchor_papers)}</div>`);
+  }
+  if (idea.supporting_papers && idea.supporting_papers.length) {
+    blocks.push(`<div class="modal-section"><div class="modal-section-title">Supporting Papers</div>${_renderPaperList(idea.supporting_papers)}</div>`);
+  }
+  if (idea.evidence_claims && idea.evidence_claims.length) {
+    blocks.push(`<div class="modal-section"><div class="modal-section-title">Evidence Claims</div><ul>${idea.evidence_claims.map(claim => `<li>${escapeHtml(claim.claim || '')}${claim.paper_ids && claim.paper_ids.length ? ` <span style="color:var(--muted)">[${escapeHtml(claim.paper_ids.join(', '))}]</span>` : ''}</li>`).join('')}</ul></div>`);
+  }
+  if (idea.risk_flags && idea.risk_flags.length) {
+    blocks.push(`<div class="modal-section"><div class="modal-section-title">Warnings</div><ul>${idea.risk_flags.map(flag => `<li>${escapeHtml(flag)}</li>`).join('')}</ul></div>`);
+  }
+  if (!blocks.length) return '';
+  const status = _evidenceStatusMeta(idea);
+  return `<div class="modal-refinement-grid"><div class="modal-section" style="grid-column:1/-1"><div class="modal-section-title">Evidence Pack</div><p>Status: ${status.label}${idea.grounding_score ? ` · Grounding score ${escapeHtml(String(idea.grounding_score))}/10` : ''}</p></div>${blocks.join('')}</div>`;
+}
+
+function _mainPhaseCount() {
+  const goal = document.getElementById('goalSelect') ? document.getElementById('goalSelect').value : '';
+  return goal === 'SYNTHESIS' ? 6 : 6;
+}
+
+function _mainPhaseProgress(phase) {
+  const total = Math.max(_mainPhaseCount() - 1, 1);
+  return Math.round((Number(phase || 0) / total) * 100);
+}
+
 function _bindModalIdeaActions(idea) {
   const ddBtn = document.getElementById('modalDeepDiveBtn');
   const exportBtn = document.getElementById('modalExportBtn');
@@ -2708,12 +2885,19 @@ function _bindModalIdeaActions(idea) {
       printWin.document.write(`<h1>${escapeHtml(idea.idea_title || 'Untitled')}</h1>`);
       printWin.document.write(`<div class="meta"><span class="chip">${escapeHtml(idea.field || '')}</span><span class="chip">${escapeHtml(idea.difficulty || '')}</span><span class="chip">${escapeHtml(idea.cost_estimate || '')}</span></div>`);
       if (idea.goal_style) printWin.document.write(`<h2>Goal Style</h2><p>${escapeHtml(GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style)}</p>`);
+      if (idea.gap_steering) printWin.document.write(`<h2>Gap Steering</h2><p>${escapeHtml(GAP_STEERING_LABELS[idea.gap_steering] || idea.gap_steering)}</p>`);
       if (idea.abstract) printWin.document.write(`<h2>Abstract</h2><p>${escapeHtml(idea.abstract)}</p>`);
+      if (idea.landscape_gap_summary) printWin.document.write(`<h2>Landscape Gap</h2><p>${escapeHtml(idea.landscape_gap_summary)}</p>`);
+      if (idea.gap_type || idea.coverage_count) printWin.document.write(`<h2>Gap Coverage</h2><p>${escapeHtml((idea.gap_type || '').replaceAll('_', ' '))}${idea.gap_type && idea.coverage_count ? ' · ' : ''}${idea.coverage_count ? escapeHtml(String(idea.coverage_count) + ' papers') : ''}</p>`);
       if (idea.why_hard) printWin.document.write(`<h2>Why It's Hard</h2><p>${escapeHtml(idea.why_hard)}</p>`);
       if (idea.methodology_hint) printWin.document.write(`<h2>Methodology</h2><p>${escapeHtml(idea.methodology_hint)}</p>`);
       if (idea.next_steps) { const steps = idea.next_steps.split('|').map(s=>s.trim()).filter(Boolean); if(steps.length) printWin.document.write(`<h2>Next Steps</h2><ol>${steps.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ol>`); }
       if (idea.key_papers) { const papers = idea.key_papers.split('|').map(s=>s.trim()).filter(Boolean); if(papers.length) printWin.document.write(`<h2>Key Papers</h2><ul>${papers.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ul>`); }
       if (idea.resources_needed) printWin.document.write(`<h2>Resources Needed</h2><p>${escapeHtml(idea.resources_needed)}</p>`);
+      if (idea.anchor_papers && idea.anchor_papers.length) printWin.document.write(`<h2>Anchor Papers</h2>${_renderPaperList(idea.anchor_papers)}`);
+      if (idea.supporting_papers && idea.supporting_papers.length) printWin.document.write(`<h2>Supporting Papers</h2>${_renderPaperList(idea.supporting_papers)}`);
+      if (idea.evidence_claims && idea.evidence_claims.length) printWin.document.write(`<h2>Evidence Claims</h2><ul>${idea.evidence_claims.map(claim => `<li>${escapeHtml(claim.claim || '')}${claim.paper_ids && claim.paper_ids.length ? ` [${escapeHtml(claim.paper_ids.join(', '))}]` : ''}</li>`).join('')}</ul>`);
+      if (idea.risk_flags && idea.risk_flags.length) printWin.document.write(`<h2>Risk Flags</h2><ul>${idea.risk_flags.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')}</ul>`);
       if (idea.critique_summary) printWin.document.write(`<h2>Internal Critique</h2><p>${escapeHtml(idea.critique_summary)}</p>`);
       if (idea.refinement_summary) printWin.document.write(`<h2>Why This Version Is Stronger</h2><p>${escapeHtml(idea.refinement_summary)}</p>`);
       if (idea.novelty_claim) printWin.document.write(`<h2>Sharper Novelty Claim</h2><p>${escapeHtml(idea.novelty_claim)}</p>`);
@@ -2733,12 +2917,19 @@ function _bindModalIdeaActions(idea) {
       if (idea.field) parts.push(`Field: ${idea.field}`);
       if (idea.difficulty) parts.push(`Level: ${idea.difficulty}`);
       if (idea.goal_style) parts.push(`Goal style: ${GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style}`);
+      if (idea.gap_steering) parts.push(`Gap steering: ${GAP_STEERING_LABELS[idea.gap_steering] || idea.gap_steering}`);
       if (idea.abstract) parts.push(`\nAbstract: ${idea.abstract}`);
+      if (idea.landscape_gap_summary) parts.push(`\nLandscape gap: ${idea.landscape_gap_summary}`);
+      if (idea.gap_type) parts.push(`\nGap type: ${String(idea.gap_type).replaceAll('_', ' ')}`);
       if (idea.why_hard) parts.push(`\nWhy hard: ${idea.why_hard}`);
       if (idea.methodology_hint) parts.push(`\nMethodology: ${idea.methodology_hint}`);
       if (idea.next_steps) parts.push(`\nNext steps:\n${idea.next_steps.split('|').map((s,i) => `  ${i+1}. ${s.trim()}`).join('\n')}`);
       if (idea.key_papers) parts.push(`\nKey papers: ${idea.key_papers}`);
       if (idea.resources_needed) parts.push(`\nResources: ${idea.resources_needed}`);
+      if (idea.anchor_papers && idea.anchor_papers.length) parts.push(`\nAnchor papers: ${idea.anchor_papers.map(p => p.title || p.id).join('; ')}`);
+      if (idea.supporting_papers && idea.supporting_papers.length) parts.push(`\nSupporting papers: ${idea.supporting_papers.map(p => p.title || p.id).join('; ')}`);
+      if (idea.evidence_claims && idea.evidence_claims.length) parts.push(`\nEvidence claims:\n${idea.evidence_claims.map(claim => `  - ${claim.claim || ''}${claim.paper_ids && claim.paper_ids.length ? ` [${claim.paper_ids.join(', ')}]` : ''}`).join('\n')}`);
+      if (idea.risk_flags && idea.risk_flags.length) parts.push(`\nRisk flags: ${idea.risk_flags.join(', ')}`);
       if (idea.critique_summary) parts.push(`\nInternal critique: ${idea.critique_summary}`);
       if (idea.refinement_summary) parts.push(`\nWhy stronger: ${idea.refinement_summary}`);
       if (idea.novelty_claim) parts.push(`\nSharper novelty claim: ${idea.novelty_claim}`);
@@ -2791,6 +2982,7 @@ function _bindModalIdeaActions(idea) {
           field: idea.field || '',
           approach: document.getElementById('approachSelect').value,
           goal_style: document.getElementById('goalStyleSelect').value,
+          gap_steering: document.getElementById('gapSteeringSelect').value,
           language: document.getElementById('langSelect').value,
           context: document.getElementById('researchContext').value.slice(0, 2000),
           exclude_title: idea.idea_title,
@@ -2866,6 +3058,7 @@ function openIdeaDetail(idea, triggerEl) {
   
   const nextSteps = (idea.next_steps || '').split('|').map(s => s.trim()).filter(Boolean);
   const keyPapers = (idea.key_papers || '').split('|').map(s => s.trim()).filter(Boolean);
+  const evidenceMeta = _evidenceStatusMeta(idea);
   
   body.innerHTML = `
     <div class="modal-title">${escapeHtml(idea.idea_title || 'Untitled')}</div>
@@ -2874,13 +3067,18 @@ function openIdeaDetail(idea, triggerEl) {
       <span class="chip">${escapeHtml(idea.difficulty || '')}</span>
       <span class="chip">${escapeHtml(idea.cost_estimate || '')}</span>
       ${idea.goal_style ? `<span class="chip">${escapeHtml(String(idea.goal_style).toUpperCase())}</span>` : ''}
+      ${idea.gap_steering ? `<span class="chip">${escapeHtml(GAP_STEERING_LABELS[idea.gap_steering] || idea.gap_steering)}</span>` : ''}
+      ${(idea.source_papers && idea.source_papers.length) || idea.landscape_gap_summary ? `<span class="chip">${escapeHtml(evidenceMeta.label)}</span>` : ''}
+      ${idea.coverage_count ? `<span class="chip" data-tooltip="Distinct fetched papers contributing to this idea.">P:${escapeHtml(String(idea.coverage_count))}</span>` : ''}
       ${_renderRefinementChip(idea)}
       ${idea.user_fit_score ? `<span class="chip" data-tooltip="Estimated fit to your profile and past feedback.">${escapeHtml('Fit:' + idea.user_fit_score + '/10')}</span>` : ''}
     </div>
     ${idea.goal_style ? `<div class="modal-section"><div class="modal-section-title">Goal Style</div><p>Generated for ${escapeHtml(GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style)} style.</p></div>` : ''}
+    ${idea.gap_steering ? `<div class="modal-section"><div class="modal-section-title">Gap Steering</div><p>${escapeHtml(GAP_STEERING_LABELS[idea.gap_steering] || idea.gap_steering)}. ${escapeHtml(GAP_STEERING_HINTS[idea.gap_steering] || '')}</p></div>` : ''}
     ${idea.abstract ? `<div class="modal-section"><div class="modal-section-title">Abstract</div><p>${escapeHtml(idea.abstract)}</p></div>` : ''}
     ${(idea.critique_summary || idea.refinement_summary || idea.novelty_claim || idea.feasibility_warning) ? _renderRefinementSections(idea) : ''}
     ${(idea.fit_to_user_summary || (idea.misalignment_flags && idea.misalignment_flags.length)) ? _renderUserFitSections(idea) : ''}
+    ${(idea.landscape_gap_summary || (idea.anchor_papers && idea.anchor_papers.length) || (idea.supporting_papers && idea.supporting_papers.length) || (idea.evidence_claims && idea.evidence_claims.length)) ? _renderGapSections(idea) : ''}
     ${idea.why_hard ? `<div class="modal-section"><div class="modal-section-title">Why It's Hard</div><p>${escapeHtml(idea.why_hard)}</p></div>` : ''}
     ${idea.methodology_hint ? `<div class="modal-section"><div class="modal-section-title">Methodology</div><p>${escapeHtml(idea.methodology_hint)}</p></div>` : ''}
     ${nextSteps.length ? `<div class="modal-section"><div class="modal-section-title">Next Steps</div><ol>${nextSteps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol></div>` : ''}
@@ -3111,6 +3309,7 @@ function addIdeaCard(idea) {
   const title = idea.idea_title || 'Untitled';
   const bm = isBookmarked(title);
   const selected = selectedIdeaKeys.has(_ideaKey(idea));
+  const evidenceMeta = _evidenceStatusMeta(idea);
   
   const card = document.createElement('div');
   card.className = 'idea-card' + (bm ? ' bookmarked' : '') + (selected ? ' selected' : '');
@@ -3131,10 +3330,14 @@ function addIdeaCard(idea) {
         ${idea.quality_score ? `<span class="chip" data-tooltip="LLM self-rated quality: ${idea.quality_score}/10. Higher = more novel and feasible.">Q:${idea.quality_score}</span>` : ''}
         ${idea.user_fit_score ? `<span class="chip" data-tooltip="Estimated fit to your profile and vote history.">Fit:${idea.user_fit_score}</span>` : ''}
         ${idea.goal_style ? `<span class="chip" data-tooltip="Generated for ${escapeHtml(GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style)} style.">${escapeHtml(String(idea.goal_style).toUpperCase())}</span>` : ''}
+        ${idea.gap_steering ? `<span class="chip" data-tooltip="${escapeHtml(GAP_STEERING_HINTS[idea.gap_steering] || '')}">${escapeHtml(GAP_STEERING_LABELS[idea.gap_steering] || idea.gap_steering)}</span>` : ''}
+        ${(idea.source_papers && idea.source_papers.length) || idea.landscape_gap_summary ? `<span class="chip" data-tooltip="Evidence status for this idea.">${escapeHtml(evidenceMeta.label)}</span>` : ''}
+        ${idea.coverage_count ? `<span class="chip" data-tooltip="Distinct fetched papers contributing to this idea.">P:${escapeHtml(String(idea.coverage_count))}</span>` : ''}
         ${_renderRefinementChip(idea)}
         ${currentLanguage === 'id' ? '<span class="chip">ID</span>' : ''}
       </div>
       ${idea.abstract ? `<div class="idea-abstract">"${escapeHtml(idea.abstract)}"</div>` : ''}
+      ${idea.landscape_gap_summary ? `<div class="idea-why-this"><span class="idea-method-label">Landscape gap:</span> ${escapeHtml(idea.landscape_gap_summary)}</div>` : ''}
       <div class="idea-why">${escapeHtml(idea.why_hard || '')}</div>
       ${idea.refinement_summary ? `<div class="idea-refine-note"><span class="idea-method-label">Why stronger:</span> ${escapeHtml(idea.refinement_summary)}</div>` : ''}
       ${idea.fit_to_user_summary ? `<div class="idea-why-this"><span class="idea-method-label">Fit:</span> ${escapeHtml(idea.fit_to_user_summary)}</div>` : ''}
@@ -3212,6 +3415,75 @@ function _formatRunTimestamp(value) {
   });
 }
 
+function _renderCoverageVisual(meta) {
+  const el = document.getElementById('runCoverageVisual');
+  if (!el) return;
+  const diagnostics = meta && Array.isArray(meta.gap_diagnostics) ? meta.gap_diagnostics : [];
+  if (!diagnostics.length) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  const maxPapers = Math.max(...diagnostics.map(item => Number(item.paper_count || 0)), 1);
+  el.style.display = 'block';
+  el.innerHTML = diagnostics.slice(0, 4).map(item => {
+    const ratio = Math.max(8, Math.round((Number(item.paper_count || 0) / maxPapers) * 100));
+    const gapTypes = Object.entries(item.top_gap_types || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([label, count]) => `${label.replaceAll('_', ' ')} ${count}`).join(' · ');
+    return `<div style="margin-top:8px">
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--muted);margin-bottom:4px">
+        <span>${escapeHtml(item.category || 'unknown')}</span>
+        <span>${escapeHtml(String(item.gap_candidates || 0))} gaps · ${escapeHtml(String(item.paper_count || 0))} papers</span>
+      </div>
+      <div style="height:6px;border-radius:999px;background:rgba(255,255,255,0.06);overflow:hidden">
+        <div style="height:100%;width:${ratio}%;background:linear-gradient(90deg,#d7cba3 0%,#9bb3c9 100%)"></div>
+      </div>
+      ${gapTypes ? `<div style="font-size:10px;color:var(--muted);margin-top:4px">${escapeHtml(gapTypes)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function _buildRunRecommendations(meta) {
+  const recs = [];
+  const diagnostics = meta && Array.isArray(meta.gap_diagnostics) ? meta.gap_diagnostics : [];
+  const selectedCategories = meta && Array.isArray(meta.categories) ? meta.categories.length : 0;
+  const totalIdeas = ideas.length;
+  const totalGaps = Number(meta && meta.gap_candidates_total || 0);
+  const contributed = Number(meta && meta.contributed_papers_total || 0);
+  const avgSupporting = Number(meta && meta.avg_supporting_papers || 0);
+
+  if (selectedCategories >= 5 && totalGaps <= totalIdeas) {
+    recs.push('Coverage looks thin for the number of categories selected. Try fewer categories for deeper gap synthesis.');
+  }
+  if ((meta && meta.gap_steering) === 'balanced' && avgSupporting < 3) {
+    recs.push('Support per idea is still light. Try Breakthrough-heavy if you want stronger multi-paper synthesis.');
+  }
+  if ((meta && meta.gap_steering) === 'breakthrough' && avgSupporting < 2.5) {
+    recs.push('Breakthrough-heavy still found shallow support. Narrow categories or tighten context to improve grounding.');
+  }
+  if (contributed && totalIdeas && contributed <= totalIdeas) {
+    recs.push('Many ideas still reuse a small paper set. Try Practical-first or reduce max ideas for higher distinctness.');
+  }
+  const strongest = diagnostics.slice().sort((a, b) => Number(b.gap_candidates || 0) - Number(a.gap_candidates || 0))[0];
+  if (strongest && strongest.gap_candidates >= 3) {
+    recs.push(`Strongest category this run was ${strongest.category}. Open those ideas first if you want the densest gap coverage.`);
+  }
+  return recs.slice(0, 3);
+}
+
+function _renderRunRecommendations(meta) {
+  const el = document.getElementById('runRecommendations');
+  if (!el) return;
+  const recs = _buildRunRecommendations(meta);
+  if (!recs.length) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = 'block';
+  el.innerHTML = `<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">Recommended Next Move</div>
+    <div style="display:flex;flex-direction:column;gap:6px">${recs.map(text => `<div style="font-size:11px;color:var(--text);line-height:1.5;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,0.02)">${escapeHtml(text)}</div>`).join('')}</div>`;
+}
+
 function updateRunInsights(meta) {
   if (meta) lastRunMeta = meta;
   const panel = document.getElementById('runInsights');
@@ -3237,9 +3509,14 @@ function updateRunInsights(meta) {
   const savedAt = _formatRunTimestamp(lastRunMeta && lastRunMeta.timestamp);
   const metaParts = [];
   if (selectedCount) metaParts.push(`${selectedCount} categories selected`);
+  if (lastRunMeta && lastRunMeta.gap_steering) metaParts.push(`Steering: ${String(lastRunMeta.gap_steering).replace('-', ' ')}`);
+  if (lastRunMeta && lastRunMeta.gap_candidates_total) metaParts.push(`${lastRunMeta.gap_candidates_total} gap candidates`);
+  if (lastRunMeta && lastRunMeta.contributed_papers_total) metaParts.push(`${lastRunMeta.contributed_papers_total} contributing papers`);
   if (savedAt) metaParts.push(`Saved in session ${savedAt}`);
   metaEl.textContent = metaParts.join(' · ');
   panel.style.display = 'flex';
+  _renderCoverageVisual(lastRunMeta || {});
+  _renderRunRecommendations(lastRunMeta || {});
 }
 
 function _updateExportAllButton() {
@@ -3316,8 +3593,18 @@ function _buildIdeaMarkdown(idea, index) {
     lines.push(`Goal Style: ${GOAL_STYLE_LABELS[idea.goal_style] || idea.goal_style}`);
     lines.push('');
   }
+  if (idea.gap_steering) {
+    lines.push(`Gap Steering: ${GAP_STEERING_LABELS[idea.gap_steering] || idea.gap_steering}`);
+    lines.push('');
+  }
+  if (idea.landscape_gap_summary) {
+    lines.push(`Gap Status: ${_evidenceStatusMeta(idea).label}`);
+    lines.push('');
+  }
 
   _appendIdeaSection(lines, 'Abstract', idea.abstract);
+  _appendIdeaSection(lines, 'Landscape Gap', idea.landscape_gap_summary);
+  _appendIdeaSection(lines, 'Gap Type', idea.gap_type ? String(idea.gap_type).replaceAll('_', ' ') : '');
   _appendIdeaSection(lines, "Why It's Hard", idea.why_hard);
   _appendIdeaSection(lines, 'Methodology', idea.methodology_hint);
   _appendIdeaSection(lines, 'Why This Idea', idea.why_this_idea);
@@ -3345,6 +3632,30 @@ function _buildIdeaMarkdown(idea, index) {
   if (idea.source_papers && idea.source_papers.length) {
     lines.push('## Evidence Pack');
     lines.push('');
+    if (idea.coverage_count || idea.coverage_ratio) {
+      lines.push(`Coverage: ${idea.coverage_count || 0} papers${idea.coverage_ratio ? ` (${Math.round(Number(idea.coverage_ratio) * 100)}%)` : ''}`);
+      lines.push('');
+    }
+    if (idea.anchor_papers && idea.anchor_papers.length) {
+      lines.push('### Anchor Papers');
+      idea.anchor_papers.forEach((paper, paperIndex) => {
+        const link = paper.link || paper.url || '';
+        const title = paper.title || `Paper ${paperIndex + 1}`;
+        const source = paper.source ? ` (${paper.source})` : '';
+        lines.push(`- ${title}${source}${link ? ` - ${link}` : ''}`);
+      });
+      lines.push('');
+    }
+    if (idea.supporting_papers && idea.supporting_papers.length) {
+      lines.push('### Supporting Papers');
+      idea.supporting_papers.forEach((paper, paperIndex) => {
+        const link = paper.link || paper.url || '';
+        const title = paper.title || `Paper ${paperIndex + 1}`;
+        const source = paper.source ? ` (${paper.source})` : '';
+        lines.push(`- ${title}${source}${link ? ` - ${link}` : ''}`);
+      });
+      lines.push('');
+    }
     lines.push('### Source Papers');
     idea.source_papers.forEach((paper, paperIndex) => {
       const link = paper.link || paper.url || '';
@@ -3439,7 +3750,7 @@ function handleEvent(ev) {
     const typeMap = {
       'start':'ok', 'ping_start':'info', 'ping_ok':'ok', 'ping_wait':'warn', 'ping_fallback':'warn',
       'phase':'warn', 'phase1_done':'ok', 'phase2_done':'ok', 'phase2_info':'info',
-      'phase3_done':'ok', 'csv_done':'ok',
+      'phase3_done':'ok', 'phase4_done':'ok', 'gap_candidates':'info', 'csv_done':'ok',
       'cat_start':'info', 'cat_done':'ok', 'cat_skip':'warn', 'cat_fetch_done':'info',
       'cat_ideas':'ok', 'gen_start':'info',
       'paper_found':'info', 'trend':'ok',
@@ -3462,10 +3773,10 @@ function handleEvent(ev) {
     updateProgress(10);
   }
   else if (e === 'fatal_error') {
-    [0,1,2,3,4].forEach(n => {
+    for (let n = 0; n < _mainPhaseCount(); n++) {
       const el = document.getElementById('ph'+n);
       if (el && el.classList.contains('active')) setPhase(n, 'error', ev.msg || 'Error');
-    });
+    }
     document.getElementById('statusBadge').textContent = 'ERROR';
     document.getElementById('statusBadge').className = 'badge error';
     const progBar = document.getElementById('progBar');
@@ -3495,7 +3806,7 @@ function handleEvent(ev) {
       }
     }
     setPhase(ev.phase, 'active', ev.msg);
-    updateProgress(ev.phase * 20 + 10);
+    updateProgress(_mainPhaseProgress(ev.phase));
   }
   else if (e === 'cat_done' || e === 'cat_fetch_done') {
     // Update papers counter live
@@ -3556,7 +3867,12 @@ function handleEvent(ev) {
         updateRunInsights({
           categories: data.categories || [],
           timestamp: data.run_timestamp || new Date().toISOString(),
-          cat_counts: data.cat_counts || {}
+          cat_counts: data.cat_counts || {},
+          gap_steering: data.gap_steering || 'balanced',
+          gap_candidates_total: data.gap_candidates_total || 0,
+          contributed_papers_total: data.contributed_papers_total || 0,
+          avg_supporting_papers: data.avg_supporting_papers || 0,
+          gap_diagnostics: data.gap_diagnostics || []
         });
       }
       if (data.mode === 'review' && data.review) {
@@ -3574,6 +3890,12 @@ function handleEvent(ev) {
       document.getElementById('tpDateRange').textContent = `Date range: ${dateFrom} → ${dateTo}`;
       document.getElementById('tpPapers').textContent    = `Papers fetched: ${ev.papers || 0}`;
       document.getElementById('tpCategories').textContent = `Categories: ${cats.slice(0,5).join(', ')}${cats.length > 5 ? ` +${cats.length-5} more` : ''}`;
+      const tpGap = document.getElementById('tpCoverage');
+      if (tpGap) {
+        const diagnostics = (lastRunMeta && Array.isArray(lastRunMeta.gap_diagnostics) ? lastRunMeta.gap_diagnostics : []).slice(0, 3);
+        const diagText = diagnostics.map(item => `${item.category} ${item.gap_candidates} gaps`).join(' · ');
+        tpGap.textContent = `Gap steering: ${GAP_STEERING_LABELS[(lastRunMeta && lastRunMeta.gap_steering) || 'balanced'] || 'Balanced'} · Gap candidates: ${ev.gap_candidates || 0} · Contributed papers: ${ev.contributed_papers || 0} · Avg support/idea: ${ev.avg_supporting_papers || 0}${diagText ? ` · Coverage: ${diagText}` : ''}`;
+      }
       tp.style.display = 'block';
     }
   }
@@ -3627,6 +3949,7 @@ function quickMode() {
   const approach = document.getElementById('approachSelect').value;
   const goal = document.getElementById('goalSelect').value;
   const goalStyle = document.getElementById('goalStyleSelect').value;
+  const gapSteering = document.getElementById('gapSteeringSelect').value;
   const context = document.getElementById('researchContext').value.slice(0, 2000);
   const userProfile = getPersonalityProfile();
   const feedbackSummary = getFeedbackMemory();
@@ -3634,7 +3957,7 @@ function quickMode() {
   fetch('/api/quick', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ categories: selectedCats, max_ideas: maxIdeas, language: language, approach: approach, goal: goal, goal_style: goalStyle, context: context, user_profile: userProfile, feedback_summary: feedbackSummary })
+    body: JSON.stringify({ categories: selectedCats, max_ideas: maxIdeas, language: language, approach: approach, goal: goal, goal_style: goalStyle, gap_steering: gapSteering, context: context, user_profile: userProfile, feedback_summary: feedbackSummary })
   })
   .then(r => r.json())
   .then(data => {
@@ -3645,7 +3968,8 @@ function quickMode() {
       updateRunInsights({
         categories: selectedCats,
         timestamp: new Date().toISOString(),
-        source: data.from_cache ? 'cache' : 'quick'
+        source: data.from_cache ? 'cache' : 'quick',
+        gap_steering: gapSteering
       });
       updateStats();
       if (data.from_cache) addLog('[QUICK] Generated from cached papers', 'ok');
@@ -3697,7 +4021,7 @@ function _doStartPipeline() {
   document.getElementById('ideasGrid').innerHTML = '<div class="empty"><span>▸</span>Processing...</div>';
   document.getElementById('logBox').innerHTML = '';
   
-  [0,1,2,3,4].forEach(n => setPhase(n,'','Pending'));
+  for (let n = 0; n < _mainPhaseCount(); n++) setPhase(n,'','Pending');
   setPhase(0, 'active', 'Pinging API...');
   
   running = true;
@@ -3720,6 +4044,7 @@ function _doStartPipeline() {
   const research_context = document.getElementById('researchContext').value.slice(0, 2000);
   const approach = document.getElementById('approachSelect').value;
   const goalStyle = document.getElementById('goalStyleSelect').value;
+  const gapSteering = document.getElementById('gapSteeringSelect').value;
   const mode = (goal === 'SYNTHESIS') ? 'review' : 'default';
   const userProfile = getPersonalityProfile();
   const feedbackSummary = getFeedbackMemory();
@@ -3727,7 +4052,7 @@ function _doStartPipeline() {
   fetch('/api/run', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, goal_style: goalStyle, mode: mode, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0', user_profile: userProfile, feedback_summary: feedbackSummary })
+    body: JSON.stringify({ start_date: dateFrom, end_date: dateTo, max_ideas: maxIdeas, categories: selectedCats, language: language, research_context: research_context, approach: approach, goal: goal, goal_style: goalStyle, gap_steering: gapSteering, mode: mode, refine: localStorage.getItem('scholarscout_refine') === '1' ? '1' : '0', sensitivity: localStorage.getItem('scholarscout_sensitivity') === '1' ? '1' : '0', user_profile: userProfile, feedback_summary: feedbackSummary })
   }).catch(err => { addLog('[ERR] Failed: ' + err, 'err'); });
 }
 
@@ -3747,6 +4072,7 @@ function stopPipeline() {
 let _owlGame = null;
 let _acSources = new Set();
 let _acGraph = {dots: [], categories: {}};
+let _acGapStats = {total: 0, categories: {}, recent: []};
 let _chatPanel = null;
 let _paperQueue = [];
 let _paperDripInterval = null;
@@ -3774,6 +4100,36 @@ function _stopPaperDrip() {
   }
 }
 
+function _renderAcGapMonitor() {
+  const summaryEl = document.getElementById('acGapSummary');
+  const badgesEl = document.getElementById('acGapBadges');
+  const listEl = document.getElementById('acGapList');
+  if (!summaryEl || !badgesEl || !listEl) return;
+
+  const categoryEntries = Object.entries(_acGapStats.categories || {}).sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]));
+  if (!_acGapStats.total) {
+    summaryEl.textContent = 'Waiting for synthesized gap candidates...';
+    badgesEl.innerHTML = '';
+    listEl.innerHTML = '';
+    return;
+  }
+
+  summaryEl.textContent = `${_acGapStats.total} gap candidates synthesized across ${categoryEntries.length} categories.`;
+  badgesEl.innerHTML = categoryEntries.slice(0, 6).map(([cat, data]) => {
+    return `<span class="chip" title="${escapeHtml((data.titles || []).join(' | '))}">${escapeHtml(cat)} ${escapeHtml(String(data.count))}</span>`;
+  }).join('');
+  listEl.innerHTML = (_acGapStats.recent || []).slice(0, 5).map(item => {
+    const titles = (item.titles || []).slice(0, 3).map(title => `<div style="font-size:10px;color:var(--text)">${escapeHtml(title)}</div>`).join('');
+    return `<div style="padding:8px;border:1px solid var(--border);border-radius:4px;background:rgba(255,255,255,0.02)">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">${escapeHtml(item.cat || 'unknown')}</div>
+        <div style="font-size:10px;color:var(--active)">${escapeHtml(String(item.count || 0))} gaps</div>
+      </div>
+      ${titles || '<div style="font-size:10px;color:var(--muted)">No gap titles emitted</div>'}
+    </div>`;
+  }).join('');
+}
+
 function acSwitchTab(tab) {
   document.querySelectorAll('.ac-tabs .ac-tab').forEach(t => t.classList.toggle('active', t.textContent.toLowerCase().includes(tab)));
   document.getElementById('acTabPipeline').classList.toggle('active', tab === 'pipeline');
@@ -3797,6 +4153,7 @@ function openActivityCenter() {
 function _resetActivityCenter() {
   _acSources = new Set();
   _acGraph = {dots: [], categories: {}, _reviewMode: false};
+  _acGapStats = {total: 0, categories: {}, recent: []};
   _paperQueue = [];
   _stopPaperDrip();
   _startPaperDrip();
@@ -3808,12 +4165,13 @@ function _resetActivityCenter() {
   document.getElementById('acProgBar').style.width = '0%';
   document.getElementById('acPct').textContent = '';
   document.getElementById('acPhaseLabel').textContent = 'Starting...';
+  _renderAcGapMonitor();
   // Build phase list based on mode
   const goal = document.getElementById('goalSelect').value;
   const isReview = (goal === 'SYNTHESIS');
   const phases = isReview
     ? ['Validate LLM', 'Fetch papers', 'Cluster papers', 'Synthesize clusters', 'Cross-cutting analysis', 'Save results']
-    : ['Validate LLM', 'Fetch papers', 'Analyze trends', 'Generate ideas', 'Save results'];
+    : ['Validate LLM', 'Fetch papers', 'Analyze trends', 'Synthesize gaps', 'Generate ideas', 'Save results'];
   const phaseEl = document.getElementById('acPhases');
   phaseEl.innerHTML = phases.map((p,i) => `<div class="ac-phase pending" id="acP${i}"><div class="ac-phase-dot"></div> ${p}</div>`).join('');
 }
@@ -3975,6 +4333,22 @@ function acHandleEvent(data) {
   // Always feed chat panel (even when AC closed, so history persists)
   if (_chatPanel) _chatPanel.handleEvent(data);
 
+  if (ev === 'gap_candidates') {
+    const cat = data.cat || 'unknown';
+    _acGapStats.total += Number(data.count || 0);
+    _acGapStats.categories[cat] = {
+      count: Number(data.count || 0),
+      titles: Array.isArray(data.titles) ? data.titles.slice(0, 3) : [],
+    };
+    _acGapStats.recent.unshift({
+      cat,
+      count: Number(data.count || 0),
+      titles: Array.isArray(data.titles) ? data.titles.slice(0, 3) : [],
+    });
+    _acGapStats.recent = _acGapStats.recent.slice(0, 8);
+    _renderAcGapMonitor();
+  }
+
   // Only update visual elements if AC is visible
   if (!document.getElementById('activityCenter').classList.contains('visible')) {
     // Update mini bar progress even when closed
@@ -4123,6 +4497,7 @@ function acHandleEvent(data) {
     document.getElementById('acPct').textContent = '100%';
     document.getElementById('acIdeas').textContent = data.ideas || 0;
     document.getElementById('pipelineMiniBar').style.display = 'none';
+    _renderAcGapMonitor();
     if (_owlGame) _owlGame.onPhaseChange('done');
     _stopPaperDrip(); // Flush remaining papers to game
     // Auto-close after 2 seconds
@@ -4511,9 +4886,80 @@ document.addEventListener('keydown', function(e) {
 // ── Notification Sound ──
 const notifAudio = new Audio('/static/notification.m4a');
 notifAudio.volume = 0.5;
+let _updateStatusPoll = null;
+let _updatedLaunchUrl = '';
 
 function playNotification() {
   try { notifAudio.play(); } catch(e) {}
+}
+
+function showUpdateOverlay() {
+  document.getElementById('updateOverlay').style.display = 'flex';
+}
+
+function hideUpdateOverlay() {
+  if (_updateStatusPoll) {
+    clearTimeout(_updateStatusPoll);
+    _updateStatusPoll = null;
+  }
+  document.getElementById('updateOverlay').style.display = 'none';
+}
+
+function setUpdateProgress(progress, message, meta='') {
+  document.getElementById('updateProgressFill').style.width = `${Math.max(0, Math.min(100, Number(progress || 0)))}%`;
+  document.getElementById('updateStatusText').textContent = message || 'Updating ScholarScout...';
+  document.getElementById('updateMetaText').textContent = meta || 'This can take a minute on the first run.';
+}
+
+function openUpdatedApp() {
+  if (_updatedLaunchUrl) window.open(_updatedLaunchUrl, '_blank');
+}
+
+function pollAppUpdateStatus() {
+  fetch('/api/update/status', {cache: 'no-store'})
+    .then(r => r.json())
+    .then(status => {
+      setUpdateProgress(status.progress, status.message, status.launch_url ? `Updated app is ready at ${status.launch_url}` : '');
+      if (status.state === 'running') {
+        _updateStatusPoll = setTimeout(pollAppUpdateStatus, 1200);
+        return;
+      }
+      if (status.state === 'done') {
+        _updatedLaunchUrl = status.launch_url || '';
+        document.getElementById('updateOpenBtn').style.display = '';
+        document.getElementById('updateCloseBtn').style.display = '';
+        if (_updatedLaunchUrl) window.open(_updatedLaunchUrl, '_blank');
+        return;
+      }
+      document.getElementById('updateCloseBtn').style.display = '';
+    })
+    .catch(() => {
+      setUpdateProgress(100, 'Updater is still working. Waiting to reconnect...', '');
+      _updateStatusPoll = setTimeout(pollAppUpdateStatus, 1800);
+    });
+}
+
+function startAppUpdate(version, zipUrl) {
+  if (!version || !zipUrl) return;
+  showUpdateOverlay();
+  document.getElementById('updateOpenBtn').style.display = 'none';
+  document.getElementById('updateCloseBtn').style.display = 'none';
+  _updatedLaunchUrl = '';
+  setUpdateProgress(4, `Preparing ScholarScout v${version} update`, 'Keeping your config and data while the new build is staged.');
+  fetch('/api/update', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({version, zip_url: zipUrl})
+  })
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || 'Could not start update');
+      pollAppUpdateStatus();
+    })
+    .catch(err => {
+      document.getElementById('updateCloseBtn').style.display = '';
+      setUpdateProgress(100, err.message || 'Could not start update', 'You can still download the latest release manually.');
+    });
 }
 
 // ── Update Checker ──
@@ -4526,9 +4972,10 @@ function playNotification() {
     .then(data => {
       const latest = (data.tag_name || '').replace(/^v/, '');
       if (latest && latest !== CURRENT_VERSION) {
+        const zipUrl = data.zipball_url || `https://github.com/${REPO}/archive/refs/tags/v${latest}.zip`;
         const banner = document.createElement('div');
-        banner.style.cssText = 'position:fixed;bottom:16px;right:16px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font-size:11px;color:var(--text);z-index:999;max-width:280px;box-shadow:0 4px 12px rgba(0,0,0,0.3)';
-        banner.innerHTML = `<div style="margin-bottom:6px;font-weight:600">Update available: v${escapeHtml(latest)}</div><div style="color:var(--muted)">You have v${CURRENT_VERSION}. <a href="https://github.com/${REPO}/releases/latest" target="_blank" style="color:#fff;border-bottom:1px solid var(--border)">View release</a></div><button onclick="this.parentElement.remove()" style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px">&times;</button>`;
+        banner.style.cssText = 'position:fixed;bottom:16px;right:16px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font-size:11px;color:var(--text);z-index:999;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,0.3)';
+        banner.innerHTML = `<div style="margin-bottom:6px;font-weight:600">Update available: v${escapeHtml(latest)}</div><div style="color:var(--muted);line-height:1.5;margin-bottom:10px">You have v${CURRENT_VERSION}. ScholarScout can stage the new build, keep your config and data, then open the updated app.</div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-run" onclick="startAppUpdate('${escapeHtml(latest)}','${escapeHtml(zipUrl)}')">Update now</button><a href="https://github.com/${REPO}/releases/latest" target="_blank" style="color:#fff;border-bottom:1px solid var(--border)">View release</a></div><button onclick="this.parentElement.remove()" style="position:absolute;top:8px;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px">&times;</button>`;
         document.body.appendChild(banner);
       }
     })

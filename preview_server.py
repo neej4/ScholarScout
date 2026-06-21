@@ -20,6 +20,7 @@ from src.web.routes.ideas    import ideas_bp
 from src.web.routes.analysis import analysis_bp
 from src.web.routes.capability import capability_bp
 from src.web.routes.settings import settings_bp
+from src.web.routes.update import update_bp
 from src.web.routes.upload   import upload_bp
 
 # ─── App factory ──────────────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ def create_app() -> Flask:
     app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
     # Register all blueprints
-    for bp in (pipeline_bp, sessions_bp, ideas_bp, analysis_bp, capability_bp, settings_bp, upload_bp):
+    for bp in (pipeline_bp, sessions_bp, ideas_bp, analysis_bp, capability_bp, settings_bp, update_bp, upload_bp):
         app.register_blueprint(bp)
 
     @app.route("/")
