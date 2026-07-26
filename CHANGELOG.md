@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7.1 Release Notes (2026-07-26)
+
+### Security
+- Validated `/api/settings/test` base URLs with the same allowlist used by saved settings before running connection probes
+- Added regression tests for custom provider URL rejection and localhost test probes
+
 ## v1.7.0 Release Notes (2026-07-13)
 
 ### Workflow polish

@@ -132,14 +132,23 @@ def api_settings_test():
     """Test LLM connection with current or provided settings."""
     body = request.get_json(silent=True) or {}
 
+    provider = str(body.get("provider") or Config.LLM_PROVIDER).lower().strip()
+    if provider not in PROVIDERS:
+        return jsonify({"error": f"Unknown provider: {provider}"}), 400
+
+    base_url = str(body.get("base_url") or "").strip()
+    url_error = _validate_base_url(provider, base_url)
+    if url_error:
+        return jsonify({"error": url_error}), 400
+
     # Temporarily override config for the test only
     orig = (Config.LLM_PROVIDER, Config.LLM_API_KEY, Config.LLM_MODEL, Config.LLM_BASE_URL)
     try:
-        if body.get("provider"):  Config.LLM_PROVIDER = body["provider"]
+        Config.LLM_PROVIDER = provider
         if body.get("api_key"):   Config.LLM_API_KEY  = body["api_key"]
         if body.get("model"):     Config.LLM_MODEL    = body["model"]
-        if body.get("base_url"):
-            url = body["base_url"].strip()
+        if base_url:
+            url = base_url
             if Config.LLM_PROVIDER != "gemini" and url and "chat/completions" not in url:
                 url = url.rstrip("/") + "/chat/completions"
             Config.LLM_BASE_URL = url
