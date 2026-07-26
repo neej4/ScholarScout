@@ -3,6 +3,13 @@ import yaml
 import math
 from datetime import datetime, timedelta, timezone
 
+
+def _as_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Config:
     """
     Main configuration for ScholarScout.
@@ -112,9 +119,9 @@ class Config:
     # ─── FEATURE FLAGS ─────────────────────────────────────────────────────────
     # Centralized registry. Overridable via env vars or config.yaml "features" section.
     _features_conf = _yaml_data.get("features", {})
-    FEATURE_REFINE      = os.environ.get("SCOUT_REFINE", str(_features_conf.get("refine", False))) == '1'
-    FEATURE_SENSITIVITY = os.environ.get("SCOUT_SENSITIVITY", str(_features_conf.get("sensitivity", False))) == '1'
-    FEATURE_GROUNDING   = _features_conf.get("grounding", False)
+    FEATURE_REFINE      = _as_bool(os.environ.get("SCOUT_REFINE", _features_conf.get("refine", False)))
+    FEATURE_SENSITIVITY = _as_bool(os.environ.get("SCOUT_SENSITIVITY", _features_conf.get("sensitivity", False)))
+    FEATURE_GROUNDING   = _as_bool(_features_conf.get("grounding", False))
     CACHE_EXPIRY_DAYS   = int(_features_conf.get("cache_expiry_days", 7))
     
     # ─── THRESHOLDS (externalized — tune via config.yaml "thresholds" section) ──

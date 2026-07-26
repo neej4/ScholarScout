@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7.2 Release Notes (2026-07-26)
+
+### Configuration
+- Parsed feature flags consistently from YAML booleans and common environment strings such as `true`, `yes`, and `on`
+- Reused configured `features.refine` and `features.sensitivity` defaults when starting the orchestrator without explicit env overrides
+
 ## v1.7.1 Release Notes (2026-07-26)
 
 ### Security

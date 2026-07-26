@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime, timezone, timedelta
 from typing import List, Callable, Optional, Dict
 
-from src.core.config import Config
+from src.core.config import Config, _as_bool
 from src.core.models import Paper, ProjectIdea, ReviewCluster, ReviewOutput
 from src.core.fetchers.arxiv_fetcher import ArxivFetcher
 from src.core.fetchers.openalex_fetcher import OpenAlexFetcher
@@ -38,9 +38,9 @@ class Orchestrator:
         self.goal = os.environ.get('SCOUT_GOAL', 'any')
         self.goal_style = os.environ.get('SCOUT_GOAL_STYLE', '')
         self.gap_steering = os.environ.get('SCOUT_GAP_STEERING', 'balanced')
-        self.refine = os.environ.get('SCOUT_REFINE', '0') == '1'
-        self.sensitivity = os.environ.get('SCOUT_SENSITIVITY', '0') == '1'
-        self.force_refresh = os.environ.get('SCOUT_FORCE_REFRESH', '0') == '1'
+        self.refine = _as_bool(os.environ.get('SCOUT_REFINE', Config.FEATURE_REFINE))
+        self.sensitivity = _as_bool(os.environ.get('SCOUT_SENSITIVITY', Config.FEATURE_SENSITIVITY))
+        self.force_refresh = _as_bool(os.environ.get('SCOUT_FORCE_REFRESH', '0'))
         self.user_profile = os.environ.get('SCOUT_USER_PROFILE', '')
         self.feedback_summary = os.environ.get('SCOUT_FEEDBACK_SUMMARY', '')
         self.llm_client = LLMClient(emit_fn=self._emit)
