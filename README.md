@@ -67,13 +67,13 @@ Use this if you originally ran `git clone`.
 ### 2. If you installed from ZIP / Download
 
 1. Download the latest release ZIP from GitHub.
-2. Extract it to a **new folder** such as `ScholarScout-v1.6.5`.
+2. Extract it to a **new folder** such as `ScholarScout-vX.Y.Z`.
 3. Copy your old `data/` folder into the new folder if you want to keep cache, snapshots, and session history.
 4. Copy your `config.yaml` into the new folder if you already set up your provider and API key.
 5. Run:
 
 ```bash
-cd ScholarScout-v1.6.5
+cd ScholarScout-vX.Y.Z
 pip install -r requirements.txt
 python preview_server.py
 ```

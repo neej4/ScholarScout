@@ -7,10 +7,9 @@ User clicks Run
     → /api/run (pipeline.py)
     → subprocess: run_pipeline.py
     → Orchestrator
-        → Phase 1: Fetch papers (arXiv + OpenAlex + S2, parallel)
-        → Phase 2: Analyze trends (LLM: keywords, gaps, saturation)
-        → Phase 3: Generate ideas (LLM: academic/product/develop mode)
-        → Phase 4: Write output (CSV + JSON snapshot + session history)
+        → Fetch papers from routed sources
+        → Default modes: analyze trends → synthesize gaps → generate ideas → save CSV, snapshot, and session history
+        → Review mode: cluster papers → synthesize clusters → save review snapshot and session history
     → SSE stream progress to dashboard
 ```
 
@@ -18,9 +17,12 @@ User clicks Run
 
 | Module | Responsibility |
 |--------|---------------|
-| `orchestrator.py` | Pipeline controller, coordinates all phases |
+| `orchestrator.py` | Pipeline controller, coordinates fetch, analysis, generation/review, and saving |
 | `analyzer.py` | Trend analysis via LLM (+ optional sensitivity check) |
-| `generator.py` | Idea generation in 3 modes, chunked, with optional refinement |
+| `gap_synthesis.py` | Builds reusable gap candidates before idea generation |
+| `generator.py` | Idea generation for Academic, Product, and Develop modes, with chunking and optional refinement |
+| `clusterer.py` | Groups papers for Review mode |
+| `synthesizer.py` | Builds Review mode literature synthesis from clusters |
 | `deep_dive.py` | Detailed analysis per idea (+ optional grounding verification) |
 | `novelty_checker.py` | Semantic + Jaccard similarity against existing papers |
 | `llm.py` | Multi-provider LLM client with SSE parser |

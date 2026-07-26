@@ -23,6 +23,7 @@ def test_export_all_helpers_exist():
     assert "## Evidence Pack" in html
     assert "Landscape Gap" in html
     assert "Anchor Papers" in html
+    assert "Decision:" in html
 
 
 def test_run_insights_and_feedback_memory_helpers_exist():
@@ -31,6 +32,19 @@ def test_run_insights_and_feedback_memory_helpers_exist():
     assert "function updateRunInsights" in html
     assert "function summarizeFeedbackMemory" in html
     assert 'id="feedbackMemorySummary"' in html
+
+
+def test_saved_decision_helpers_exist():
+    html = _dashboard()
+    assert "scholarscout_decisions" in html
+    assert "function getSavedDecisions" in html
+    assert "function saveDecision" in html
+    assert "function cycleIdeaDecision" in html
+    assert 'id="modalDecisionBtn"' in html
+    assert 'data-action="decision"' in html
+    assert "Keep" in html
+    assert "Maybe" in html
+    assert "Drop" in html
 
 
 def test_export_selected_and_preset_controls_exist():

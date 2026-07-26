@@ -1,6 +1,6 @@
-# Three modes
+# Four modes
 
-ScholarScout generates ideas in three modes from the same papers. The difference is what the LLM looks for.
+ScholarScout can use the same paper search flow for different jobs. The mode changes what gets produced from the papers.
 
 ## Academic
 
@@ -28,8 +28,15 @@ The LLM reads papers and asks: "What technique from this paper can improve the p
 
 In Develop mode, your context description is a hard constraint. Every idea must be applicable to your project.
 
+## Review
+
+For literature review work. Output: paper clusters, cluster syntheses, and cross-cutting themes.
+
+Review mode requires context so the synthesis has a clear scope.
+
 ## How to choose
 
 - First time exploring? Use **Academic** with goal "Any"
 - Have a hackathon coming up? Use **Product** with goal "Hackathon"
 - Want to improve your existing app? Use **Develop** with goal "Feature" and describe your project in the context field
+- Need a literature overview? Use **Review** and describe what the review should focus on

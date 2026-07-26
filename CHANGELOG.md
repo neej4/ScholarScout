@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.7.0 Release Notes (2026-07-13)
+
+### Workflow polish
+- Added saved idea decisions so users can mark generated ideas as Keep, Maybe, or Drop without changing session files
+- Exported Markdown now carries saved decisions for easier handoff and review
+- Synced shipped mode and pipeline docs with the current dashboard behavior
+
+### Safety checks
+- Added lightweight tests for docs drift, session compatibility, updater safety, and version sync
+- Kept session schema compatibility stable for existing v1.6.x snapshots
+
 ## v1.6.5 Release Notes (2026-06-21)
 
 ### Gap-first generation
